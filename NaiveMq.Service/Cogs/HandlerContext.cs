@@ -16,7 +16,7 @@ namespace NaiveMq.Service.Cogs
         public string User { get; set; }
 
         /// <summary>
-        /// In case handler is called on reinstating persistent messages.
+        /// True in case handler is called on reinstating persistent data.
         /// </summary>
         public bool Reinstate { get; set; }
     }

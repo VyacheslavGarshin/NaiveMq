@@ -13,7 +13,6 @@ using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
 using Microsoft.Extensions.DependencyInjection;
-using NaiveMq.Client.Entities;
 
 namespace NaiveMq.Service
 {
@@ -24,8 +23,6 @@ namespace NaiveMq.Service
         public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
 
         private CancellationToken _stoppingToken;
-
-        private bool _isStarted;
 
         private readonly TcpListener _listener;
 
@@ -75,7 +72,7 @@ namespace NaiveMq.Service
         {
             _stoppingToken = stoppingToken;
 
-            await Start();
+            await (new PersistentStorageLoader(_storage, _logger, _stoppingToken)).Load();
 
             while (!_stoppingToken.IsCancellationRequested)
             {
@@ -85,18 +82,9 @@ namespace NaiveMq.Service
                 }
                 else
                 {
-                    try
-                    {
-                        _listener.Start();
+                    Start();
 
-                        _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, $"Cannot start server listener.");
-
-                        await Task.Delay(5000, _stoppingToken);
-                    }
+                    await Task.Delay(5000, _stoppingToken);
                 }
             }
         }
@@ -119,84 +107,23 @@ namespace NaiveMq.Service
             WriteCounter.Dispose();
         }
 
-        private async Task Start()
+        private void Start()
         {
             try
             {
-                if (_storage.PersistentStorage != null)
-                {
-                    _logger.LogInformation("Starting to load persistent queues and messages.");
+                _listener.Start();
 
-                    var allQueues = new Dictionary<string, IEnumerable<QueueEntity>>();
-
-                    await LoadQueues(allQueues);
-
-                    LoadMessages(allQueues);
-                }
+                _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error starting the service.");
+                _logger.LogError(ex, $"Cannot start server listener.");
             }
-
-            _isStarted = true;
         }
 
-        private async Task LoadQueues(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
-        {
-            var queuesCount = 0;
-
-            foreach (var user in new[] { "guest" })
-            {
-                var queues = (await _storage.PersistentStorage.LoadQueues(user, _stoppingToken)).ToList();
-
-                allQueues[user] = queues;
-
-                var context = new HandlerContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _stoppingToken };
-
-                foreach (var queue in queues)
-                {
-                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable });
-                    queuesCount++;
-                }
-            }
-
-            _logger.LogInformation($"{queuesCount} queues are loaded. Messages are being loaded in background.");
-        }
-
-        private void LoadMessages(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
-        {
-            _ = Task.Run(async () =>
-            {
-                var messageCount = 0;
-
-                foreach (var pair in allQueues)
-                {
-                    var context = new HandlerContext { User = pair.Key, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _stoppingToken };
-
-                    foreach (var queue in pair.Value)
-                    {
-                        var messages = await _storage.PersistentStorage.LoadMessages(queue.User, queue.Name, _stoppingToken);
-
-                        foreach (var message in messages)
-                        {
-                            await new EnqueueHandler().ExecuteAsync(context, new Enqueue { Id = message.Id, Queue = message.Queue, Text = message.Text });
-                            messageCount++;
-                        }
-                    }
-                }
-
-                _logger.LogInformation($"Loading of {messageCount} persistent messages is completed.");
-            }, _stoppingToken);
-        }
-
-        private Task Stop()
+        private void Stop()
         {
             _listener.Stop();
-
-            _isStarted = false;
-
-            return Task.CompletedTask;
         }
 
         private void AddClient(TcpClient tcpClient)
@@ -228,6 +155,15 @@ namespace NaiveMq.Service
             }
         }
 
+        private void DeleteClient(NaiveMqClient client)
+        {
+            _storage.DeleteSubscriptions(client);
+            _clients.TryRemove(client.Id, out var _);
+            client.Dispose();
+
+            _logger.LogInformation($"Client deleted {client.Id}.");
+        }
+
         private Task OnClientSendAsync(NaiveMqClient sender, string message)
         {
             WriteCounter.Add();
@@ -240,31 +176,15 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private async Task SendAsync(NaiveMqClient client, IResponse response)
-        {
-            try
-            {
-                await client.SendAsync(response, _stoppingToken);
-            }
-            catch (ConnectionException ex)
-            {
-                _logger.LogWarning(ex, "Error sending response. Client threw connection exception.");
-                DeleteClient(client);
-            }
-            catch (ClientStoppedException)
-            {
-                _logger.LogWarning($"Error sending response. Client is stopped.");
-                DeleteClient(client);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error on sending response.");
-            }
-        }
-
         private async Task OnClientParseMessageErrorAsync(NaiveMqClient sender, ParseCommandException exception)
         {
             await SendAsync(sender, Confirmation.Error(exception.ErrorCode.ToString(), exception.Message));
+        }
+
+        private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
+        {
+            DeleteClient(sender);
+            return Task.CompletedTask;
         }
 
         private async Task OnClientReceiveRequestAsync(NaiveMqClient sender, IRequest request)
@@ -298,6 +218,28 @@ namespace NaiveMq.Service
                 {
                     await SendAsync(sender, Confirmation.Error(request.Id.Value, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message));
                 }
+            }
+        }
+
+        private async Task SendAsync(NaiveMqClient client, IResponse response)
+        {
+            try
+            {
+                await client.SendAsync(response, _stoppingToken);
+            }
+            catch (ConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Error sending response. Client threw connection exception.");
+                DeleteClient(client);
+            }
+            catch (ClientStoppedException)
+            {
+                _logger.LogWarning($"Error sending response. Client is stopped.");
+                DeleteClient(client);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error on sending response.");
             }
         }
 
@@ -339,24 +281,6 @@ namespace NaiveMq.Service
                 throw new ServerException(ErrorCode.CommandHandlerNotFound,
                     string.Format(ErrorCode.CommandHandlerNotFound.GetDescription(), command.GetType().Name));
             }
-        }
-
-        private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
-        {
-            DeleteClient(sender);
-
-            return Task.CompletedTask;
-        }
-
-        private void DeleteClient(NaiveMqClient client)
-        {
-            _storage.DeleteSubscriptions(client);
-
-            _clients.TryRemove(client.Id, out var _);
-
-            client.Dispose();
-
-            _logger.LogInformation($"Client deleted {client.Id}.");
         }
     }
 }
