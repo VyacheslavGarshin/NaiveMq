@@ -1,0 +1,362 @@
+﻿using System.Net.Sockets;
+using System.Net;
+using System.Collections.Concurrent;
+using System.Reflection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NaiveMq.Client.Common;
+using NaiveMq.Service.Cogs;
+using NaiveMq.Client.Commands;
+using NaiveMq.Client.Exceptions;
+using NaiveMq.Service.Handlers;
+using NaiveMq.Service.PersistentStorage;
+using NaiveMq.Client;
+using Microsoft.Extensions.DependencyInjection;
+using NaiveMq.Client.Entities;
+
+namespace NaiveMq.Service
+{
+    public sealed class NaiveMqService : BackgroundService
+    {
+        public SpeedCounter WriteCounter { get; set; } = new SpeedCounter(10);
+
+        public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
+
+        private CancellationToken _stoppingToken;
+
+        private bool _isStarted;
+
+        private readonly TcpListener _listener;
+
+        private readonly ILogger<NaiveMqService> _logger;
+
+        private readonly IOptions<NaiveMqServiceOptions> _options;
+
+        private readonly IServiceProvider _serviceProvider;
+        
+        private readonly ConcurrentDictionary<int, NaiveMqClient> _clients = new();
+
+        private readonly Dictionary<Type, Type> _commandHandlers = new();
+
+        private readonly Storage _storage = new();
+
+        public NaiveMqService(
+            ILogger<NaiveMqService> logger,
+            IOptions<NaiveMqServiceOptions> options,
+            IServiceProvider serviceProvider,
+            IPersistentStorage storage = null)
+        {
+            _logger = logger;
+            _options = options;
+            _serviceProvider = serviceProvider;
+
+            InitCommands();
+
+            _storage.PersistentStorage = storage;
+
+            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
+        }
+
+        private void InitCommands()
+        {
+            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+            {
+                var ihandler = type.GetInterfaces().FirstOrDefault(y => y.IsGenericType && typeof(IHandler<IRequest<IResponse>, IResponse>).Name == y.GetGenericTypeDefinition().Name);
+                if (ihandler != null)
+                {
+                    _commandHandlers.Add(ihandler.GenericTypeArguments.First(), type);
+                    continue;
+                }
+            }
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _stoppingToken = stoppingToken;
+
+            await Start();
+
+            while (!_stoppingToken.IsCancellationRequested)
+            {
+                if (_listener.Server.IsBound)
+                {
+                    AddClient(await _listener.AcceptTcpClientAsync(_stoppingToken));
+                }
+                else
+                {
+                    try
+                    {
+                        _listener.Start();
+
+                        _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"Cannot start server listener.");
+
+                        await Task.Delay(5000, _stoppingToken);
+                    }
+                }
+            }
+        }
+
+        public override void Dispose()
+        {
+            Stop();
+
+            base.Dispose();
+
+            foreach (var client in _clients.Values)
+            {
+                client.Dispose();
+            }
+
+            _clients.Clear();
+
+            _storage.Dispose();
+            ReadCounter.Dispose();
+            WriteCounter.Dispose();
+        }
+
+        private async Task Start()
+        {
+            try
+            {
+                if (_storage.PersistentStorage != null)
+                {
+                    _logger.LogInformation("Starting to load persistent queues and messages.");
+
+                    var allQueues = new Dictionary<string, IEnumerable<QueueEntity>>();
+
+                    await LoadQueues(allQueues);
+
+                    LoadMessages(allQueues);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error starting the service.");
+            }
+
+            _isStarted = true;
+        }
+
+        private async Task LoadQueues(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
+        {
+            var queuesCount = 0;
+
+            foreach (var user in new[] { "guest" })
+            {
+                var queues = (await _storage.PersistentStorage.LoadQueues(user, _stoppingToken)).ToList();
+
+                allQueues[user] = queues;
+
+                var context = new HandlerContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _stoppingToken };
+
+                foreach (var queue in queues)
+                {
+                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable });
+                    queuesCount++;
+                }
+            }
+
+            _logger.LogInformation($"{queuesCount} queues are loaded. Messages are being loaded in background.");
+        }
+
+        private void LoadMessages(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
+        {
+            _ = Task.Run(async () =>
+            {
+                var messageCount = 0;
+
+                foreach (var pair in allQueues)
+                {
+                    var context = new HandlerContext { User = pair.Key, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _stoppingToken };
+
+                    foreach (var queue in pair.Value)
+                    {
+                        var messages = await _storage.PersistentStorage.LoadMessages(queue.User, queue.Name, _stoppingToken);
+
+                        foreach (var message in messages)
+                        {
+                            await new EnqueueHandler().ExecuteAsync(context, new Enqueue { Id = message.Id, Queue = message.Queue, Text = message.Text });
+                            messageCount++;
+                        }
+                    }
+                }
+
+                _logger.LogInformation($"Loading of {messageCount} persistent messages is completed.");
+            }, _stoppingToken);
+        }
+
+        private Task Stop()
+        {
+            _listener.Stop();
+
+            _isStarted = false;
+
+            return Task.CompletedTask;
+        }
+
+        private void AddClient(TcpClient tcpClient)
+        {
+            NaiveMqClient client = null;
+
+            try
+            {
+                client = new NaiveMqClient(tcpClient, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
+                client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
+                client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
+                client.OnParseMessageErrorAsync += OnClientParseMessageErrorAsync;
+                client.OnReceiveAsync += OnClientReceiveAsync;
+                client.OnSendAsync += OnClientSendAsync;
+
+                client.Start();
+                _clients.TryAdd(client.Id, client);
+
+                _logger.LogInformation($"Client added {client.Id}.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during adding client.");
+
+                if (client != null)
+                {
+                    DeleteClient(client);
+                }
+            }
+        }
+
+        private Task OnClientSendAsync(NaiveMqClient sender, string message)
+        {
+            WriteCounter.Add();
+            return Task.CompletedTask;
+        }
+
+        private Task OnClientReceiveAsync(NaiveMqClient sender, string message)
+        {
+            ReadCounter.Add();
+            return Task.CompletedTask;
+        }
+
+        private async Task SendAsync(NaiveMqClient client, IResponse response)
+        {
+            try
+            {
+                await client.SendAsync(response, _stoppingToken);
+            }
+            catch (ConnectionException ex)
+            {
+                _logger.LogWarning(ex, "Error sending response. Client threw connection exception.");
+                DeleteClient(client);
+            }
+            catch (ClientStoppedException)
+            {
+                _logger.LogWarning($"Error sending response. Client is stopped.");
+                DeleteClient(client);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error on sending response.");
+            }
+        }
+
+        private async Task OnClientParseMessageErrorAsync(NaiveMqClient sender, ParseCommandException exception)
+        {
+            await SendAsync(sender, Confirmation.Error(exception.ErrorCode.ToString(), exception.Message));
+        }
+
+        private async Task OnClientReceiveRequestAsync(NaiveMqClient sender, IRequest request)
+        {
+            IResponse result;
+
+            try
+            {
+                result = await HandleRequestAsync(sender, request);
+
+                if (request.Confirm)
+                {
+                    var response = result ?? Confirmation.Success();
+                    response.RequestId = request.Id;
+
+                    await SendAsync(sender, response);
+                }
+            }
+            catch (ServerException ex)
+            {
+                if (request.Confirm)
+                {
+                    await SendAsync(sender, Confirmation.Error(request.Id.Value, ex.ErrorCode.ToString(), ex.Message));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error on handling received command.");
+
+                if (request.Confirm)
+                {
+                    await SendAsync(sender, Confirmation.Error(request.Id.Value, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message));
+                }
+            }
+        }
+
+        private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, ICommand command)
+        {
+            if (_commandHandlers.TryGetValue(command.GetType(), out var commandHandler))
+            {
+                var method = commandHandler.GetMethod(nameof(IHandler<IRequest<IResponse>, IResponse>.ExecuteAsync));
+                IDisposable instance = null;
+
+                try
+                {
+                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
+                    var context = new HandlerContext { Storage = _storage, User = sender.User, Client = sender, CancellationToken = _stoppingToken, Logger = _logger };
+
+                    var task = (Task)method.Invoke(instance, new object[] { context, command });
+
+                    await task.ConfigureAwait(false);
+
+                    var resultProperty = task.GetType().GetProperty("Result");
+                    var result = (IResponse)resultProperty.GetValue(task);
+
+                    return result;
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    if (instance != null)
+                    {
+                        instance.Dispose();
+                    }
+                }
+            }
+            else
+            {
+                throw new ServerException(ErrorCode.CommandHandlerNotFound,
+                    string.Format(ErrorCode.CommandHandlerNotFound.GetDescription(), command.GetType().Name));
+            }
+        }
+
+        private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
+        {
+            DeleteClient(sender);
+
+            return Task.CompletedTask;
+        }
+
+        private void DeleteClient(NaiveMqClient client)
+        {
+            _storage.DeleteSubscriptions(client);
+
+            _clients.TryRemove(client.Id, out var _);
+
+            client.Dispose();
+
+            _logger.LogInformation($"Client deleted {client.Id}.");
+        }
+    }
+}

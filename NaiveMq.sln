@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.Client", "NaiveMq.Client\NaiveMq.Client.csproj", "{A18CA539-DC86-47F2-ADC1-C25173F9B58D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.Service", "NaiveMq.Service\NaiveMq.Service.csproj", "{E618F48D-622E-4417-81A6-7B4D5C31B88E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.LoadTests", "Tests\NaiveMq.LoadTests\NaiveMq.LoadTests.csproj", "{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{93FC5308-D796-4142-8C3E-104D4599E6CD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.Server", "NaiveMq.Server\NaiveMq.Server.csproj", "{5E0D5610-4550-4DEB-ACB1-A1E6408B2380}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A18CA539-DC86-47F2-ADC1-C25173F9B58D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A18CA539-DC86-47F2-ADC1-C25173F9B58D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A18CA539-DC86-47F2-ADC1-C25173F9B58D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A18CA539-DC86-47F2-ADC1-C25173F9B58D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E618F48D-622E-4417-81A6-7B4D5C31B88E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E618F48D-622E-4417-81A6-7B4D5C31B88E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E618F48D-622E-4417-81A6-7B4D5C31B88E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E618F48D-622E-4417-81A6-7B4D5C31B88E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E0D5610-4550-4DEB-ACB1-A1E6408B2380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E0D5610-4550-4DEB-ACB1-A1E6408B2380}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E0D5610-4550-4DEB-ACB1-A1E6408B2380}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E0D5610-4550-4DEB-ACB1-A1E6408B2380}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2AFBD2E9-D389-4BC7-AAE4-6F40F4A248FF} = {93FC5308-D796-4142-8C3E-104D4599E6CD}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7C06993C-9FA8-4DB0-BA84-300381840CD2}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,172 @@
+﻿using Microsoft.Extensions.Options;
+using NaiveMq.Client;
+using NaiveMq.Client.Commands;
+using NaiveMq.Client.Exceptions;
+using System.Diagnostics;
+
+namespace NaiveMq.LoadTests.SpamQueue
+{
+    public class QueueSpamService : BackgroundService
+    {
+        private CancellationToken _stoppingToken;
+        private ILogger<QueueSpamService> _logger;
+        private IOptions<QueueSpamServiceOptions> _options;
+        private readonly NaiveMq.Service.NaiveMqService _queueService;
+        private readonly IServiceProvider _serviceProvider;
+
+        public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMq.Service.NaiveMqService queueService)
+        {
+            _logger = logger;
+            _options = options;
+            _queueService = queueService;
+            _serviceProvider = serviceProvider;
+        }
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _stoppingToken = stoppingToken;
+
+            await Task.Delay(1000);
+
+            using var timer = new Timer((s) =>
+            {
+                _logger.LogInformation($"Read/Write {DateTime.Now:O}: speed p/s {_queueService.ReadCounter.LastResult}/{_queueService.WriteCounter.LastResult}, totals: {_queueService.ReadCounter.Total}/{_queueService.WriteCounter.Total}");
+            }, null, 0, 1000);
+
+            for (var i = 0; i < _options.Value.Runs; i++)
+                await QueueSpam();
+
+            //while (!stoppingToken.IsCancellationRequested)
+            //{
+            //    await Task.Delay(1000, _stoppingToken);
+            //}
+        }
+
+        private Task OnMessageReceived(NaiveMqClient sender, ICommand args)
+        {
+            return Task.CompletedTask;
+        }
+
+        private async Task QueueSpam()
+        {
+            var clientLogger = _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>();
+
+            await Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                var tasks = new List<Task>();
+
+                var taskCount = _options.Value.ThreadsCount;
+                var max = _options.Value.MessageCount;
+
+                using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
+
+                c.Start();
+
+                if (_options.Value.AddQueue)
+                {
+                    try
+                    {
+                        await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, }, _stoppingToken);
+
+                        if (_options.Value.RewriteQueue)
+                        {
+                            await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                            await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
+                        }
+                    }
+                    catch
+                    {
+                        //
+                        await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
+                    }
+                }
+
+                var swt = Stopwatch.StartNew();
+
+                string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
+
+                for (var i = 0; i < taskCount; i++)
+                {
+                    var poc = i;
+                    var t = Task.Run(async () =>
+                    {
+                        using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
+
+                        c.Start();
+
+                        if (_options.Value.Subscribe)
+                        {
+                            await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName }, _stoppingToken);
+                        }
+
+                        using var exitSp = new SemaphoreSlim(1, 1);
+
+                        var sw = Stopwatch.StartNew();
+                        await exitSp.WaitAsync();
+
+                        var lastActivity = DateTime.Now;
+                        TimeSpan delta = TimeSpan.Zero;
+
+                        using var timer = new Timer((s) =>
+                        {
+                            _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+
+                            if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
+                            {
+                                lastActivity = DateTime.Now;
+                            }
+                            else
+                            {
+                                if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 10)
+                                {
+                                    delta = DateTime.Now.Subtract(lastActivity);
+                                    if (exitSp.CurrentCount == 0)
+                                        exitSp.Release(1);
+                                }
+                            }
+                        }, null, 0, 1000);
+
+                        for (var j = 1; j <= max; j++)
+                        {
+                            try
+                            {
+                                await c.SendAsync(new Enqueue
+                                {
+                                    Queue = _options.Value.QueueName,
+                                    Text = $"{message} {poc} says {j}.",
+                                    Confirm = _options.Value.Confirm
+                                },
+                                    _stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Send errr");
+                            }
+                        }
+
+                        await exitSp.WaitAsync();
+
+                        timer.Dispose();
+
+                        if (_options.Value.Subscribe)
+                        {
+                            await c.SendAsync(new Unsubscribe { Queue = _options.Value.QueueName }, _stoppingToken);
+                        }
+
+                        _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
+                    });
+
+                    tasks.Add(t);
+                }
+
+                Task.WaitAll(tasks.ToArray());
+
+                if (_options.Value.DeleteQueue)
+                    await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+
+                _logger.LogInformation($"Sent {max * taskCount} messages in {swt.Elapsed}.");
+            });
+        }
+    }
+}
