@@ -10,11 +10,13 @@ namespace NaiveMq.Service.Handlers
     {
         public async Task<Confirmation> ExecuteAsync(HandlerContext context, AddQueue command)
         {
+            var userQueues = context.Storage.GetUserQueues(context);
+
             var queue = new Queue(command.Name, command.Durable);
 
             try
             {
-                if (!context.Storage.Queues.TryAdd(command.Name, queue))
+                if (!userQueues.TryAdd(command.Name, queue))
                 {
                     throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), command.Name));
                 }
@@ -27,14 +29,14 @@ namespace NaiveMq.Service.Handlers
                     }
                     else
                     {
-                        var queueEnity = new QueueEntity { User = context.User, Name = queue.Name, Durable = queue.Durable };
-                        await context.Storage.PersistentStorage.SaveQueueAsync(context.User, queueEnity, context.CancellationToken);
+                        var queueEnity = new QueueEntity { User = context.User.Username, Name = queue.Name, Durable = queue.Durable };
+                        await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);
                     }
                 }
             }
             catch
             {
-                context.Storage.Queues.TryRemove(queue.Name, out var _);
+                userQueues.TryRemove(queue.Name, out var _);
                 queue.Dispose();
                 throw;
             }

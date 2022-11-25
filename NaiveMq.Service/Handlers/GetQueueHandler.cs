@@ -10,7 +10,9 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<GetQueueResponse> ExecuteAsync(HandlerContext context, GetQueue command)
         {
-            if (context.Storage.Queues.TryGetValue(command.Name, out var queue) || command.Try)
+            var userQueues = context.Storage.GetUserQueues(context);
+
+            if (userQueues.TryGetValue(command.Name, out var queue) || command.Try)
             {
                 return Task.FromResult(new GetQueueResponse
                 {

@@ -7,7 +7,7 @@ namespace NaiveMq.Client.Commands
         /// <summary>
         /// Confirmation required.
         /// </summary>
-        /// <remarks>In this case a IResponse command should be send back to requesting side. Otherwise sender should revert operation and receiver rise an error after timeout.</remarks>
+        /// <remarks>Default is true. In this case a IResponse command should be send back to requesting side. Otherwise sender should revert operation and receiver rise an error after timeout.</remarks>
         bool Confirm { get; set; }
 
         /// <summary>

@@ -45,5 +45,20 @@ namespace NaiveMq.Client
 
         [Description("Cannot create durable queue. Persistence storage is not set.")]
         CannotCreateDurableQueue = 108,
+
+        [Description("User '{0}' already exists.")]
+        UserAlreadyExists = 109,
+
+        [Description("You don't have access to add a new user.")]
+        AccessDeniedAddingUser = 110,
+
+        [Description("User '{0}' queues are not found.")]
+        UserQueuesNotFound = 111,
+
+        [Description("User is not authenticated.")]
+        UserNotAuthenticated = 112,
+
+        [Description("Username or password is not correct.")]
+        UserOrPasswordNotCorrect = 113,
     }
 }

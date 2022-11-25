@@ -9,9 +9,11 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<Confirmation> ExecuteAsync(HandlerContext context, Unsubscribe command)
         {
+            var userQueues = context.Storage.GetUserQueues(context);
+
             if (context.Storage.Subscriptions.TryGetValue(context.Client, out var subscriptions))
             {
-                if (context.Storage.Queues.TryGetValue(command.Queue, out var queue))
+                if (userQueues.TryGetValue(command.Queue, out var queue))
                 {
                     if (subscriptions.TryRemove(queue, out var subscription))
                     {

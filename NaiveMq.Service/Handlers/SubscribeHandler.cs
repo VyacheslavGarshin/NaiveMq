@@ -10,7 +10,9 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<Confirmation> ExecuteAsync(HandlerContext context, Subscribe command)
         {
-            if (context.Storage.Queues.TryGetValue(command.Queue, out var queue))
+            var userQueues = context.Storage.GetUserQueues(context);
+
+            if (userQueues.TryGetValue(command.Queue, out var queue))
             {
                 var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client, (key) => new ConcurrentDictionary<Queue, Subscription>());
                 var subscription = new Subscription(context, queue, command.ClientConfirm, command.ClientConfirmTimeout);

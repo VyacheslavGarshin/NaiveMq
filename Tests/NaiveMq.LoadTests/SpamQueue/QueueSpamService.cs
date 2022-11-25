@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Exceptions;
+using NaiveMq.Client.Common;
 using System.Diagnostics;
 
 namespace NaiveMq.LoadTests.SpamQueue
@@ -63,6 +63,11 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 c.Start();
 
+                if (!string.IsNullOrEmpty(_options.Value.Username))
+                {
+                    await c.SendAsync(new Login { Username = _options.Value.Username, PasswordHash = _options.Value.Password.ComputeHash() }, _stoppingToken);
+                }
+
                 if (_options.Value.AddQueue)
                 {
                     if ((await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, Try = true }, _stoppingToken)).Queue != null)
@@ -75,7 +80,6 @@ namespace NaiveMq.LoadTests.SpamQueue
                     }
                     else
                     {
-                        //
                         await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
                     }
                 }
@@ -92,6 +96,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                         using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
 
                         c.Start();
+
+                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        {
+                            await c.SendAsync(new Login { Username = _options.Value.Username, PasswordHash = _options.Value.Password.ComputeHash() }, _stoppingToken);
+                        }
 
                         if (_options.Value.Subscribe)
                         {

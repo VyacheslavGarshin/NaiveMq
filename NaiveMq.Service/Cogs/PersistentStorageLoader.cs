@@ -42,20 +42,30 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private Task<IEnumerable<string>> LoadUsers()
+        private async Task<IEnumerable<UserEntity>> LoadUsers()
         {
-            return Task.FromResult(new[] { "guest" }.AsEnumerable());
+            var result = (await _storage.PersistentStorage.LoadUsersAsync(_cancellationToken)).ToList();
+
+            var context = new HandlerContext { User = new UserEntity { IsAdministrator = true }, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+
+            foreach (var user in result)
+            {
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, PasswordHash = user.PasswordHash, HashAlgorithm = user.HashAlgorithm, IsAdministrator = user.IsAdministrator });
+            }
+
+            _logger.LogInformation($"{result.Count} users are loaded.");
+            return result;
         }
 
-        private async Task LoadQueues(IEnumerable<string> users, Dictionary<string, IEnumerable<QueueEntity>> allQueues)
+        private async Task LoadQueues(IEnumerable<UserEntity> users, Dictionary<string, IEnumerable<QueueEntity>> allQueues)
         {
             var queuesCount = 0;
 
             foreach (var user in users)
             {
-                var queues = (await _storage.PersistentStorage.LoadQueues(user, _cancellationToken)).ToList();
+                var queues = (await _storage.PersistentStorage.LoadQueuesAsync(user.Username, _cancellationToken)).ToList();
 
-                allQueues[user] = queues;
+                allQueues[user.Username] = queues;
 
                 var context = new HandlerContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
@@ -66,7 +76,7 @@ namespace NaiveMq.Service.Cogs
                 }
             }
 
-            _logger.LogInformation($"{queuesCount} queues are loaded.");
+            _logger.LogInformation($"{queuesCount} persistent queues are loaded.");
         }
 
         private async Task LoadMessagesAsync(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
@@ -75,11 +85,11 @@ namespace NaiveMq.Service.Cogs
 
             foreach (var pair in allQueues)
             {
-                var context = new HandlerContext { User = pair.Key, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                var context = new HandlerContext { User = new UserEntity { Username = pair.Key }, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
                 foreach (var queue in pair.Value)
                 {
-                    var messages = await _storage.PersistentStorage.LoadMessages(queue.User, queue.Name, _cancellationToken);
+                    var messages = await _storage.PersistentStorage.LoadMessagesAsync(queue.User, queue.Name, _cancellationToken);
 
                     foreach (var message in messages)
                     {
@@ -89,7 +99,7 @@ namespace NaiveMq.Service.Cogs
                 }
             }
 
-            _logger.LogInformation($"Loading of {messageCount} persistent messages is completed.");
+            _logger.LogInformation($"{messageCount} persistent messages are loaded.");
         }
     }
 }

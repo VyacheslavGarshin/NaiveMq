@@ -10,7 +10,9 @@ namespace NaiveMq.Service.Handlers
     {
         public async Task<Confirmation> ExecuteAsync(HandlerContext context, Message command)
         {
-            if (context.Storage.Queues.TryGetValue(command.Queue, out var queue))
+            var userQueues = context.Storage.GetUserQueues(context);
+
+            if (userQueues.TryGetValue(command.Queue, out var queue))
             {
                 var message = new MessageEntity { Id = command.Id.Value, Queue = command.Queue, Text = command.Text };
 
@@ -18,7 +20,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate && queue.Durable)
                 {
-                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User, command.Queue, message, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, command.Queue, message, context.CancellationToken);
                 }
 
                 queue.ReleaseDequeue();

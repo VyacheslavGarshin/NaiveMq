@@ -1,4 +1,6 @@
 ﻿using NaiveMq.Client;
+using NaiveMq.Client.Common;
+using NaiveMq.Client.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
 
@@ -8,9 +10,26 @@ namespace NaiveMq.Service.Cogs
     {
         public IPersistentStorage PersistentStorage { get; set; }
 
-        public readonly ConcurrentDictionary<string, Queue> Queues = new(StringComparer.InvariantCultureIgnoreCase);
+        public readonly ConcurrentDictionary<string, UserEntity> Users = new(StringComparer.InvariantCultureIgnoreCase);
+
+        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Queue>> UserQueues = new(StringComparer.InvariantCultureIgnoreCase);
 
         public readonly ConcurrentDictionary<NaiveMqClient, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
+
+        public ConcurrentDictionary<string, Queue> GetUserQueues(HandlerContext context)
+        {
+            if (context.User == null || string.IsNullOrWhiteSpace(context.User.Username))
+            {
+                throw new ServerException(ErrorCode.UserNotAuthenticated, ErrorCode.UserNotAuthenticated.GetDescription());
+            }
+
+            if (!UserQueues.TryGetValue(context.User.Username, out var userQueues))
+            {
+                throw new ServerException(ErrorCode.UserQueuesNotFound, string.Format(ErrorCode.UserQueuesNotFound.GetDescription(), context.User.Username));
+            }
+
+            return userQueues;
+        }
 
         public void DeleteSubscriptions(NaiveMqClient client)
         {
@@ -34,12 +53,17 @@ namespace NaiveMq.Service.Cogs
 
             Subscriptions.Clear();
 
-            foreach (var queue in Queues)
+            foreach (var userQueues in UserQueues)
             {
-                queue.Value.Dispose();
+                foreach (var queue in userQueues.Value)
+                {
+                    queue.Value.Dispose();
+                }
+
+                userQueues.Value.Clear();
             }
 
-            Queues.Clear();
+            UserQueues.Clear();
 
             if (PersistentStorage != null)
             {

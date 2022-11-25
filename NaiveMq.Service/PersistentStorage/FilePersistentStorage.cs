@@ -23,6 +23,23 @@ namespace NaiveMq.Service.PersistentStorage
             _basePath = string.IsNullOrEmpty(options.Value.Path) ? AppDomain.CurrentDomain.BaseDirectory : options.Value.Path;
         }
 
+        public async Task SaveUserAsync(UserEntity user, CancellationToken cancellationToken)
+        {
+            await WriteFileAsync(GetUserPath(user.Username), JsonConvert.SerializeObject(user), cancellationToken);
+        }
+
+        public async Task DeleteUserAsync(string user, CancellationToken cancellationToken)
+        {
+            await DeleteFileAsync(GetUserPath(user), cancellationToken);
+        }
+
+        public Task<IEnumerable<UserEntity>> LoadUsersAsync(CancellationToken cancellationToken)
+        {
+            var path = Path.GetDirectoryName(GetUserPath("tmp"));
+            var result = LoadEntitiesList<UserEntity>(path);
+            return Task.FromResult(result.AsEnumerable());
+        }
+
         public async Task SaveQueueAsync(string user, QueueEntity queue, CancellationToken cancellationToken)
         {
             await WriteFileAsync(GetQueuePath(user, queue.Name), JsonConvert.SerializeObject(queue), cancellationToken);
@@ -34,20 +51,10 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteDirectoryAsync(Path.GetDirectoryName(GetMessagePath(user, queue, Guid.Empty)), cancellationToken);
         }
 
-        public Task<IEnumerable<QueueEntity>> LoadQueues(string user, CancellationToken cancellationToken)
+        public Task<IEnumerable<QueueEntity>> LoadQueuesAsync(string user, CancellationToken cancellationToken)
         {
-            var result = new List<QueueEntity>();
             var path = Path.GetDirectoryName(GetQueuePath(user, "tmp"));
-
-            if (Directory.Exists(path))
-            {
-                foreach (var fileInfo in new DirectoryInfo(path).EnumerateFiles())
-                {
-                    var queue = JsonConvert.DeserializeObject<QueueEntity>(File.ReadAllText(fileInfo.FullName, Encoding.UTF8));
-                    result.Add(queue);
-                }
-            }
-
+            var result = LoadEntitiesList<QueueEntity>(path);
             return Task.FromResult(result.AsEnumerable());
         }
 
@@ -61,7 +68,7 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetMessagePath(user, queue, enqueueId), cancellationToken);
         }
 
-        public Task<IEnumerable<MessageEntity>> LoadMessages(string user, string queue, CancellationToken cancellationToken)
+        public Task<IEnumerable<MessageEntity>> LoadMessagesAsync(string user, string queue, CancellationToken cancellationToken)
         {
             var result = new List<MessageEntity>();
             var path = Path.GetDirectoryName(GetMessagePath(user, queue, Guid.Empty));
@@ -124,6 +131,22 @@ namespace NaiveMq.Service.PersistentStorage
 
                 await Task.Delay(_options.Value.DeleteRetryInterval);
             }
+        }
+
+        private static List<T> LoadEntitiesList<T>(string path)
+        {
+            var result = new List<T>();
+
+            if (Directory.Exists(path))
+            {
+                foreach (var fileInfo in new DirectoryInfo(path).EnumerateFiles())
+                {
+                    var queue = JsonConvert.DeserializeObject<T>(File.ReadAllText(fileInfo.FullName, Encoding.UTF8));
+                    result.Add(queue);
+                }
+            }
+
+            return result;
         }
 
         private static async Task WriteFileAsync(string path, string text, CancellationToken cancellationToken)

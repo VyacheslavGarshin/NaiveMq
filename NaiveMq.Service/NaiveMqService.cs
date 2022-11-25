@@ -13,6 +13,7 @@ using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
 using Microsoft.Extensions.DependencyInjection;
+using NaiveMq.Client.Entities;
 
 namespace NaiveMq.Service
 {
@@ -34,7 +35,7 @@ namespace NaiveMq.Service
 
         private readonly IServiceProvider _serviceProvider;
         
-        private readonly ConcurrentDictionary<int, NaiveMqClient> _clients = new();
+        private readonly ConcurrentDictionary<int, HandlerContext> _clientContexts = new();
 
         private readonly Dictionary<Type, Type> _commandHandlers = new();
 
@@ -95,12 +96,12 @@ namespace NaiveMq.Service
 
             base.Dispose();
 
-            foreach (var client in _clients.Values)
+            foreach (var client in _clientContexts.Values)
             {
-                client.Dispose();
+                client.Client.Dispose();
             }
 
-            _clients.Clear();
+            _clientContexts.Clear();
 
             _storage.Dispose();
             ReadCounter.Dispose();
@@ -156,7 +157,14 @@ namespace NaiveMq.Service
                 client.OnSendAsync += OnClientSendAsync;
 
                 client.Start();
-                _clients.TryAdd(client.Id, client);
+                _clientContexts.TryAdd(client.Id, new HandlerContext
+                {
+                    Storage = _storage,
+                    User = null,
+                    Client = client,
+                    CancellationToken = _stoppingToken,
+                    Logger = _logger
+                });
 
                 _logger.LogInformation($"Client added {client.Id}.");
             }
@@ -174,7 +182,7 @@ namespace NaiveMq.Service
         private void DeleteClient(NaiveMqClient client)
         {
             _storage.DeleteSubscriptions(client);
-            _clients.TryRemove(client.Id, out var _);
+            _clientContexts.TryRemove(client.Id, out var _);
             client.Dispose();
 
             _logger.LogInformation($"Client deleted {client.Id}.");
@@ -266,10 +274,10 @@ namespace NaiveMq.Service
 
                 try
                 {
-                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
-                    var context = new HandlerContext { Storage = _storage, User = sender.User, Client = sender, CancellationToken = _stoppingToken, Logger = _logger };
+                    _clientContexts.TryGetValue(sender.Id, out var clientContext);
 
-                    var task = (Task)method.Invoke(instance, new object[] { context, command });
+                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
+                    var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
 
                     await task.ConfigureAwait(false);
 

@@ -39,8 +39,6 @@ namespace NaiveMq.Client
 
         public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
 
-        public string User { get; protected set; } = "guest";
-
         public delegate Task OnReceiveErrorHandler(NaiveMqClient sender, Exception ex);
 
         public event OnReceiveErrorHandler OnReceiveErrorAsync;
