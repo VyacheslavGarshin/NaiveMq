@@ -65,17 +65,15 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 if (_options.Value.AddQueue)
                 {
-                    try
+                    if ((await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, Try = true }, _stoppingToken)).Queue != null)
                     {
-                        await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, }, _stoppingToken);
-
                         if (_options.Value.RewriteQueue)
                         {
                             await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
                             await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
                         }
                     }
-                    catch
+                    else
                     {
                         //
                         await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
@@ -97,7 +95,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         if (_options.Value.Subscribe)
                         {
-                            await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName }, _stoppingToken);
+                            await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ClientConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
                         }
 
                         using var exitSp = new SemaphoreSlim(1, 1);
@@ -131,7 +129,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                         {
                             try
                             {
-                                await c.SendAsync(new Enqueue
+                                await c.SendAsync(new Message
                                 {
                                     Queue = _options.Value.QueueName,
                                     Text = $"{message} {poc} says {j}.",

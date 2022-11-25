@@ -22,6 +22,8 @@ namespace NaiveMq.Service
 
         public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
 
+        public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(10);
+
         private CancellationToken _stoppingToken;
 
         private readonly TcpListener _listener;
@@ -82,9 +84,7 @@ namespace NaiveMq.Service
                 }
                 else
                 {
-                    Start();
-
-                    await Task.Delay(5000, _stoppingToken);
+                    await StartAsync();
                 }
             }
         }
@@ -107,23 +107,39 @@ namespace NaiveMq.Service
             WriteCounter.Dispose();
         }
 
-        private void Start()
+        private async Task StartAsync()
         {
-            try
-            {
-                _listener.Start();
+            var lastError = string.Empty;
 
-                _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
-            }
-            catch (Exception ex)
+            while (true)
             {
-                _logger.LogError(ex, $"Cannot start server listener.");
+                try
+                {
+                    _listener.Start();
+
+                    _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
+
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (lastError != ex.GetBaseException().Message)
+                    {
+                        _logger.LogError(ex, $"Cannot start server listener on port {_options.Value.Port}. Retry in {StartListenerErrorRetryInterval}.");
+
+                        lastError = ex.GetBaseException().Message;
+                    }
+                }
+
+                await Task.Delay(StartListenerErrorRetryInterval, _stoppingToken);
             }
         }
 
         private void Stop()
         {
             _listener.Stop();
+
+            _logger.LogWarning($"Server listenter stopped on port {_options.Value.Port}.");
         }
 
         private void AddClient(TcpClient tcpClient)
@@ -229,17 +245,15 @@ namespace NaiveMq.Service
             }
             catch (ConnectionException ex)
             {
-                _logger.LogWarning(ex, "Error sending response. Client threw connection exception.");
                 DeleteClient(client);
             }
             catch (ClientStoppedException)
             {
-                _logger.LogWarning($"Error sending response. Client is stopped.");
                 DeleteClient(client);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error on sending response.");
+                _logger.LogError(ex, "Unexpected error on sending response.");
             }
         }
 

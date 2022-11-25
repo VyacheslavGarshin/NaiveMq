@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
 using NaiveMq.Service.Handlers;
@@ -7,6 +8,10 @@ namespace NaiveMq.Service.Cogs
 {
     public class Subscription : IDisposable
     {
+        public bool _clientConfirm { get; set; }
+
+        public TimeSpan? _clientConfirmTimeout { get; set; }
+
         private readonly HandlerContext _context;
 
         private readonly Queue _queue;
@@ -16,11 +21,12 @@ namespace NaiveMq.Service.Cogs
         private CancellationTokenSource _cancellationTokenSource;
 
         private Task _sendTask;
-
-        public Subscription(HandlerContext context, Queue queue)
+        public Subscription(HandlerContext context, Queue queue, bool clientConfirm, TimeSpan? clientConfirmTimeout)
         {
             _context = context;
             _queue = queue;
+            _clientConfirm = clientConfirm;
+            _clientConfirmTimeout = clientConfirmTimeout;
         }
 
         public void Start()
@@ -64,34 +70,24 @@ namespace NaiveMq.Service.Cogs
 
                 await _queue.WaitDequeueAsync(cancellationToken);
 
-                MessageEntity messageEntity = null;
+                if (_queue.TryDequeue(out var messageEntity))
+                {
+                    if (_queue.Durable)
+                    {
+                        await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User, _queue.Name, messageEntity.Id, cancellationToken);
+                    }
 
-                try
-                {
-                    messageEntity = (await new DequeueHandler().ExecuteAsync(_context, new Dequeue { Queue = _queue.Name }))?.Message;
-                }
-                catch (ServerException ex)
-                {
-                    _context.Logger.LogWarning(ex, "Warning during getting message for subscription.");
-                }
-                catch (Exception ex)
-                {
-                    _context.Logger.LogError(ex, "Error during getting message for subscription.");
-                }
-
-                if (messageEntity != null)
-                {
                     // todo set confirm to message depends on subscription
 
                     try
                     {
-                        var message = new Message { Confirm = false, Queue = messageEntity.Queue, Text = messageEntity.Text };
+                        var message = new Message { Confirm = _clientConfirm, ConfirmTimeout = _clientConfirmTimeout, Queue = messageEntity.Queue, Text = messageEntity.Text };
 
                         await _context.Client.SendAsync(message, cancellationToken);
                     }
                     catch
                     {
-                        await new EnqueueHandler().ExecuteAsync(_context, new Enqueue { Id = messageEntity.Id, Queue = messageEntity.Queue, Text = messageEntity.Text });
+                        await new MessageHandler().ExecuteAsync(_context, new Message { Id = messageEntity.Id, Queue = messageEntity.Queue, Text = messageEntity.Text });
                     }
                 }
             }

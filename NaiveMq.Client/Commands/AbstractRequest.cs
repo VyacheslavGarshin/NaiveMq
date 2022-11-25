@@ -8,5 +8,7 @@ namespace NaiveMq.Client.Commands
         public Guid? Id { get; set; }
 
         public bool Confirm { get; set; } = true;
+
+        public TimeSpan? ConfirmTimeout { get; set; }
     }
 }

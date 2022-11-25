@@ -171,7 +171,7 @@ namespace NaiveMq.Client
 
                 if (request.Confirm)
                 {
-                    var entered = await responseItem.SemaphoreSlim.WaitAsync((int)Timeout.TotalMilliseconds, cancellationToken);
+                    var entered = await responseItem.SemaphoreSlim.WaitAsync((int)(request.ConfirmTimeout ?? Timeout).TotalMilliseconds, cancellationToken);
 
                     if (!entered)
                     {
@@ -349,7 +349,11 @@ namespace NaiveMq.Client
                     await _streamWriter.FlushAsync();
 
                     WriteCounter.Add();
-                    _logger.LogTrace($">{Id}:{text}");
+
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        _logger.LogTrace($">{Id}:{text}");
+                    }
 
                     if (OnSendAsync != null)
                     {
@@ -388,7 +392,11 @@ namespace NaiveMq.Client
                 }
 
                 ReadCounter.Add();
-                _logger.LogTrace($"<{Id}:{message}");
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace($"<{Id}:{message}");
+                }
 
                 if (message == null)
                 {

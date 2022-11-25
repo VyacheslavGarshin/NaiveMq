@@ -6,9 +6,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class EnqueueHandler : IHandler<Enqueue, Confirmation>
+    public class MessageHandler : IHandler<Message, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, Enqueue command)
+        public async Task<Confirmation> ExecuteAsync(HandlerContext context, Message command)
         {
             if (context.Storage.Queues.TryGetValue(command.Queue, out var queue))
             {

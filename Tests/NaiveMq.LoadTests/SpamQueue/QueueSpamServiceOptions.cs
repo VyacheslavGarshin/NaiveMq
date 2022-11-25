@@ -27,5 +27,7 @@
         public string QueueName { get; set; } = "test";
         
         public bool RewriteQueue { get; set; }
+        
+        public bool ConfirmSubscription { get; set; }
     }
 }

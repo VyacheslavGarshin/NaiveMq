@@ -36,7 +36,7 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error starting the service.");
+                _logger.LogError(ex, "Error loading persistent data.");
                 
                 throw;
             }
@@ -83,7 +83,7 @@ namespace NaiveMq.Service.Cogs
 
                     foreach (var message in messages)
                     {
-                        await new EnqueueHandler().ExecuteAsync(context, new Enqueue { Id = message.Id, Queue = message.Queue, Text = message.Text });
+                        await new MessageHandler().ExecuteAsync(context, new Message { Id = message.Id, Queue = message.Queue, Text = message.Text });
                         messageCount++;
                     }
                 }
