@@ -43,14 +43,14 @@ namespace NaiveMq.Client
         [Description("Queue '{0}' is empty.")]
         QueueIsEmpty = 107,
 
-        [Description("Cannot create durable queue. Persistence storage is not set.")]
-        CannotCreateDurableQueue = 108,
+        [Description("Cannot perform operation. Persistence storage is not set up.")]
+        PersistenceStorageNotSetUp = 108,
 
         [Description("User '{0}' already exists.")]
         UserAlreadyExists = 109,
 
-        [Description("You don't have access to add a new user.")]
-        AccessDeniedAddingUser = 110,
+        [Description("You must have admin rights to perform this operation.")]
+        AccessDeniedNotAdmin = 110,
 
         [Description("User '{0}' queues are not found.")]
         UserQueuesNotFound = 111,
@@ -60,5 +60,23 @@ namespace NaiveMq.Client
 
         [Description("Username or password is not correct.")]
         UserOrPasswordNotCorrect = 113,
+
+        [Description("User '{0}' is not found.")]
+        UserNotFound = 114,
+
+        [Description("Users cannot delete themselves.")]
+        UserCannotDeleteSelf = 115,
+
+        [Description("Users cannot unset administrator privilege on themselves.")]
+        UserCannotUnsetAdministratorSelf = 116,
+
+        [Description("Wrong password.")]
+        WrongPassword = 117,
+
+        [Description("New password cannot be the same as an old one.")]
+        NewPasswordCannotBeTheSame = 118,
+
+        [Description("Password сannot be empty.")]
+        PasswordCannotBeEmpty = 119,
     }
 }

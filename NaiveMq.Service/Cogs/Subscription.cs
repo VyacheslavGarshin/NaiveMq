@@ -77,8 +77,6 @@ namespace NaiveMq.Service.Cogs
                         await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
                     }
 
-                    // todo set confirm to message depends on subscription
-
                     try
                     {
                         var message = new Message { Confirm = _clientConfirm, ConfirmTimeout = _clientConfirmTimeout, Queue = messageEntity.Queue, Text = messageEntity.Text };

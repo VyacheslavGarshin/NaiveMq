@@ -1,11 +1,9 @@
 ﻿namespace NaiveMq.Client.Entities
 {
-    public class UserEntity
+    public class ProfileEntity
     {
         public string Username { get; set; }
 
         public bool IsAdministrator { get; set; }
-
-        public string PasswordHash { get; set; }
     }
 }

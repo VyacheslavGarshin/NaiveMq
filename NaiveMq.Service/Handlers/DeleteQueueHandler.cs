@@ -9,6 +9,8 @@ namespace NaiveMq.Service.Handlers
     {
         public async Task<Confirmation> ExecuteAsync(HandlerContext context, DeleteQueue command)
         {
+            context.CheckUser(context);
+
             var userQueues = context.Storage.GetUserQueues(context);
 
             if (userQueues.TryRemove(command.Name, out var queue))
@@ -17,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 {
                     if (queue.Durable)
                     {
-                        await context.Storage.PersistentStorage.DeleteQueueAsync(context.User.Username, queue.Name, context.CancellationToken);
+                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.User, queue.Name, context.CancellationToken);
                     }
                     
                     queue.Dispose();

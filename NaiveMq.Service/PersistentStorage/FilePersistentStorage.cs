@@ -25,7 +25,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         public async Task SaveUserAsync(UserEntity user, CancellationToken cancellationToken)
         {
-            await WriteFileAsync(GetUserPath(user.Username), JsonConvert.SerializeObject(user), cancellationToken);
+            await WriteFileAsync(GetUserPath(user.Username), JsonConvert.SerializeObject(user), true, cancellationToken);
         }
 
         public async Task DeleteUserAsync(string user, CancellationToken cancellationToken)
@@ -33,16 +33,16 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetUserPath(user), cancellationToken);
         }
 
-        public Task<IEnumerable<UserEntity>> LoadUsersAsync(CancellationToken cancellationToken)
+        public Task<List<UserEntity>> LoadUsersAsync(CancellationToken cancellationToken)
         {
             var path = Path.GetDirectoryName(GetUserPath("tmp"));
             var result = LoadEntitiesList<UserEntity>(path);
-            return Task.FromResult(result.AsEnumerable());
+            return Task.FromResult(result);
         }
 
         public async Task SaveQueueAsync(string user, QueueEntity queue, CancellationToken cancellationToken)
         {
-            await WriteFileAsync(GetQueuePath(user, queue.Name), JsonConvert.SerializeObject(queue), cancellationToken);
+            await WriteFileAsync(GetQueuePath(user, queue.Name), JsonConvert.SerializeObject(queue), true, cancellationToken);
         }
 
         public async Task DeleteQueueAsync(string user, string queue, CancellationToken cancellationToken)
@@ -51,16 +51,16 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteDirectoryAsync(Path.GetDirectoryName(GetMessagePath(user, queue, Guid.Empty)), cancellationToken);
         }
 
-        public Task<IEnumerable<QueueEntity>> LoadQueuesAsync(string user, CancellationToken cancellationToken)
+        public Task<List<QueueEntity>> LoadQueuesAsync(string user, CancellationToken cancellationToken)
         {
             var path = Path.GetDirectoryName(GetQueuePath(user, "tmp"));
             var result = LoadEntitiesList<QueueEntity>(path);
-            return Task.FromResult(result.AsEnumerable());
+            return Task.FromResult(result);
         }
 
         public async Task SaveMessageAsync(string user, string queue, MessageEntity message, CancellationToken cancellationToken)
         {
-            await WriteFileAsync(GetMessagePath(user, queue, message.Id), JsonConvert.SerializeObject(message), cancellationToken);
+            await WriteFileAsync(GetMessagePath(user, queue, message.Id), JsonConvert.SerializeObject(message), false, cancellationToken);
         }
 
         public async Task DeleteMessageAsync(string user, string queue, Guid enqueueId, CancellationToken cancellationToken)
@@ -68,7 +68,7 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetMessagePath(user, queue, enqueueId), cancellationToken);
         }
 
-        public Task<IEnumerable<MessageEntity>> LoadMessagesAsync(string user, string queue, CancellationToken cancellationToken)
+        public Task<List<MessageEntity>> LoadMessagesAsync(string user, string queue, CancellationToken cancellationToken)
         {
             var result = new List<MessageEntity>();
             var path = Path.GetDirectoryName(GetMessagePath(user, queue, Guid.Empty));
@@ -82,7 +82,7 @@ namespace NaiveMq.Service.PersistentStorage
                 }
             }
 
-            return Task.FromResult(result.AsEnumerable());
+            return Task.FromResult(result);
         }
 
         private async Task DeleteFileAsync(string path, CancellationToken cancellationToken)
@@ -149,9 +149,9 @@ namespace NaiveMq.Service.PersistentStorage
             return result;
         }
 
-        private static async Task WriteFileAsync(string path, string text, CancellationToken cancellationToken)
+        private static async Task WriteFileAsync(string path, string text, bool overwrite, CancellationToken cancellationToken)
         {
-            if (!File.Exists(path))
+            if (overwrite || !File.Exists(path))
             {
                 try
                 {

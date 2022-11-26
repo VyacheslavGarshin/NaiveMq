@@ -10,22 +10,18 @@ namespace NaiveMq.Client.Common
         /// 
         /// </summary>
         /// <param name="value"></param>
-        /// <param name="hashAlgorithm">Default is SHA256Managed.</param>
         /// <returns></returns>
-        public static string ComputeHash(this string value, HashAlgorithm hashAlgorithm = null)
+        public static string ComputeHash(this string value)
         {
             var data = Encoding.UTF8.GetBytes(value);
+
+            using var hashAlgorithm = new SHA256Managed();
             
-            HashAlgorithm createdHashAlgorithm = null;
-            
-            var hash = (hashAlgorithm ?? (createdHashAlgorithm  = new SHA256Managed())).ComputeHash(data);
+            var hash = hashAlgorithm.ComputeHash(data);
             
             var result = Convert.ToBase64String(hash);
-            
-            if (createdHashAlgorithm != null)
-            {
-                createdHashAlgorithm.Dispose();
-            }
+
+            hashAlgorithm.Dispose();
 
             return result;
         }

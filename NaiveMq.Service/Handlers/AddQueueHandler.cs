@@ -10,9 +10,11 @@ namespace NaiveMq.Service.Handlers
     {
         public async Task<Confirmation> ExecuteAsync(HandlerContext context, AddQueue command)
         {
+            context.CheckUser(context);
+
             var userQueues = context.Storage.GetUserQueues(context);
 
-            var queue = new Queue(command.Name, command.Durable);
+            var queue = new Queue(command.Name, context.User.Username, command.Durable);
 
             try
             {
@@ -23,15 +25,8 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate && command.Durable)
                 {
-                    if (context.Storage.PersistentStorage == null)
-                    {
-                        throw new ServerException(ErrorCode.CannotCreateDurableQueue, ErrorCode.CannotCreateDurableQueue.GetDescription());
-                    }
-                    else
-                    {
-                        var queueEnity = new QueueEntity { User = context.User.Username, Name = queue.Name, Durable = queue.Durable };
-                        await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);
-                    }
+                    var queueEnity = new QueueEntity { User = queue.User, Name = queue.Name, Durable = queue.Durable };
+                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);                    
                 }
             }
             catch

@@ -1,9 +1,7 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class Login : AbstractRequest<Confirmation>
+    public class SearchUsers : AbstractRequest<SearchUsersResponse>
     {
         public string Username { get; set; }
-
-        public string Password { get; set; }
     }
 }

@@ -65,24 +65,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 if (!string.IsNullOrEmpty(_options.Value.Username))
                 {
-                    await c.SendAsync(new Login { Username = _options.Value.Username, PasswordHash = _options.Value.Password.ComputeHash() }, _stoppingToken);
+                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                 }
 
-                if (_options.Value.AddQueue)
-                {
-                    if ((await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, Try = true }, _stoppingToken)).Queue != null)
-                    {
-                        if (_options.Value.RewriteQueue)
-                        {
-                            await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
-                            await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
-                        }
-                    }
-                    else
-                    {
-                        await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
-                    }
-                }
+                await CheckQueueCommands(c);
+
+                await CheckUserCommands(c);
 
                 var swt = Stopwatch.StartNew();
 
@@ -99,7 +87,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         if (!string.IsNullOrEmpty(_options.Value.Username))
                         {
-                            await c.SendAsync(new Login { Username = _options.Value.Username, PasswordHash = _options.Value.Password.ComputeHash() }, _stoppingToken);
+                            await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                         }
 
                         if (_options.Value.Subscribe)
@@ -174,6 +162,68 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 _logger.LogInformation($"Sent {max * taskCount} messages in {swt.Elapsed}.");
             });
+        }
+
+        private async Task CheckQueueCommands(NaiveMqClient c)
+        {
+            if (_options.Value.AddQueue)
+            {
+                if ((await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, Try = true }, _stoppingToken)).Queue != null)
+                {
+                    if (_options.Value.RewriteQueue)
+                    {
+                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                        await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
+                    }
+                }
+                else
+                {
+                    await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.SearchQueues))
+            {
+                await c.SendAsync(new SearchQueues { Name = _options.Value.SearchQueues }, _stoppingToken);
+            }
+        }
+
+        private async Task CheckUserCommands(NaiveMqClient c)
+        {
+            if (_options.Value.GetProfile)
+            {
+                await c.SendAsync(new GetProfile(), _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.ChangePassword))
+            {
+                await c.SendAsync(new ChangePassword { CurrentPassword = _options.Value.Password, NewPassword = _options.Value.ChangePassword }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.GetUser))
+            {
+                await c.SendAsync(new GetUser { Username = _options.Value.AddUser, Try = _options.Value.GetUserTry }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.SearchUsers))
+            {
+                await c.SendAsync(new SearchUsers { Username = _options.Value.SearchUsers }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.AddUser))
+            {
+                await c.SendAsync(new AddUser { Username = _options.Value.AddUser, IsAdministrator = true, Password = "guest" }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.UpdateUser))
+            {
+                await c.SendAsync(new UpdateUser { Username = _options.Value.UpdateUser, IsAdministrator = true }, _stoppingToken);
+            }
+
+            if (_options.Value.DeleteUser)
+            {
+                await c.SendAsync(new DeleteUser { Username = _options.Value.AddUser }, _stoppingToken);
+            }
         }
     }
 }

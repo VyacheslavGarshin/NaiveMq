@@ -10,12 +10,17 @@ namespace NaiveMq.Service.Handlers
     {
         public async Task<Confirmation> ExecuteAsync(HandlerContext context, AddUser command)
         {
-            if (!context.User.IsAdministrator)
+            if (!context.Reinstate)
             {
-                throw new ServerException(ErrorCode.AccessDeniedAddingUser, ErrorCode.AccessDeniedAddingUser.GetDescription());
+                context.CheckAdmin(context);
             }
 
-            var userEntity = new UserEntity { Username = command.Username, PasswordHash = command.PasswordHash, HashAlgorithm = command.HashAlgorithm, IsAdministrator = command.IsAdministrator };
+            var userEntity = new UserEntity
+            {
+                Username = command.Username,
+                PasswordHash = context.Reinstate ? command.Password : command.Password.ComputeHash(),
+                IsAdministrator = command.IsAdministrator
+            };
 
             try
             {
@@ -24,19 +29,12 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserAlreadyExists, string.Format(ErrorCode.UserAlreadyExists.GetDescription(), command.Username));
                 }
 
-                context.Storage.UserQueues.TryAdd(command.Username, new());
-
                 if (!context.Reinstate)
                 {
-                    if (context.Storage.PersistentStorage == null)
-                    {
-                        throw new ServerException(ErrorCode.CannotCreateDurableQueue, ErrorCode.CannotCreateDurableQueue.GetDescription());
-                    }
-                    else
-                    {
-                        await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.CancellationToken);
-                    }
+                    await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.CancellationToken);
                 }
+
+                context.Storage.UserQueues.TryAdd(command.Username, new());
             }
             catch
             {

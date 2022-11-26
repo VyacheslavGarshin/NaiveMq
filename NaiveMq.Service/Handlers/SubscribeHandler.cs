@@ -10,6 +10,8 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<Confirmation> ExecuteAsync(HandlerContext context, Subscribe command)
         {
+            context.CheckUser(context);
+
             var userQueues = context.Storage.GetUserQueues(context);
 
             if (userQueues.TryGetValue(command.Queue, out var queue))

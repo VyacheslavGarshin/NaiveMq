@@ -33,5 +33,23 @@
         public bool RewriteQueue { get; set; }
         
         public bool ConfirmSubscription { get; set; }
+
+        public string GetUser { get; set; }
+
+        public bool GetUserTry { get; set; }
+
+        public string AddUser { get; set; }
+        
+        public bool DeleteUser { get; set; }
+
+        public string UpdateUser { get; set; }
+
+        public string SearchUsers { get; set; }
+
+        public string SearchQueues { get; set; }
+
+        public string ChangePassword { get; set; }
+
+        public bool GetProfile { get; set; }
     }
 }

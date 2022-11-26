@@ -10,6 +10,8 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<GetQueueResponse> ExecuteAsync(HandlerContext context, GetQueue command)
         {
+            context.CheckUser(context);
+
             var userQueues = context.Storage.GetUserQueues(context);
 
             if (userQueues.TryGetValue(command.Name, out var queue) || command.Try)
@@ -19,6 +21,7 @@ namespace NaiveMq.Service.Handlers
                     Queue = queue != null
                         ? new QueueEntity
                         {
+                            User = queue.User,
                             Name = queue.Name,
                             Durable = queue.Durable
                         }

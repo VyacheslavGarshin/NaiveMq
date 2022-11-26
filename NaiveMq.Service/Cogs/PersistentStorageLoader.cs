@@ -28,9 +28,9 @@ namespace NaiveMq.Service.Cogs
                 {
                     _logger.LogInformation("Starting to load users, persistent queues and messages.");
 
-                    var users = await LoadUsers();
+                    await LoadUsers();
                     var allQueues = new Dictionary<string, IEnumerable<QueueEntity>>();
-                    await LoadQueues(users, allQueues);
+                    await LoadQueues(allQueues);
                     await LoadMessagesAsync(allQueues);
                 }
             }
@@ -42,26 +42,25 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task<IEnumerable<UserEntity>> LoadUsers()
+        private async Task LoadUsers()
         {
             var result = (await _storage.PersistentStorage.LoadUsersAsync(_cancellationToken)).ToList();
 
-            var context = new HandlerContext { User = new UserEntity { IsAdministrator = true }, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+            var context = new HandlerContext { Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
             foreach (var user in result)
             {
-                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, PasswordHash = user.PasswordHash, HashAlgorithm = user.HashAlgorithm, IsAdministrator = user.IsAdministrator });
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, IsAdministrator = user.IsAdministrator });
             }
 
             _logger.LogInformation($"{result.Count} users are loaded.");
-            return result;
         }
 
-        private async Task LoadQueues(IEnumerable<UserEntity> users, Dictionary<string, IEnumerable<QueueEntity>> allQueues)
+        private async Task LoadQueues(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
         {
             var queuesCount = 0;
 
-            foreach (var user in users)
+            foreach (var user in _storage.Users.Values)
             {
                 var queues = (await _storage.PersistentStorage.LoadQueuesAsync(user.Username, _cancellationToken)).ToList();
 

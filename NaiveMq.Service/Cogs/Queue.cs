@@ -5,6 +5,8 @@ namespace NaiveMq.Service.Cogs
 {
     public class Queue : IDisposable
     {
+        public string User { get; set; }
+
         public string Name { get; set; }
 
         public bool Durable { get; set; }
@@ -13,9 +15,10 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
-        public Queue(string name, bool durable)
+        public Queue(string name, string user, bool durable)
         {
             Name = name;
+            User = user;
             Durable = durable;
         }
 

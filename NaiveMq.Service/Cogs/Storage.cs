@@ -18,11 +18,6 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<string, Queue> GetUserQueues(HandlerContext context)
         {
-            if (context.User == null || string.IsNullOrWhiteSpace(context.User.Username))
-            {
-                throw new ServerException(ErrorCode.UserNotAuthenticated, ErrorCode.UserNotAuthenticated.GetDescription());
-            }
-
             if (!UserQueues.TryGetValue(context.User.Username, out var userQueues))
             {
                 throw new ServerException(ErrorCode.UserQueuesNotFound, string.Format(ErrorCode.UserQueuesNotFound.GetDescription(), context.User.Username));
