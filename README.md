@@ -1,5 +1,5 @@
 # NaiveMq
-.NET libraries for creating a message queue server.
+.NET libraries for creating a message queue server. And the default server project.
 
 Implemented so far:
 + Simple custom client-server messaging protocol
