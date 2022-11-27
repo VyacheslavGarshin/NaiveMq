@@ -2,6 +2,8 @@
 {
     public class RabbitSpamServiceOptions
     {
+        public bool IsEnabled { get; set; }
+
         public bool Durable { get; set; }
 
         public int ThreadsCount { get; set; } = 1;

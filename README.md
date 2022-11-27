@@ -13,8 +13,8 @@ Plans:
 
 # Performance
 In comparrision to RabbitMQ:
-+ In memory queue, 10 clients, 100b message, 1.5 times faster
-+ Durable queue, 10 clients, 100b message, ... stay tuned 
++ In memory queue, 10 clients, 100b message, 2 times faster
++ Durable queue, 10 clients, 100b message, 2 times faster
 
 # Requirements
 + .NET Standart for Client and Service

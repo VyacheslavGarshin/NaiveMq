@@ -11,13 +11,11 @@ namespace NaiveMq.LoadTests.SpamQueue
         private ILogger<RabbitSpamService> _logger;
         private IOptions<RabbitSpamServiceOptions> _options;
         private IOptions<RabbitOptions> _rabbitOptions;
-        private HttpClient _httpClient;
 
-        public RabbitSpamService(ILogger<RabbitSpamService> logger, IOptions<RabbitSpamServiceOptions> options, IOptions<RabbitOptions> rabbitOptions, HttpClient httpClient)
+        public RabbitSpamService(ILogger<RabbitSpamService> logger, IOptions<RabbitSpamServiceOptions> options, IOptions<RabbitOptions> rabbitOptions)
         {
             _logger = logger;
             _options = options;
-            _httpClient = httpClient;
             _rabbitOptions = rabbitOptions;
         }
 
@@ -25,7 +23,10 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             _stoppingToken = stoppingToken;
 
-            await WebSpam();
+            if (_options.Value.IsEnabled)
+            {
+                await WebSpam();
+            }
 
             while (!stoppingToken.IsCancellationRequested)
             {

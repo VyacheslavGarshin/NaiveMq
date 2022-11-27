@@ -26,20 +26,23 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             _stoppingToken = stoppingToken;
 
-            await Task.Delay(1000);
-
-            using var timer = new Timer((s) =>
+            if (_options.Value.IsEnabled)
             {
-                _logger.LogInformation($"{DateTime.Now:O};{_queueService.ReadCounter.LastResult};{_queueService.WriteCounter.LastResult};{_queueService.ReadCounter.Total};{_queueService.WriteCounter.Total}");
-            }, null, 0, 1000);
+                await Task.Delay(1000);
 
-            for (var i = 0; i < _options.Value.Runs; i++)
-                await QueueSpam();
+                using var timer = new Timer((s) =>
+                {
+                    _logger.LogInformation($"{DateTime.Now:O};{_queueService.ReadCounter.LastResult};{_queueService.WriteCounter.LastResult};{_queueService.ReadCounter.Total};{_queueService.WriteCounter.Total}");
+                }, null, 0, 1000);
 
-            //while (!stoppingToken.IsCancellationRequested)
-            //{
-            //    await Task.Delay(1000, _stoppingToken);
-            //}
+                for (var i = 0; i < _options.Value.Runs; i++)
+                    await QueueSpam();
+            }
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(1000, _stoppingToken);
+            }
         }
 
         private Task OnMessageReceived(NaiveMqClient sender, ICommand args)
