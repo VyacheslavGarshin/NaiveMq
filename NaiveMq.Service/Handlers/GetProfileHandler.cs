@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetProfileHandler : IHandler<GetProfile, GetProfileResponse>
     {
-        public Task<GetProfileResponse> ExecuteAsync(HandlerContext context, GetProfile command)
+        public Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command)
         {
             context.CheckUser(context);
 

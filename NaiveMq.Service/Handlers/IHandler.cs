@@ -18,6 +18,6 @@ namespace NaiveMq.Service.Handlers
         /// <param name="context"></param>
         /// <param name="command"></param>
         /// <returns>If returns null and confirmation requested then Confirmation.Success will be returned. ResponseId will be set.</returns>
-        Task<TResponse> ExecuteAsync(HandlerContext context, TRequest command);
+        Task<TResponse> ExecuteAsync(ClientContext context, TRequest command);
     }
 }

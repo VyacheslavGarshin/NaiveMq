@@ -5,7 +5,7 @@ using NaiveMq.Client.Entities;
 
 namespace NaiveMq.Service.Cogs
 {
-    public class HandlerContext
+    public class ClientContext
     {
         public Storage Storage { get; set; }
 
@@ -22,17 +22,17 @@ namespace NaiveMq.Service.Cogs
         /// </summary>
         public bool Reinstate { get; set; }
 
-        public void CheckUser(HandlerContext context)
+        public void CheckUser(ClientContext context)
         {
             CheckUser(context, false);
         }
 
-        public void CheckAdmin(HandlerContext context)
+        public void CheckAdmin(ClientContext context)
         {
             CheckUser(context, true);
         }
 
-        private void CheckUser(HandlerContext context, bool checkAdmin)
+        private void CheckUser(ClientContext context, bool checkAdmin)
         {
             if (context.User == null || string.IsNullOrWhiteSpace(context.User.Username))
             {

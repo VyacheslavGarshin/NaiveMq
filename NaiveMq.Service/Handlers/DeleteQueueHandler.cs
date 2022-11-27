@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class DeleteQueueHandler : IHandler<DeleteQueue, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, DeleteQueue command)
+        public async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command)
         {
             context.CheckUser(context);
 

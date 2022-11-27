@@ -1,8 +1,10 @@
-﻿using NaiveMq.Client;
+﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -16,7 +18,20 @@ namespace NaiveMq.Service.Cogs
 
         public readonly ConcurrentDictionary<NaiveMqClient, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
 
-        public ConcurrentDictionary<string, Queue> GetUserQueues(HandlerContext context)
+        private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
+
+        private readonly CancellationToken _stoppingToken;
+
+        private readonly ILogger _logger;
+
+        public Storage(IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
+        {
+            _logger = logger;
+            _stoppingToken = stoppingToken;
+            PersistentStorage = persistentStorage;
+        }
+
+        public ConcurrentDictionary<string, Queue> GetUserQueues(ClientContext context)
         {
             if (!UserQueues.TryGetValue(context.User.Username, out var userQueues))
             {
@@ -60,11 +75,47 @@ namespace NaiveMq.Service.Cogs
 
             UserQueues.Clear();
 
+            foreach (var context in _clientContexts.Values)
+            {
+                context.Client.Dispose();
+            }
+
+            _clientContexts.Clear();
+
             if (PersistentStorage != null)
             {
                 // we don't manage lifecycle of persistence storage
                 PersistentStorage = null;
             }
+        }
+
+        public bool TryGetClient(int id, out ClientContext clientContext)
+        {
+            return _clientContexts.TryGetValue(id, out clientContext);
+        }
+
+        public void AddClient(NaiveMqClient client)
+        {
+            _clientContexts.TryAdd(client.Id, new ClientContext
+            {
+                Storage = this,
+                User = null,
+                Client = client,
+                CancellationToken = _stoppingToken,
+                Logger = _logger
+            });
+
+
+            _logger.LogInformation($"Client added {client.Id}.");
+        }
+
+        public void DeleteClient(NaiveMqClient client)
+        {
+            DeleteSubscriptions(client);
+            _clientContexts.TryRemove(client.Id, out var _);
+            client.Dispose();
+
+            _logger.LogInformation($"Client deleted {client.Id}.");
         }
     }
 }

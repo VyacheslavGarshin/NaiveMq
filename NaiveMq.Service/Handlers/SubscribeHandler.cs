@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class SubscribeHandler : IHandler<Subscribe, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(HandlerContext context, Subscribe command)
+        public Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command)
         {
             context.CheckUser(context);
 

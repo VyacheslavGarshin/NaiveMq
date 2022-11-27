@@ -8,9 +8,9 @@ namespace NaiveMq.Service.Handlers
 {
     public class AddUserHandler : IHandler<AddUser, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, AddUser command)
+        public async Task<Confirmation> ExecuteAsync(ClientContext context, AddUser command)
         {
-            if (!context.Reinstate)
+            if (!context.Reinstate && context.Storage.Users.Any())
             {
                 context.CheckAdmin(context);
             }

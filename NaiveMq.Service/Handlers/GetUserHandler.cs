@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetUserHandler : IHandler<GetUser, GetUserResponse>
     {
-        public Task<GetUserResponse> ExecuteAsync(HandlerContext context, GetUser command)
+        public Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command)
         {
             context.CheckAdmin(context);
             

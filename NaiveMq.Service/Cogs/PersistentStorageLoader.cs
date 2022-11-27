@@ -46,14 +46,27 @@ namespace NaiveMq.Service.Cogs
         {
             var result = (await _storage.PersistentStorage.LoadUsersAsync(_cancellationToken)).ToList();
 
-            var context = new HandlerContext { Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
-            foreach (var user in result)
+            if (result.Any())
             {
-                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, IsAdministrator = user.IsAdministrator });
-            }
+                foreach (var user in result)
+                {
+                    await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, IsAdministrator = user.IsAdministrator });
+                }
 
-            _logger.LogInformation($"{result.Count} users are loaded.");
+                _logger.LogInformation($"{result.Count} users are loaded.");
+            }
+            else
+            {
+                _logger.LogInformation($"There are no users in the persistent storage. Adding default user.");
+
+                context.Reinstate = false;
+
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", IsAdministrator = true });
+
+                _logger.LogInformation($"Added default 'guest' user with the same password.");
+            }
         }
 
         private async Task LoadQueues(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
@@ -66,7 +79,7 @@ namespace NaiveMq.Service.Cogs
 
                 allQueues[user.Username] = queues;
 
-                var context = new HandlerContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
                 foreach (var queue in queues)
                 {
@@ -84,7 +97,7 @@ namespace NaiveMq.Service.Cogs
 
             foreach (var pair in allQueues)
             {
-                var context = new HandlerContext { User = new UserEntity { Username = pair.Key }, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                var context = new ClientContext { User = new UserEntity { Username = pair.Key }, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
                 foreach (var queue in pair.Value)
                 {

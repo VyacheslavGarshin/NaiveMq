@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Cogs
 
         public TimeSpan? _clientConfirmTimeout { get; set; }
 
-        private readonly HandlerContext _context;
+        private readonly ClientContext _context;
 
         private readonly Queue _queue;
 
@@ -21,7 +21,7 @@ namespace NaiveMq.Service.Cogs
         private CancellationTokenSource _cancellationTokenSource;
 
         private Task _sendTask;
-        public Subscription(HandlerContext context, Queue queue, bool clientConfirm, TimeSpan? clientConfirmTimeout)
+        public Subscription(ClientContext context, Queue queue, bool clientConfirm, TimeSpan? clientConfirmTimeout)
         {
             _context = context;
             _queue = queue;

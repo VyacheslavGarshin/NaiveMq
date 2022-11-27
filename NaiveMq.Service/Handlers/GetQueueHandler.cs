@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetQueueHandler : IHandler<GetQueue, GetQueueResponse>
     {
-        public Task<GetQueueResponse> ExecuteAsync(HandlerContext context, GetQueue command)
+        public Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command)
         {
             context.CheckUser(context);
 

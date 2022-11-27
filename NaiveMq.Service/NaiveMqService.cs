@@ -27,35 +27,32 @@ namespace NaiveMq.Service
 
         private CancellationToken _stoppingToken;
 
-        private readonly TcpListener _listener;
+        private TcpListener _listener;
+
+        private Storage _storage;
 
         private readonly ILogger<NaiveMqService> _logger;
 
         private readonly IOptions<NaiveMqServiceOptions> _options;
 
         private readonly IServiceProvider _serviceProvider;
-        
-        private readonly ConcurrentDictionary<int, HandlerContext> _clientContexts = new();
+
+        private readonly IPersistentStorage _persistentStorage;
 
         private readonly Dictionary<Type, Type> _commandHandlers = new();
-
-        private readonly Storage _storage = new();
 
         public NaiveMqService(
             ILogger<NaiveMqService> logger,
             IOptions<NaiveMqServiceOptions> options,
             IServiceProvider serviceProvider,
-            IPersistentStorage storage = null)
+            IPersistentStorage persistentStorage)
         {
             _logger = logger;
             _options = options;
             _serviceProvider = serviceProvider;
+            _persistentStorage = persistentStorage;
 
             InitCommands();
-
-            _storage.PersistentStorage = storage;
-
-            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
         }
 
         private void InitCommands()
@@ -74,6 +71,10 @@ namespace NaiveMq.Service
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _stoppingToken = stoppingToken;
+
+            _storage = new Storage(_persistentStorage, _logger, _stoppingToken);
+
+            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
 
             await (new PersistentStorageLoader(_storage, _logger, _stoppingToken)).Load();
 
@@ -95,13 +96,6 @@ namespace NaiveMq.Service
             Stop();
 
             base.Dispose();
-
-            foreach (var client in _clientContexts.Values)
-            {
-                client.Client.Dispose();
-            }
-
-            _clientContexts.Clear();
 
             _storage.Dispose();
             ReadCounter.Dispose();
@@ -157,16 +151,8 @@ namespace NaiveMq.Service
                 client.OnSendAsync += OnClientSendAsync;
 
                 client.Start();
-                _clientContexts.TryAdd(client.Id, new HandlerContext
-                {
-                    Storage = _storage,
-                    User = null,
-                    Client = client,
-                    CancellationToken = _stoppingToken,
-                    Logger = _logger
-                });
-
-                _logger.LogInformation($"Client added {client.Id}.");
+                
+                _storage.AddClient(client);
             }
             catch (Exception ex)
             {
@@ -174,19 +160,10 @@ namespace NaiveMq.Service
 
                 if (client != null)
                 {
-                    DeleteClient(client);
+                    _storage.DeleteClient(client);
                 }
             }
-        }
-
-        private void DeleteClient(NaiveMqClient client)
-        {
-            _storage.DeleteSubscriptions(client);
-            _clientContexts.TryRemove(client.Id, out var _);
-            client.Dispose();
-
-            _logger.LogInformation($"Client deleted {client.Id}.");
-        }
+        }      
 
         private Task OnClientSendAsync(NaiveMqClient sender, string message)
         {
@@ -207,7 +184,7 @@ namespace NaiveMq.Service
 
         private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
         {
-            DeleteClient(sender);
+            _storage.DeleteClient(sender);
             return Task.CompletedTask;
         }
 
@@ -251,13 +228,13 @@ namespace NaiveMq.Service
             {
                 await client.SendAsync(response, _stoppingToken);
             }
-            catch (ConnectionException ex)
+            catch (ConnectionException)
             {
-                DeleteClient(client);
+                _storage.DeleteClient(client);
             }
             catch (ClientStoppedException)
             {
-                DeleteClient(client);
+                _storage.DeleteClient(client);
             }
             catch (Exception ex)
             {
@@ -274,7 +251,7 @@ namespace NaiveMq.Service
 
                 try
                 {
-                    _clientContexts.TryGetValue(sender.Id, out var clientContext);
+                    _storage.TryGetClient(sender.Id, out var clientContext);
 
                     instance = (IDisposable)Activator.CreateInstance(commandHandler);
                     var task = (Task)method.Invoke(instance, new object[] { clientContext, command });

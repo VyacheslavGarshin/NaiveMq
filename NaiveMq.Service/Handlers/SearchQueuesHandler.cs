@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class SearchQueuesHandler : IHandler<SearchQueues, SearchQueuesResponse>
     {
-        public Task<SearchQueuesResponse> ExecuteAsync(HandlerContext context, SearchQueues command)
+        public Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command)
         {
             context.CheckUser(context);
 

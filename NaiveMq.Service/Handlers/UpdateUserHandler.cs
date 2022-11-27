@@ -10,7 +10,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class UpdateUserHandler : IHandler<UpdateUser, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, UpdateUser command)
+        public async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command)
         {
             context.CheckAdmin(context);
 

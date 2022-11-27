@@ -9,7 +9,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class ChangePasswordHandler : IHandler<ChangePassword, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, ChangePassword command)
+        public async Task<Confirmation> ExecuteAsync(ClientContext context, ChangePassword command)
         {
             context.CheckUser(context);
 

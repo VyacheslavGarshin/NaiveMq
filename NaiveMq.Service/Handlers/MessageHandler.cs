@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class MessageHandler : IHandler<Message, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(HandlerContext context, Message command)
+        public async Task<Confirmation> ExecuteAsync(ClientContext context, Message command)
         {
             context.CheckUser(context);
 

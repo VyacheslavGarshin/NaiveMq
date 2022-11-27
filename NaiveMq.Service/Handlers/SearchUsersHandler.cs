@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class SearchUsersHandler : IHandler<SearchUsers, SearchUsersResponse>
     {
-        public Task<SearchUsersResponse> ExecuteAsync(HandlerContext context, SearchUsers command)
+        public Task<SearchUsersResponse> ExecuteAsync(ClientContext context, SearchUsers command)
         {
             context.CheckAdmin(context);
 

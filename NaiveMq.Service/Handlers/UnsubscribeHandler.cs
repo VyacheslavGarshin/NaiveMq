@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class UnsubscribeHandler : IHandler<Unsubscribe, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(HandlerContext context, Unsubscribe command)
+        public Task<Confirmation> ExecuteAsync(ClientContext context, Unsubscribe command)
         {
             context.CheckUser(context);
 
