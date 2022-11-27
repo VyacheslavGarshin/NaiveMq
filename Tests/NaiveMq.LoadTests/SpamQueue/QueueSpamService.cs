@@ -30,7 +30,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             using var timer = new Timer((s) =>
             {
-                _logger.LogInformation($"Read/Write {DateTime.Now:O}: speed p/s {_queueService.ReadCounter.LastResult}/{_queueService.WriteCounter.LastResult}, totals: {_queueService.ReadCounter.Total}/{_queueService.WriteCounter.Total}");
+                _logger.LogInformation($"{DateTime.Now:O};{_queueService.ReadCounter.LastResult};{_queueService.WriteCounter.LastResult};{_queueService.ReadCounter.Total};{_queueService.WriteCounter.Total}");
             }, null, 0, 1000);
 
             for (var i = 0; i < _options.Value.Runs; i++)
