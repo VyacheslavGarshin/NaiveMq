@@ -99,5 +99,8 @@ namespace NaiveMq.Client
 
         [Description("Binding of exchange '{0}' and queue '{1}' is not found.")]
         BindingNotFound = 126,
+
+        [Description("Cannot subscribe to exchange.")]
+        CannotSubscribeToExchange = 127,
     }
 }

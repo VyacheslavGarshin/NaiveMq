@@ -16,16 +16,23 @@ namespace NaiveMq.Service.Handlers
 
             if (userQueues.TryGetValue(command.Queue, out var queue))
             {
-                var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client, (key) => new ConcurrentDictionary<Queue, Subscription>());
-                var subscription = new Subscription(context, queue, command.ClientConfirm, command.ClientConfirmTimeout);
-
-                if (subscriptions.TryAdd(queue, subscription))
+                if (!queue.IsExchange)
                 {
-                    subscription.Start();
+                    var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client, (key) => new ConcurrentDictionary<Queue, Subscription>());
+                    var subscription = new Subscription(context, queue, command.ClientConfirm, command.ClientConfirmTimeout);
+
+                    if (subscriptions.TryAdd(queue, subscription))
+                    {
+                        subscription.Start();
+                    }
+                    else
+                    {
+                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, string.Format(ErrorCode.SubscriptionAlreadyExists.GetDescription(), queue.Name));
+                    }
                 }
                 else
                 {
-                    throw new ServerException(ErrorCode.SubscriptionAlreadyExists, string.Format(ErrorCode.SubscriptionAlreadyExists.GetDescription(), queue.Name));
+                    throw new ServerException(ErrorCode.CannotSubscribeToExchange, ErrorCode.CannotSubscribeToExchange.GetDescription());
                 }
             }
             else
