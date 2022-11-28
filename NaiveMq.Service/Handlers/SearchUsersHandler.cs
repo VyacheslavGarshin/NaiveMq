@@ -1,8 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
-using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -18,7 +16,7 @@ namespace NaiveMq.Service.Handlers
                     new UserEntity
                     {
                         Username = x.Username,
-                        IsAdministrator = x.IsAdministrator
+                        Administrator = x.Administrator
                     }).OrderBy(x => x.Username).ToList()
             });
         }

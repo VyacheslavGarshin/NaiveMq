@@ -11,15 +11,18 @@ namespace NaiveMq.Service.Cogs
 
         public bool Durable { get; set; }
 
+        public bool IsExchange { get; set; }
+
         private SemaphoreSlim _dequeueSemaphore { get; set; } = new SemaphoreSlim(0, int.MaxValue);
 
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
-        public Queue(string name, string user, bool durable)
+        public Queue(string name, string user, bool durable, bool isExchange)
         {
             Name = name;
             User = user;
             Durable = durable;
+            IsExchange = isExchange;
         }
 
         public bool TryDequeue(out MessageEntity enqueue)

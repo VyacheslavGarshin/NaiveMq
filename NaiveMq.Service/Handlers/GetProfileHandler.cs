@@ -1,8 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
-using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -17,7 +15,7 @@ namespace NaiveMq.Service.Handlers
                 Profile = new ProfileEntity
                 {
                     Username = context.User.Username,
-                    IsAdministrator = context.User.IsAdministrator
+                    Administrator = context.User.Administrator
                 }
             });
         }

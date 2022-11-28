@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Handlers
 
             var userQueues = context.Storage.GetUserQueues(context);
 
-            var queue = new Queue(command.Name, context.User.Username, command.Durable);
+            var queue = new Queue(command.Name, context.User.Username, command.Durable, command.IsExchange);
 
             try
             {
@@ -25,9 +25,13 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate && command.Durable)
                 {
-                    var queueEnity = new QueueEntity { User = queue.User, Name = queue.Name, Durable = queue.Durable };
-                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);                    
+                    var queueEnity = new QueueEntity { User = queue.User, Name = queue.Name, Durable = queue.Durable, IsExchange = queue.IsExchange };
+                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);
                 }
+            }
+            catch (ServerException)
+            {
+                throw;
             }
             catch
             {

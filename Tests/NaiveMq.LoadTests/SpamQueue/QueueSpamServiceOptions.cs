@@ -53,5 +53,15 @@
         public string ChangePassword { get; set; }
 
         public bool GetProfile { get; set; }
+
+        public string Exchange { get; set; }
+
+        public string ExchangeTo { get; set; }        
+
+        public bool AddExchange { get; set; }
+
+        public string AddBinding { get; set; }
+
+        public bool DeleteBinding { get; set; }        
     }
 }

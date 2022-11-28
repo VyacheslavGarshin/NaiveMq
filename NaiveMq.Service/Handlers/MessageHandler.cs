@@ -16,13 +16,13 @@ namespace NaiveMq.Service.Handlers
 
             if (userQueues.TryGetValue(command.Queue, out var queue))
             {
-                var message = new MessageEntity { Id = command.Id.Value, Queue = command.Queue, Text = command.Text };
+                var message = new MessageEntity { Id = command.Id.Value, Queue = command.Queue, Durable = command.Durable, Text = command.Text };
 
                 queue.Enqueue(message);
 
-                if (!context.Reinstate && queue.Durable)
+                if (!context.Reinstate && message.Durable)
                 {
-                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, command.Queue, message, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, message.Queue, message, context.CancellationToken);
                 }
 
                 queue.ReleaseDequeue();

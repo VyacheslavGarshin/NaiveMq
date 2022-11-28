@@ -4,7 +4,6 @@ using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
-using System.Reflection;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -15,6 +14,12 @@ namespace NaiveMq.Service.Cogs
         public readonly ConcurrentDictionary<string, UserEntity> Users = new(StringComparer.InvariantCultureIgnoreCase);
 
         public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Queue>> UserQueues = new(StringComparer.InvariantCultureIgnoreCase);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Keys are: user, from queue, to queue.</remarks>
+        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>>> UserBindings = new(StringComparer.InvariantCultureIgnoreCase);
 
         public readonly ConcurrentDictionary<NaiveMqClient, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
 
@@ -39,6 +44,16 @@ namespace NaiveMq.Service.Cogs
             }
 
             return userQueues;
+        }
+
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>> GetUserBindings(ClientContext context)
+        {
+            if (!UserBindings.TryGetValue(context.User.Username, out var userBindings))
+            {
+                throw new ServerException(ErrorCode.UserBindingsNotFound, string.Format(ErrorCode.UserBindingsNotFound.GetDescription(), context.User.Username));
+            }
+
+            return userBindings;
         }
 
         public void DeleteSubscriptions(NaiveMqClient client)

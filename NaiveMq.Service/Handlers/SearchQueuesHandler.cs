@@ -10,7 +10,7 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = context.User.IsAdministrator 
+            var userQueues = context.User.Administrator 
                 ? context.Storage.UserQueues.SelectMany(x => x.Value.Values.Where(y => string.IsNullOrEmpty(command.User) || y.User.Contains(command.User, StringComparison.InvariantCultureIgnoreCase)))
                 : context.Storage.GetUserQueues(context).Values;
 
@@ -22,6 +22,7 @@ namespace NaiveMq.Service.Handlers
                         User = x.User,
                         Name = x.Name,
                         Durable = x.Durable,
+                        IsExchange = x.IsExchange,
                     }).OrderBy(x => x.User).ThenBy(x => x.Name).ToList()
             });
         }

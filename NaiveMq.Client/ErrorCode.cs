@@ -78,5 +78,26 @@ namespace NaiveMq.Client
 
         [Description("Password сannot be empty.")]
         PasswordCannotBeEmpty = 119,
+
+        [Description("User '{0}' bindings are not found.")]
+        UserBindingsNotFound = 120,
+
+        [Description("Exchange '{0}' is already bound to queue '{1}'.")]
+        ExchangeAlreadyBoundToQueue = 121,
+
+        [Description("Exchange '{0}' is not found.")]
+        ExchangeNotFound = 122,
+
+        [Description("Durable binding must bind both durable exchange and queue.")]
+        DurableBindingCheck = 123,
+
+        [Description("Cannot bind exchange.")]
+        CannotBindExchange = 124,
+
+        [Description("Cannot bind to a queue which is not exchange.")]
+        CannotBindToQueue = 125,
+
+        [Description("Binding of exchange '{0}' and queue '{1}' is not found.")]
+        BindingNotFound = 126,
     }
 }

@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Cogs
                 throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), context.User.Username));
             }
 
-            if (checkAdmin && !context.User.IsAdministrator)
+            if (checkAdmin && !context.User.Administrator)
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotAdmin, ErrorCode.AccessDeniedNotAdmin.GetDescription());
             }

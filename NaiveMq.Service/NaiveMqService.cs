@@ -1,6 +1,5 @@
 ﻿using System.Net.Sockets;
 using System.Net;
-using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,6 @@ using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
 using Microsoft.Extensions.DependencyInjection;
-using NaiveMq.Client.Entities;
 
 namespace NaiveMq.Service
 {

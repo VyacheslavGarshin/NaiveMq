@@ -1,9 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client;
-using Newtonsoft.Json;
 
 namespace NaiveMq.Service.Handlers
 {

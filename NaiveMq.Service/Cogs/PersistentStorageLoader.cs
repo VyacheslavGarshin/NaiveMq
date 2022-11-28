@@ -31,6 +31,7 @@ namespace NaiveMq.Service.Cogs
                     await LoadUsers();
                     var allQueues = new Dictionary<string, IEnumerable<QueueEntity>>();
                     await LoadQueues(allQueues);
+                    await LoadBindings();
                     await LoadMessagesAsync(allQueues);
                 }
             }
@@ -52,7 +53,7 @@ namespace NaiveMq.Service.Cogs
             {
                 foreach (var user in result)
                 {
-                    await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, IsAdministrator = user.IsAdministrator });
+                    await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, Administrator = user.Administrator });
                 }
 
                 _logger.LogInformation($"{result.Count} users are loaded.");
@@ -63,7 +64,7 @@ namespace NaiveMq.Service.Cogs
 
                 context.Reinstate = false;
 
-                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", IsAdministrator = true });
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", Administrator = true });
 
                 _logger.LogInformation($"Added default 'guest' user with the same password.");
             }
@@ -83,12 +84,32 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var queue in queues)
                 {
-                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable });
+                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable, IsExchange = queue.IsExchange });
                     queuesCount++;
                 }
             }
 
             _logger.LogInformation($"{queuesCount} persistent queues are loaded.");
+        }
+
+        private async Task LoadBindings()
+        {
+            var bindingsCount = 0;
+
+            foreach (var user in _storage.Users.Values)
+            {
+                var bindings = (await _storage.PersistentStorage.LoadBindingsAsync(user.Username, _cancellationToken)).ToList();
+
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+
+                foreach (var binding in bindings)
+                {
+                    await new AddBindingHandler().ExecuteAsync(context, new AddBinding { Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Regex = binding.Regex });
+                    bindingsCount++;
+                }
+            }
+
+            _logger.LogInformation($"{bindingsCount} persistent bindings are loaded.");
         }
 
         private async Task LoadMessagesAsync(Dictionary<string, IEnumerable<QueueEntity>> allQueues)
@@ -105,7 +126,7 @@ namespace NaiveMq.Service.Cogs
 
                     foreach (var message in messages)
                     {
-                        await new MessageHandler().ExecuteAsync(context, new Message { Id = message.Id, Queue = message.Queue, Text = message.Text });
+                        await new MessageHandler().ExecuteAsync(context, new Message { Id = message.Id, Queue = message.Queue, Durable = message.Durable, Text = message.Text });
                         messageCount++;
                     }
                 }

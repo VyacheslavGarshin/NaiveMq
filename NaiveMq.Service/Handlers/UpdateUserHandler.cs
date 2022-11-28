@@ -3,7 +3,6 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
 using NaiveMq.Client;
-using System.Text.Json.Nodes;
 using Newtonsoft.Json;
 
 namespace NaiveMq.Service.Handlers
@@ -27,12 +26,12 @@ namespace NaiveMq.Service.Handlers
                 oldEntity = JsonConvert.DeserializeObject<UserEntity>(JsonConvert.SerializeObject(userEntity));
 
                 if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
-                    && !command.IsAdministrator)
+                    && !command.Administrator)
                 {
                     throw new ServerException(ErrorCode.UserCannotUnsetAdministratorSelf, ErrorCode.UserCannotUnsetAdministratorSelf.GetDescription());
                 }
 
-                userEntity.IsAdministrator = command.IsAdministrator;
+                userEntity.Administrator = command.Administrator;
 
                 if (!string.IsNullOrEmpty(command.Password))
                 {
@@ -45,7 +44,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (userEntity != null && oldEntity != null)
                 {
-                    userEntity.IsAdministrator = oldEntity.IsAdministrator;
+                    userEntity.Administrator = oldEntity.Administrator;
                     userEntity.PasswordHash = oldEntity.PasswordHash;
                 }
 

@@ -21,5 +21,11 @@ namespace NaiveMq.Service.PersistentStorage
         public Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken);
 
         public Task<List<MessageEntity>> LoadMessagesAsync(string user, string queue, CancellationToken cancellationToken);
+        
+        public Task SaveBindingAsync(string user, BindingEntity binding, CancellationToken cancellationToken);
+
+        public Task DeleteBindingAsync(string user, string exchange, string queue, CancellationToken cancellationToken);
+
+        public Task<List<BindingEntity>> LoadBindingsAsync(string user, CancellationToken cancellationToken);
     }
 }

@@ -26,10 +26,7 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserCannotDeleteSelf, ErrorCode.UserCannotDeleteSelf.GetDescription());
                 }
 
-                if (!context.Reinstate)
-                {
-                    await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.CancellationToken);
-                }
+                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.CancellationToken);
 
                 context.Storage.UserQueues.TryRemove(command.Username, out var userQueues);
 
@@ -39,6 +36,8 @@ namespace NaiveMq.Service.Handlers
                 }
 
                 userQueues.Clear();
+
+                context.Storage.UserBindings.TryRemove(command.Username, out var _);
             }
             catch
             {

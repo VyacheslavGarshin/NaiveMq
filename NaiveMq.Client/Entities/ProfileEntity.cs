@@ -4,6 +4,6 @@
     {
         public string Username { get; set; }
 
-        public bool IsAdministrator { get; set; }
+        public bool Administrator { get; set; }
     }
 }

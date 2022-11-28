@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using NaiveMq.Client;
-using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
+﻿using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
@@ -79,7 +76,14 @@ namespace NaiveMq.Service.Cogs
 
                     try
                     {
-                        var message = new Message { Confirm = _clientConfirm, ConfirmTimeout = _clientConfirmTimeout, Queue = messageEntity.Queue, Text = messageEntity.Text };
+                        var message = new Message
+                        {
+                            Confirm = _clientConfirm,
+                            ConfirmTimeout = _clientConfirmTimeout,
+                            Queue = messageEntity.Queue,
+                            Durable = messageEntity.Durable,
+                            Text = messageEntity.Text
+                        };
 
                         await _context.Client.SendAsync(message, cancellationToken);
                     }

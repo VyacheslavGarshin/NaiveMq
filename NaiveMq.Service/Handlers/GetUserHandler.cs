@@ -20,7 +20,7 @@ namespace NaiveMq.Service.Handlers
                         ? new UserEntity
                         {
                             Username = userEntity.Username,
-                            IsAdministrator = userEntity.IsAdministrator
+                            Administrator = userEntity.Administrator
                         }
                         : null
                 });

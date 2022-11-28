@@ -85,6 +85,23 @@ namespace NaiveMq.Service.PersistentStorage
             return Task.FromResult(result);
         }
 
+        public async Task SaveBindingAsync(string user, BindingEntity binding, CancellationToken cancellationToken)
+        {
+            await WriteFileAsync(GetBindingPath(user, binding.Exchange, binding.Queue), JsonConvert.SerializeObject(binding), true, cancellationToken);
+        }
+
+        public async Task DeleteBindingAsync(string user, string exchange, string queue, CancellationToken cancellationToken)
+        {
+            await DeleteFileAsync(GetBindingPath(user, exchange, queue), cancellationToken);
+        }
+
+        public Task<List<BindingEntity>> LoadBindingsAsync(string user, CancellationToken cancellationToken)
+        {
+            var path = Path.GetDirectoryName(GetBindingPath(user, "tmp", "tmp"));
+            var result = LoadEntitiesList<BindingEntity>(path);
+            return Task.FromResult(result);
+        }
+
         private async Task DeleteFileAsync(string path, CancellationToken cancellationToken)
         {
             await DeleteAsync(path, () =>
@@ -170,9 +187,9 @@ namespace NaiveMq.Service.PersistentStorage
             await File.WriteAllTextAsync(path, text, Encoding.UTF8, cancellationToken);
         }
 
-        private string GetMessagePath(string user, string queue, Guid enqueueId)
+        private string GetUserPath(string user)
         {
-            return Path.Combine(_basePath, "data", user, queue, $"{enqueueId}.json");
+            return Path.Combine(_basePath, "users", $"{user}.json");
         }
 
         private string GetQueuePath(string user, string queue)
@@ -180,9 +197,14 @@ namespace NaiveMq.Service.PersistentStorage
             return Path.Combine(_basePath, "queues", user, $"{queue}.json");
         }
 
-        private string GetUserPath(string user)
+        private string GetBindingPath(string user, string exchange, string queue)
         {
-            return Path.Combine(_basePath, "users", $"{user}.json");
+            return Path.Combine(_basePath, "bindings", user, $"{exchange}-{queue}.json");
+        }
+
+        private string GetMessagePath(string user, string queue, Guid enqueueId)
+        {
+            return Path.Combine(_basePath, "data", user, queue, $"{enqueueId}.json");
         }
 
         public void Dispose()

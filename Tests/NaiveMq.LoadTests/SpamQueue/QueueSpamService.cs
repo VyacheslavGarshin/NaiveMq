@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using System.Diagnostics;
 
 namespace NaiveMq.LoadTests.SpamQueue
@@ -35,8 +34,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                     _logger.LogInformation($"{DateTime.Now:O};{_queueService.ReadCounter.LastResult};{_queueService.WriteCounter.LastResult};{_queueService.ReadCounter.Total};{_queueService.WriteCounter.Total}");
                 }, null, 0, 1000);
 
-                for (var i = 0; i < _options.Value.Runs; i++)
-                    await QueueSpam();
+                await QueueSpam();
             }
 
             while (!stoppingToken.IsCancellationRequested)
@@ -75,87 +73,93 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 await CheckUserCommands(c);
 
+                await CheckExchange(c);
+
                 var swt = Stopwatch.StartNew();
 
                 string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
 
-                for (var i = 0; i < taskCount; i++)
+                for (var runs = 0; runs < _options.Value.Runs; runs++)
                 {
-                    var poc = i;
-                    var t = Task.Run(async () =>
+                    for (var i = 0; i < taskCount; i++)
                     {
-                        using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
-
-                        c.Start();
-
-                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        var poc = i;
+                        var t = Task.Run(async () =>
                         {
-                            await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                        }
+                            using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
 
-                        if (_options.Value.Subscribe)
-                        {
-                            await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ClientConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
-                        }
+                            c.Start();
 
-                        using var exitSp = new SemaphoreSlim(1, 1);
-
-                        var sw = Stopwatch.StartNew();
-                        await exitSp.WaitAsync();
-
-                        var lastActivity = DateTime.Now;
-                        TimeSpan delta = TimeSpan.Zero;
-
-                        using var timer = new Timer((s) =>
-                        {
-                            _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
-
-                            if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
+                            if (!string.IsNullOrEmpty(_options.Value.Username))
                             {
-                                lastActivity = DateTime.Now;
+                                await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                             }
-                            else
+
+                            if (_options.Value.Subscribe)
                             {
-                                if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 10)
+                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ClientConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
+                            }
+
+                            using var exitSp = new SemaphoreSlim(1, 1);
+
+                            var sw = Stopwatch.StartNew();
+                            await exitSp.WaitAsync();
+
+                            var lastActivity = DateTime.Now;
+                            TimeSpan delta = TimeSpan.Zero;
+
+                            using var timer = new Timer((s) =>
+                            {
+                                _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+
+                                if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
                                 {
-                                    delta = DateTime.Now.Subtract(lastActivity);
-                                    if (exitSp.CurrentCount == 0)
-                                        exitSp.Release(1);
+                                    lastActivity = DateTime.Now;
+                                }
+                                else
+                                {
+                                    if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 10)
+                                    {
+                                        delta = DateTime.Now.Subtract(lastActivity);
+                                        if (exitSp.CurrentCount == 0)
+                                            exitSp.Release(1);
+                                    }
+                                }
+                            }, null, 0, 1000);
+
+                            for (var j = 1; j <= max; j++)
+                            {
+                                try
+                                {
+                                    await c.SendAsync(new Message
+                                    {
+                                        Queue = _options.Value.QueueName,
+                                        Durable = _options.Value.Durable,
+                                        Text = $"{message} {poc} says {j}.",
+                                        Confirm = _options.Value.Confirm
+                                    },
+                                        _stoppingToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Send errr");
                                 }
                             }
-                        }, null, 0, 1000);
 
-                        for (var j = 1; j <= max; j++)
-                        {
-                            try
+                            await exitSp.WaitAsync();
+
+                            timer.Dispose();
+
+                            if (_options.Value.Subscribe)
                             {
-                                await c.SendAsync(new Message
-                                {
-                                    Queue = _options.Value.QueueName,
-                                    Text = $"{message} {poc} says {j}.",
-                                    Confirm = _options.Value.Confirm
-                                },
-                                    _stoppingToken);
+                                await c.SendAsync(new Unsubscribe { Queue = _options.Value.QueueName }, _stoppingToken);
                             }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Send errr");
-                            }
-                        }
 
-                        await exitSp.WaitAsync();
+                            _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
+                        });
 
-                        timer.Dispose();
-
-                        if (_options.Value.Subscribe)
-                        {
-                            await c.SendAsync(new Unsubscribe { Queue = _options.Value.QueueName }, _stoppingToken);
-                        }
-
-                        _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
-                    });
-
-                    tasks.Add(t);
+                        tasks.Add(t);
+                    }
                 }
 
                 Task.WaitAll(tasks.ToArray());
@@ -165,6 +169,25 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 _logger.LogInformation($"Sent {max * taskCount} messages in {swt.Elapsed}.");
             });
+        }
+
+        private async Task CheckExchange(NaiveMqClient c)
+        {
+            if (_options.Value.AddExchange)
+            {
+                await c.SendAsync(new AddQueue { Name = _options.Value.Exchange, Durable = true, IsExchange = true }, _stoppingToken);
+                await c.SendAsync(new AddQueue { Name = _options.Value.ExchangeTo, Durable = true }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.AddBinding))
+            {
+                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = null }, _stoppingToken);
+            }
+
+            if (_options.Value.DeleteBinding)
+            {
+                await c.SendAsync(new DeleteBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo }, _stoppingToken);
+            }
         }
 
         private async Task CheckQueueCommands(NaiveMqClient c)
@@ -215,12 +238,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.AddUser))
             {
-                await c.SendAsync(new AddUser { Username = _options.Value.AddUser, IsAdministrator = true, Password = "guest" }, _stoppingToken);
+                await c.SendAsync(new AddUser { Username = _options.Value.AddUser, Administrator = true, Password = "guest" }, _stoppingToken);
             }
 
             if (!string.IsNullOrEmpty(_options.Value.UpdateUser))
             {
-                await c.SendAsync(new UpdateUser { Username = _options.Value.UpdateUser, IsAdministrator = true }, _stoppingToken);
+                await c.SendAsync(new UpdateUser { Username = _options.Value.UpdateUser, Administrator = true }, _stoppingToken);
             }
 
             if (_options.Value.DeleteUser)
