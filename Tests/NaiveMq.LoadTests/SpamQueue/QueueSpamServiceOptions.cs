@@ -62,6 +62,8 @@
 
         public string AddBinding { get; set; }
 
-        public bool DeleteBinding { get; set; }        
+        public bool DeleteBinding { get; set; }
+
+        public string SendExchangeMessageWithKey { get; set; }
     }
 }

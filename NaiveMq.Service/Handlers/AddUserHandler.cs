@@ -41,8 +41,8 @@ namespace NaiveMq.Service.Handlers
                 }
             }
 
-            context.Storage.UserQueues.TryAdd(command.Username, new());
-            context.Storage.UserBindings.TryAdd(command.Username, new());
+            context.Storage.UserQueues.TryAdd(command.Username, new(StringComparer.InvariantCultureIgnoreCase));
+            context.Storage.UserBindings.TryAdd(command.Username, new(StringComparer.InvariantCultureIgnoreCase));
 
             return null;
         }

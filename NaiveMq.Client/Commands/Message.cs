@@ -6,6 +6,8 @@
 
         public bool Durable { get; set; }
 
+        public string BindingKey { get; set; }
+
         public string Text { get; set; }
     }
 }

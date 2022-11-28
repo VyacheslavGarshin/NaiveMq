@@ -181,7 +181,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.AddBinding))
             {
-                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = null }, _stoppingToken);
+                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = _options.Value.AddBinding }, _stoppingToken);
+            }
+
+            if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
+            {
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Durable = true, BindingKey = _options.Value.SendExchangeMessageWithKey, Text = "Some text to exchange" }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)

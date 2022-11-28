@@ -3,18 +3,19 @@
 
 Implemented so far:
 + Simple custom client-server messaging protocol
++ User management
 + Queue management, publish message, queue subscriptions and message receiving
-+ Durable queues (mostly)
++ Exchanges, routing with regex
++ Durable queues (not good)
 
 Plans:
-+ User management
-+ Queue exchanges
++ Better durable queues
 + Unit tests ;-)
 
-# Performance in comparrision to RabbitMQ
+# Performance vs RabbitMQ
 Producers:
-+ In memory queue with/without confirmation, 10 clients, 100b message, 2 times faster, 
-+ Durable queue with/without confirmation, 10 clients, 100b message, 2 times faster
++ In memory queue with/without confirmation, 10 clients, 100 chars message, 2 times faster
++ Durable queue with/without confirmation, 10 clients, 100 chars message, 2 times faster
 
 # Requirements
 + .NET Standart for Client and Service

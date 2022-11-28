@@ -126,7 +126,15 @@ namespace NaiveMq.Service.Cogs
 
                     foreach (var message in messages)
                     {
-                        await new MessageHandler().ExecuteAsync(context, new Message { Id = message.Id, Queue = message.Queue, Durable = message.Durable, Text = message.Text });
+                        var messageCommand = new Message
+                        {
+                            Id = message.Id,
+                            Queue = message.Queue,
+                            Durable = message.Durable,
+                            BindingKey = message.BindingKey,
+                            Text = message.Text
+                        };
+                        await new MessageHandler().ExecuteAsync(context, messageCommand);
                         messageCount++;
                     }
                 }

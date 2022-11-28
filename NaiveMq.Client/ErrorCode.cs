@@ -102,5 +102,8 @@ namespace NaiveMq.Client
 
         [Description("Cannot subscribe to exchange.")]
         CannotSubscribeToExchange = 127,
+
+        [Description("Exchange cannot route the message.")]
+        ExchangeCannotRouteMessage = 128,
     }
 }

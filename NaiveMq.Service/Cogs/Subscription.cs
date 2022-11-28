@@ -82,6 +82,7 @@ namespace NaiveMq.Service.Cogs
                             ConfirmTimeout = _clientConfirmTimeout,
                             Queue = messageEntity.Queue,
                             Durable = messageEntity.Durable,
+                            BindingKey = messageEntity.BindingKey,
                             Text = messageEntity.Text
                         };
 
@@ -89,7 +90,15 @@ namespace NaiveMq.Service.Cogs
                     }
                     catch
                     {
-                        await new MessageHandler().ExecuteAsync(_context, new Message { Id = messageEntity.Id, Queue = messageEntity.Queue, Text = messageEntity.Text });
+                        var messageCommand = new Message
+                        {
+                            Id = messageEntity.Id,
+                            Queue = messageEntity.Queue,
+                            Durable = messageEntity.Durable,
+                            BindingKey = messageEntity.BindingKey,
+                            Text = messageEntity.Text
+                        };
+                        await new MessageHandler().ExecuteAsync(_context, messageCommand);
                     }
                 }
             }

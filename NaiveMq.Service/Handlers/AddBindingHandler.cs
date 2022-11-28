@@ -91,7 +91,7 @@ namespace NaiveMq.Service.Handlers
         {            
             if (!userBindings.TryGetValue(binding.Exchange, out exchangeBindings))
             {
-                exchangeBindings = new();
+                exchangeBindings = new(StringComparer.InvariantCultureIgnoreCase);
                 userBindings.TryAdd(binding.Exchange, exchangeBindings);
             }
 
@@ -102,7 +102,7 @@ namespace NaiveMq.Service.Handlers
 
             if (!userBindings.TryGetValue(binding.Queue, out queueBindings))
             {
-                queueBindings = new();
+                queueBindings = new(StringComparer.InvariantCultureIgnoreCase);
                 userBindings.TryAdd(binding.Queue, queueBindings);
             }
 
