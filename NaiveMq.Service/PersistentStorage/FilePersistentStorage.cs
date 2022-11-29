@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -99,7 +100,7 @@ namespace NaiveMq.Service.PersistentStorage
         public async Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
             await DeleteFileAsync(GetMessagePath(user, queue, messageId), cancellationToken);
-            await DeleteDirectoryUpAsync(Path.GetDirectoryName(GetMessagePath(user, queue, messageId)), cancellationToken);
+            await DeleteEmptyDirectoriesAsync(Path.GetDirectoryName(GetMessagePath(user, queue, messageId)), cancellationToken);
         }
 
         public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
@@ -137,7 +138,7 @@ namespace NaiveMq.Service.PersistentStorage
             }, cancellationToken);
         }
 
-        private async Task DeleteDirectoryUpAsync(string path, CancellationToken cancellationToken)
+        private async Task DeleteEmptyDirectoriesAsync(string path, CancellationToken cancellationToken)
         {
             var info = new DirectoryInfo(path);
             var parent = info.Parent;
@@ -145,7 +146,7 @@ namespace NaiveMq.Service.PersistentStorage
             if (info.Exists && !info.EnumerateFiles().Any() && !info.EnumerateDirectories().Any())
             {
                 info.Delete();
-                await DeleteDirectoryUpAsync(parent.FullName, cancellationToken);
+                await DeleteEmptyDirectoriesAsync(parent.FullName, cancellationToken);
             }
         }
 
