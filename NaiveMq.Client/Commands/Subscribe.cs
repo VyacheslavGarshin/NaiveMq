@@ -7,14 +7,14 @@ namespace NaiveMq.Client.Commands
         public string Queue { get; set; }
 
         /// <summary>
-        /// Client should confirm message by sending Confirmation command back to server.
+        /// Subscriber should confirm message by sending Confirmation command back to server.
         /// </summary>
-        public bool ClientConfirm { get; set; } = true;
+        public bool MessageConfirm { get; set; } = true;
 
         /// <summary>
-        /// Message will be returned to the queue if no confirmation is received by server.
+        /// Message will be returned to the queue if no confirmation is received by server in case <see cref="MessageConfirm"/> is set.
         /// </summary>
         /// <remarks>If not set then server default will be used.</remarks>
-        public TimeSpan? ClientConfirmTimeout { get; set; }
+        public TimeSpan? MessageConfirmTimeout { get; set; }
     }
 }

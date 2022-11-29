@@ -27,7 +27,15 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (_options.Value.IsEnabled)
             {
-                await Task.Delay(1000);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    if (_queueService.IsLoaded)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000, _stoppingToken);
+                }
 
                 using var timer = new Timer((s) =>
                 {
@@ -97,7 +105,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             if (_options.Value.Subscribe)
                             {
-                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ClientConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
+                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, MessageConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
                             }
 
                             using var exitSp = new SemaphoreSlim(1, 1);

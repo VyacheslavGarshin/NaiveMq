@@ -23,8 +23,12 @@ namespace NaiveMq.Service
 
         public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(10);
 
-        private CancellationToken _stoppingToken;
+        public bool IsLoaded => _isLoaded;
 
+        private CancellationToken _stoppingToken;
+        
+        private bool _isLoaded;
+        
         private TcpListener _listener;
 
         private Storage _storage;
@@ -72,9 +76,11 @@ namespace NaiveMq.Service
 
             _storage = new Storage(_persistentStorage, _logger, _stoppingToken);
 
-            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
+            await new PersistentStorageLoader(_storage, _logger, _stoppingToken).LoadAsync();
 
-            await (new PersistentStorageLoader(_storage, _logger, _stoppingToken)).Load();
+            _isLoaded = true;
+
+            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
 
             while (!_stoppingToken.IsCancellationRequested)
             {

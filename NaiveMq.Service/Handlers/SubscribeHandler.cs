@@ -19,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 if (!queue.IsExchange)
                 {
                     var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client, (key) => new ConcurrentDictionary<Queue, Subscription>());
-                    var subscription = new Subscription(context, queue, command.ClientConfirm, command.ClientConfirmTimeout);
+                    var subscription = new Subscription(context, queue, command.MessageConfirm, command.MessageConfirmTimeout);
 
                     if (subscriptions.TryAdd(queue, subscription))
                     {

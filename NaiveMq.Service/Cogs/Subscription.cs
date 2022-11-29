@@ -5,9 +5,9 @@ namespace NaiveMq.Service.Cogs
 {
     public class Subscription : IDisposable
     {
-        public bool _clientConfirm { get; set; }
+        public bool _confirm { get; set; }
 
-        public TimeSpan? _clientConfirmTimeout { get; set; }
+        public TimeSpan? _confirmTimeout { get; set; }
 
         private readonly ClientContext _context;
 
@@ -18,12 +18,12 @@ namespace NaiveMq.Service.Cogs
         private CancellationTokenSource _cancellationTokenSource;
 
         private Task _sendTask;
-        public Subscription(ClientContext context, Queue queue, bool clientConfirm, TimeSpan? clientConfirmTimeout)
+        public Subscription(ClientContext context, Queue queue, bool confirm, TimeSpan? confirmTimeout)
         {
             _context = context;
             _queue = queue;
-            _clientConfirm = clientConfirm;
-            _clientConfirmTimeout = clientConfirmTimeout;
+            _confirm = confirm;
+            _confirmTimeout = confirmTimeout;
         }
 
         public void Start()
@@ -78,8 +78,8 @@ namespace NaiveMq.Service.Cogs
                     {
                         var message = new Message
                         {
-                            Confirm = _clientConfirm,
-                            ConfirmTimeout = _clientConfirmTimeout,
+                            Confirm = _confirm,
+                            ConfirmTimeout = _confirmTimeout,
                             Queue = messageEntity.Queue,
                             Durable = messageEntity.Durable,
                             BindingKey = messageEntity.BindingKey,
