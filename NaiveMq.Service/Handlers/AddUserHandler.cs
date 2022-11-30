@@ -15,6 +15,11 @@ namespace NaiveMq.Service.Handlers
                 context.CheckAdmin(context);
             }
 
+            if (string.IsNullOrEmpty(command.Password))
+            {
+                throw new ServerException(ErrorCode.PasswordCannotBeEmpty, ErrorCode.PasswordCannotBeEmpty.GetDescription());
+            }
+
             var userEntity = new UserEntity
             {
                 Username = command.Username,
