@@ -188,7 +188,7 @@ namespace NaiveMq.Service
 
         private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
         {
-            if (!(ex is ClientException))
+            if (ex is not ClientException)
             {
                 _logger.LogError(ex, "Error in client.");
             }
