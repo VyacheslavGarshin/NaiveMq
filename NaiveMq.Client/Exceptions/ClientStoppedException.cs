@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace NaiveMq.Client.Exceptions
+﻿namespace NaiveMq.Client.Exceptions
 {
-    public class ClientStoppedException : Exception
+    public class ClientStoppedException : ClientException
     {
         public ClientStoppedException(string message) : base(message)
         {

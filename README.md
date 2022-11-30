@@ -6,7 +6,7 @@ Implemented so far:
 + User management
 + Queue management, publish message, queue subscriptions and message receiving
 + Exchanges, routing with regex
-+ Durable queues (not good)
++ Durable queues
 
 Plans:
 + Better durable queues

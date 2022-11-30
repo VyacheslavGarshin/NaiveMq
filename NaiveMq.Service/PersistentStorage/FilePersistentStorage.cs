@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;

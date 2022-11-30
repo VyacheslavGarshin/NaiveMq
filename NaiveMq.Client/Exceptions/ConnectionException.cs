@@ -2,7 +2,7 @@
 
 namespace NaiveMq.Client.Exceptions
 {
-    public class ConnectionException : Exception
+    public class ConnectionException : ClientException
     {
         public ConnectionException(string message, Exception innerException) : base(message, innerException)
         {

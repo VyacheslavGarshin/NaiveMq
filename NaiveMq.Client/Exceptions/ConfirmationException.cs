@@ -1,9 +1,8 @@
 ﻿using NaiveMq.Client.Commands;
-using System;
 
 namespace NaiveMq.Client.Exceptions
 {
-    public class ConfirmationException : Exception
+    public class ConfirmationException : ClientException
     {
         public IResponse Response { get; set; }
 

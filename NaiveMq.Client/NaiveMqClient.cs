@@ -404,7 +404,7 @@ namespace NaiveMq.Client
 
                 if (text == null)
                 {
-                    var ex = new Exception("Incoming message is null.");
+                    var ex = new ConnectionException("Incoming message is null.", null);
                     await HandleReceiveErrorAsync(ex);
                     throw ex;
                 }
