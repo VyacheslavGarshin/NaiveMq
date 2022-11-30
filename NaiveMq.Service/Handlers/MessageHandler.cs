@@ -3,6 +3,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
 using NaiveMq.Client;
+using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -14,25 +15,13 @@ namespace NaiveMq.Service.Handlers
 
             var userQueues = context.Storage.GetUserQueues(context);
 
-            if (userQueues.TryGetValue(command.Queue, out var initialQueue))
+            if (userQueues.TryGetValue(command.Queue, out var queue))
             {
                 var queues = new List<Queue>();
 
-                if (initialQueue.Exchange)
+                if (queue.Exchange)
                 {
-                    var userBindings = context.Storage.GetUserBindings(context);
-
-                    if (userBindings.TryGetValue(initialQueue.Name, out var bindings))
-                    {
-                        foreach (var binding in bindings)
-                        {
-                            if ((binding.Value.Regex == null || binding.Value.Regex.IsMatch(command.BindingKey))
-                                && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
-                            {
-                                queues.Add(boundQueue);
-                            }
-                        }
-                    }
+                    queues.AddRange(MatchBoundQueues(context, command, userQueues, queue));
 
                     if (!queues.Any())
                     {
@@ -41,7 +30,7 @@ namespace NaiveMq.Service.Handlers
                 }
                 else
                 {
-                    queues.Add(initialQueue);
+                    queues.Add(queue);
                 }
 
                 await Enqueue(context, command, queues);
@@ -52,6 +41,26 @@ namespace NaiveMq.Service.Handlers
             }
 
             return null;
+        }
+
+        private static List<Queue> MatchBoundQueues(ClientContext context, Message command, ConcurrentDictionary<string, Queue> userQueues, Queue exchange)
+        {
+            var result = new List<Queue>();
+            var userBindings = context.Storage.GetUserBindings(context);
+
+            if (userBindings.TryGetValue(exchange.Name, out var bindings))
+            {
+                foreach (var binding in bindings)
+                {
+                    if ((binding.Value.Regex == null || binding.Value.Regex.IsMatch(command.BindingKey))
+                        && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
+                    {
+                        result.Add(boundQueue);
+                    }
+                }
+            }
+
+            return result;
         }
 
         private static async Task Enqueue(ClientContext context, Message command, List<Queue> queues)

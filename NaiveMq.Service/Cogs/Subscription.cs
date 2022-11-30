@@ -98,6 +98,7 @@ namespace NaiveMq.Service.Cogs
                             BindingKey = messageEntity.BindingKey,
                             Text = messageEntity.Text
                         };
+
                         await new MessageHandler().ExecuteAsync(_context, messageCommand);
                     }
                 }
