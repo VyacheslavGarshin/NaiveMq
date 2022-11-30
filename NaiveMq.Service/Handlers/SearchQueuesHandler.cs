@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
                         User = x.User,
                         Name = x.Name,
                         Durable = x.Durable,
-                        IsExchange = x.IsExchange,
+                        Exchange = x.Exchange,
                     }).OrderBy(x => x.User).ThenBy(x => x.Name).ToList()
             });
         }

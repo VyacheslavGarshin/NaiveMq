@@ -24,7 +24,7 @@ namespace NaiveMq.Service.Handlers
                             User = queue.User,
                             Name = queue.Name,
                             Durable = queue.Durable,
-                            IsExchange = queue.IsExchange,
+                            Exchange = queue.Exchange,
                         }
                         : null
                 });

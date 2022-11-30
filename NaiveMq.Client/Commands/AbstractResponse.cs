@@ -9,7 +9,7 @@ namespace NaiveMq.Client.Commands
     {
         public Guid? Id { get; set; }
 
-        public Guid? RequestId { get; set; }
+        public Guid RequestId { get; set; }
 
         public bool IsSuccess { get; set; } = true;
 
@@ -19,7 +19,7 @@ namespace NaiveMq.Client.Commands
 
         public List<string> Warnings { get; set; }
 
-        public static T Success(Guid? requestId, IEnumerable<string> warnings = null)
+        public static T Success(Guid requestId, IEnumerable<string> warnings = null)
         {
             return new T
             {
@@ -29,12 +29,7 @@ namespace NaiveMq.Client.Commands
             };
         }
 
-        public static T Success(IEnumerable<string> warnings = null)
-        {
-            return Success(null, warnings);
-        }
-
-        public static T Error(Guid? requestId, string errorCode, string errorMessage, IEnumerable<string> warnings = null)
+        public static T Error(Guid requestId, string errorCode, string errorMessage, IEnumerable<string> warnings = null)
         {
             return new T
             {
@@ -48,7 +43,7 @@ namespace NaiveMq.Client.Commands
 
         public static T Error(string errorCode, string errorMessage, IEnumerable<string> warnings = null)
         {
-            return Error(null, errorCode, errorMessage, warnings);
+            return Error(Guid.Empty, errorCode, errorMessage, warnings);
         }
     }
 }

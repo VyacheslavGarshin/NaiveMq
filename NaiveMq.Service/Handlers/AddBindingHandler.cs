@@ -67,12 +67,12 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), binding.Queue));
             }
 
-            if (queue.IsExchange)
+            if (queue.Exchange)
             {
                 throw new ServerException(ErrorCode.CannotBindExchange, ErrorCode.CannotBindExchange.GetDescription());
             }
 
-            if (!exchange.IsExchange)
+            if (!exchange.Exchange)
             {
                 throw new ServerException(ErrorCode.CannotBindToQueue, ErrorCode.CannotBindToQueue.GetDescription());
             }

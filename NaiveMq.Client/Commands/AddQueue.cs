@@ -6,6 +6,6 @@
 
         public bool Durable { get; set; }
         
-        public bool IsExchange { get; set; }
+        public bool Exchange { get; set; }
     }
 }

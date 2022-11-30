@@ -5,7 +5,7 @@ namespace NaiveMq.Client.Commands
 {
     public interface IResponse : ICommand
     {
-        public Guid? RequestId { get; set; }
+        public Guid RequestId { get; set; }
 
         public bool IsSuccess { get; set; }
 

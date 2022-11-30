@@ -18,7 +18,7 @@ namespace NaiveMq.Service.Handlers
             {
                 var queues = new List<Queue>();
 
-                if (initialQueue.IsExchange)
+                if (initialQueue.Exchange)
                 {
                     var userBindings = context.Storage.GetUserBindings(context);
 

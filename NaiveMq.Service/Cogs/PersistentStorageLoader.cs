@@ -81,7 +81,7 @@ namespace NaiveMq.Service.Cogs
                 foreach (var keys in await _storage.PersistentStorage.LoadQueueKeysAsync(user.Username, _cancellationToken))
                 {
                     var queue = await _storage.PersistentStorage.LoadQueueAsync(user.Username, keys, _cancellationToken);
-                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable, IsExchange = queue.IsExchange });
+                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable, Exchange = queue.Exchange });
                     queuesCount++;
                 }
             }

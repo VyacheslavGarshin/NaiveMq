@@ -43,6 +43,10 @@ namespace NaiveMq.Client
 
         public event OnReceiveErrorHandler OnReceiveErrorAsync;
 
+        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message command);
+
+        public event OnReceiveMessageHandler OnReceiveMessageAsync;
+
         public delegate Task OnReceiveCommandHandler(NaiveMqClient sender, ICommand command);
 
         public event OnReceiveCommandHandler OnReceiveCommandAsync;
@@ -107,11 +111,13 @@ namespace NaiveMq.Client
         public NaiveMqClient(TcpClient tcpClient, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken) : this(logger, stoppingToken)
         {
             TcpClient = tcpClient;
+            Start();
         }
 
         public NaiveMqClient(string host, int port, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken) : this(logger, stoppingToken)
         {
             TcpClient = new TcpClient(host, port);
+            Start();
         }
 
         public void Start()
@@ -377,38 +383,47 @@ namespace NaiveMq.Client
         {
             while (!_stoppingToken.IsCancellationRequested && _isStarted)
             {
-                string message;
+                string text;
 
                 try
                 {
-                    message = await _streamReader.ReadLineAsync();
+                    text = await _streamReader.ReadLineAsync();
                 }
                 catch (Exception ex)
                 {
                     await HandleReceiveErrorAsync(ex);
-                    return;
+                    throw;
                 }
 
                 ReadCounter.Add();
 
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogTrace($"<{Id}:{message}");
+                    _logger.LogTrace($"<{Id}:{text}");
                 }
 
-                if (message == null)
+                if (text == null)
                 {
-                    await HandleReceiveErrorAsync(new Exception("Incoming message is null."));
-                    return;
+                    var ex = new Exception("Incoming message is null.");
+                    await HandleReceiveErrorAsync(ex);
+                    throw ex;
                 }
                 else
                 {
-                    if (OnReceiveAsync != null)
+                    try
                     {
-                        await OnReceiveAsync.Invoke(this, message);
-                    }
+                        if (OnReceiveAsync != null)
+                        {
+                            await OnReceiveAsync.Invoke(this, text);
+                        }
 
-                    await HandleReceiveCommandAsync(message);
+                        await HandleReceiveCommandAsync(text);
+                    }
+                    catch (Exception ex)
+                    {
+                        await HandleReceiveErrorAsync(ex);
+                        throw;
+                    }
                 }
             };
         }
@@ -423,30 +438,35 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceiveCommandAsync(string message)
+        private async Task HandleReceiveCommandAsync(string text)
         {
             try
             {
-                var command = ParseMessage(message);
+                var command = ParseMessage(text);
 
                 if (OnReceiveCommandAsync != null)
                 {
                     await OnReceiveCommandAsync.Invoke(this, command);
                 }
 
-                if (command is IRequest && OnReceiveRequestAsync != null)
+                if (command is IRequest request && OnReceiveRequestAsync != null)
                 {
-                    await OnReceiveRequestAsync.Invoke(this, (IRequest)command);
+                    await OnReceiveRequestAsync.Invoke(this, request);
                 }
 
-                if (command is IResponse)
+                if (command is IResponse response)
                 {
-                    HandleResponse((IResponse)command);
+                    HandleResponse(response);
 
                     if (OnReceiveResponseAsync != null)
                     {
-                        await OnReceiveResponseAsync.Invoke(this, (IResponse)command);
+                        await OnReceiveResponseAsync.Invoke(this, response);
                     }
+                }
+
+                if (command is Message message && OnReceiveMessageAsync != null)
+                {
+                    await OnReceiveMessageAsync.Invoke(this, message);
                 }
             }
             catch (ParseCommandException ex)
@@ -458,21 +478,16 @@ namespace NaiveMq.Client
             }
             catch
             {
-                Stop();
-
                 throw;
             }
         }
 
         private void HandleResponse(IResponse response)
         {
-            if (response != null)
+            if (_responses.TryGetValue(response.RequestId, out var responseItem))
             {
-                if (_responses.TryGetValue(response.RequestId.Value, out var responseItem))
-                {
-                    responseItem.Response = response;
-                    responseItem.SemaphoreSlim.Release();
-                }
+                responseItem.Response = response;
+                responseItem.SemaphoreSlim.Release();
             }
         }
     }

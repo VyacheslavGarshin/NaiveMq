@@ -69,11 +69,6 @@ namespace NaiveMq.Service.Cogs
 
                 if (_queue.TryDequeue(out var messageEntity))
                 {
-                    if (_queue.Durable)
-                    {
-                        await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
-                    }
-
                     try
                     {
                         var message = new Message
@@ -87,6 +82,11 @@ namespace NaiveMq.Service.Cogs
                         };
 
                         await _context.Client.SendAsync(message, cancellationToken);
+
+                        if (_queue.Durable)
+                        {
+                            await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
+                        }
                     }
                     catch
                     {

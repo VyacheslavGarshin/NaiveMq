@@ -70,7 +70,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
 
-                c.Start();
+                // c.Start();
 
                 if (!string.IsNullOrEmpty(_options.Value.Username))
                 {
@@ -96,7 +96,21 @@ namespace NaiveMq.LoadTests.SpamQueue
                         {
                             using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
 
-                            c.Start();
+                            // c.Start();
+
+                            c.OnReceiveMessageAsync += async (client, message) =>
+                            {
+                                if (message.Confirm)
+                                {
+                                    await client.SendAsync(Confirmation.Success(message.Id.Value), _stoppingToken);
+                                }
+                            };
+
+                            c.OnReceiveErrorAsync += (client, ex) =>
+                            {
+                                _logger.LogError(ex, "Error on message");
+                                return Task.CompletedTask;
+                            };
 
                             if (!string.IsNullOrEmpty(_options.Value.Username))
                             {
@@ -105,7 +119,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             if (_options.Value.Subscribe)
                             {
-                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, MessageConfirm = _options.Value.ConfirmSubscription }, _stoppingToken);
+                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
                             }
 
                             using var exitSp = new SemaphoreSlim(1, 1);
@@ -183,13 +197,13 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             if (_options.Value.AddExchange)
             {
-                await c.SendAsync(new AddQueue { Name = _options.Value.Exchange, Durable = true, IsExchange = true }, _stoppingToken);
+                await c.SendAsync(new AddQueue { Name = _options.Value.Exchange, Durable = true, Exchange = true }, _stoppingToken);
                 await c.SendAsync(new AddQueue { Name = _options.Value.ExchangeTo, Durable = true }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.AddBinding))
+            if (_options.Value.AddBinding)
             {
-                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = _options.Value.AddBinding }, _stoppingToken);
+                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = _options.Value.BindingRegex }, _stoppingToken);
             }
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))

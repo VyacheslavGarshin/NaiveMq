@@ -202,9 +202,7 @@ namespace NaiveMq.Service
 
                 if (request.Confirm)
                 {
-                    var response = result ?? Confirmation.Success();
-                    response.RequestId = request.Id;
-
+                    var response = result ?? Confirmation.Success(request.Id.Value);
                     await SendAsync(sender, response);
                 }
             }

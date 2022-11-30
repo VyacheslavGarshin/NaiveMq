@@ -10,6 +10,14 @@ namespace NaiveMq.Service.PersistentStorage
 {
     public class FilePersistentStorage : IPersistentStorage
     {
+        private const string MessagesDirectory = "messages";
+        
+        private const string BindingsDirectory = "bindings";
+
+        private const string QueuesDirectory = "queues";
+
+        private const string UsersDirecotory = "users";
+
         private readonly IOptions<FilePersistentStorageOptions> _options;
 
         private readonly ILogger<FilePersistentStorage> _logger;
@@ -220,43 +228,43 @@ namespace NaiveMq.Service.PersistentStorage
 
         private string GetUserPath(string user)
         {
-            return Path.Combine(_basePath, "users", $"{user.ToLowerInvariant()}.json");
+            return Path.Combine(_basePath, UsersDirecotory, $"{user.ToLowerInvariant()}.json");
         }
 
         private string GetUserQueuesPath(string user)
         {
-            return Path.Combine(_basePath, "queues", user);
+            return Path.Combine(_basePath, QueuesDirectory, user);
         }
 
         private string GetQueuePath(string user, string queue)
         {
-            return Path.Combine(_basePath, "queues", user, $"{queue.ToLowerInvariant()}.json");
+            return Path.Combine(_basePath, QueuesDirectory, user, $"{queue.ToLowerInvariant()}.json");
         }
 
         private string GetUserBindingsPath(string user)
         {
-            return Path.Combine(_basePath, "bindings", user);
+            return Path.Combine(_basePath, BindingsDirectory, user);
         }        
 
         private string GetBindingPath(string user, string exchange, string queue)
         {
-            return Path.Combine(_basePath, "bindings", user, $"{exchange.ToLowerInvariant()}-{queue.ToLowerInvariant()}.json");
+            return Path.Combine(_basePath, BindingsDirectory, user, $"{exchange.ToLowerInvariant()}-{queue.ToLowerInvariant()}.json");
         }
 
         private string GetUserMessagesPath(string user)
         {
-            return Path.Combine(_basePath, "data", user);
+            return Path.Combine(_basePath, MessagesDirectory, user);
         }
 
         private string GetQueueMessagesPath(string user, string queue)
         {
-            return Path.Combine(_basePath, "data", user, queue);
+            return Path.Combine(_basePath, MessagesDirectory, user, queue);
         }
 
         private string GetMessagePath(string user, string queue, Guid messageId)
         {
             var chunk = messageId.ToString();
-            return Path.Combine(_basePath, "data", user, queue, chunk.Substring(0, 2), chunk.Substring(2, 2), $"{messageId}.json");
+            return Path.Combine(_basePath, MessagesDirectory, user, queue, chunk.Substring(0, 2), chunk.Substring(2, 2), $"{messageId}.json");
         }
 
         public void Dispose()

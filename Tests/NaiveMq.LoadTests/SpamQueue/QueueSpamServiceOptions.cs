@@ -60,10 +60,14 @@
 
         public bool AddExchange { get; set; }
 
-        public string AddBinding { get; set; }
+        public bool AddBinding { get; set; }
+
+        public string BindingRegex { get; set; }
 
         public bool DeleteBinding { get; set; }
 
         public string SendExchangeMessageWithKey { get; set; }
+
+        public TimeSpan? ConfirmMessageTimeout { get; set; }
     }
 }
