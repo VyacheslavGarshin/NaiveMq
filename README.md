@@ -19,4 +19,4 @@ Producers:
 
 # Requirements
 + .NET Standart for Client and Service
-+ .NET 6 for tests
++ .NET 6 for tests and Server
