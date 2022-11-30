@@ -7,11 +7,11 @@ namespace NaiveMq.Client.Common
 {
     public class SpeedCounter : IDisposable
     {
-        public int StoreCount { get; }
+        public int ResultCount { get; private set; }
 
-        public long LastResult;
+        public long LastResult { get; private set; }
 
-        public long Total;
+        public long Total => _total;
 
         public ReadOnlyCollection<long> Results => _results.AsReadOnly();
 
@@ -21,17 +21,18 @@ namespace NaiveMq.Client.Common
 
         private long _currentCounter;
 
+        private long _total;
+
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="storeCount"></param>
+        /// <param name="resultCount"></param>
         /// <param name="interval">Default is one second.</param>
-        public SpeedCounter(int storeCount = 10, TimeSpan? interval = null)
+        public SpeedCounter(int resultCount = 10, TimeSpan? interval = null)
         {
             _timer = new Timer(OnTimer, null, TimeSpan.Zero, interval ?? TimeSpan.FromSeconds(1));
-            StoreCount = storeCount;
+            ResultCount = resultCount;
         }
-
 
         public void Add(long amount = 1)
         {
@@ -39,12 +40,11 @@ namespace NaiveMq.Client.Common
 
             try
             {
-                if (Total < long.MaxValue)
-                    Interlocked.Add(ref Total, 1);
+                Interlocked.Add(ref _total, 1);
             }
             catch (Exception)
             {
-                // no lock for speed
+                _total = 0;
             }
         }
 
@@ -60,7 +60,7 @@ namespace NaiveMq.Client.Common
 
             _results.Add(LastResult);
 
-            if (_results.Count > StoreCount)
+            if (_results.Count > ResultCount)
             {
                 _results.RemoveAt(0);
             }
