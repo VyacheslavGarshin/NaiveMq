@@ -105,5 +105,8 @@ namespace NaiveMq.Client
 
         [Description("Exchange cannot route the message.")]
         ExchangeCannotRouteMessage = 128,
+
+        [Description("Request message '{0}' already registered.")]
+        RequestAlreadyRegistered = 129,
     }
 }

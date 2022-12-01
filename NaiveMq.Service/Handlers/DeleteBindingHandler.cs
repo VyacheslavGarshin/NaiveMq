@@ -50,7 +50,7 @@ namespace NaiveMq.Service.Handlers
                 userBindings.TryRemove(command.Queue, out var _);
             }
 
-            return null;
+            return Confirmation.Ok(command);
         }
 
         public void Dispose()

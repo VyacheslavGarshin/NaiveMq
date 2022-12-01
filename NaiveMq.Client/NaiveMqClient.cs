@@ -168,7 +168,7 @@ namespace NaiveMq.Client
                 if (request.Confirm)
                 {
                     responseItem = new ResponseItem();
-                    _responses[request.Id.Value] = responseItem;
+                    _responses[request.Id] = responseItem;
                 }
 
                 await SendAsync(commandText, cancellationToken);
@@ -183,7 +183,7 @@ namespace NaiveMq.Client
                     }
                     else
                     {
-                        if (!responseItem.Response.IsSuccess)
+                        if (!responseItem.Response.Success)
                         {
                             throw new ConfirmationException(responseItem.Response);
                         }
@@ -198,7 +198,7 @@ namespace NaiveMq.Client
             {
                 if (request.Confirm)
                 {
-                    _responses.TryRemove(request.Id.Value, out var _);
+                    _responses.TryRemove(request.Id, out var _);
                     responseItem.Dispose();
                 }
             }

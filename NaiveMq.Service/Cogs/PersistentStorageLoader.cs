@@ -50,7 +50,7 @@ namespace NaiveMq.Service.Cogs
             foreach (var key in await _storage.PersistentStorage.LoadUserKeysAsync(_cancellationToken))
             {
                 var user = await _storage.PersistentStorage.LoadUserAsync(key, _cancellationToken);
-                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = user.Username, Password = user.PasswordHash, Administrator = user.Administrator });
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Id = Guid.NewGuid(), Username = user.Username, Password = user.PasswordHash, Administrator = user.Administrator });
                 count++;
             }
 
@@ -81,7 +81,7 @@ namespace NaiveMq.Service.Cogs
                 foreach (var keys in await _storage.PersistentStorage.LoadQueueKeysAsync(user.Username, _cancellationToken))
                 {
                     var queue = await _storage.PersistentStorage.LoadQueueAsync(user.Username, keys, _cancellationToken);
-                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Name = queue.Name, Durable = queue.Durable, Exchange = queue.Exchange });
+                    await new AddQueueHandler().ExecuteAsync(context, new AddQueue { Id = Guid.NewGuid(), Name = queue.Name, Durable = queue.Durable, Exchange = queue.Exchange });
                     queuesCount++;
                 }
             }
@@ -103,7 +103,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     var binding = await _storage.PersistentStorage.LoadBindingAsync(user.Username, key.Exchange, key.Queue, _cancellationToken);
 
-                    await new AddBindingHandler().ExecuteAsync(context, new AddBinding { Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Regex = binding.Regex });
+                    await new AddBindingHandler().ExecuteAsync(context, new AddBinding { Id = Guid.NewGuid(), Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Regex = binding.Regex });
                     bindingsCount++;
                 }
             }
@@ -132,6 +132,7 @@ namespace NaiveMq.Service.Cogs
                         {
                             Id = message.Id,
                             Queue = message.Queue,
+                            Request = message.Request,
                             Durable = message.Durable,
                             BindingKey = message.BindingKey,
                             Text = message.Text

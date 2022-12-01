@@ -52,7 +52,7 @@ namespace NaiveMq.Service.Handlers
                 }
             }
 
-            return null;
+            return Confirmation.Ok(command);
         }
 
         private static void Check(ConcurrentDictionary<string, Queue> userQueues, Binding binding)

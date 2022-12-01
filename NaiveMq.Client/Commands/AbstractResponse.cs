@@ -7,43 +7,44 @@ namespace NaiveMq.Client.Commands
     public abstract class AbstractResponse<T> : IResponse
         where T : IResponse, new()
     {
-        public Guid? Id { get; set; }
+        public Guid Id { get; set; }
 
         public Guid RequestId { get; set; }
 
-        public bool IsSuccess { get; set; } = true;
+        public bool Success { get; set; } = true;
 
         public string ErrorCode { get; set; }
 
         public string ErrorMessage { get; set; }
 
-        public List<string> Warnings { get; set; }
-
-        public static T Success(Guid requestId, IEnumerable<string> warnings = null)
+        public static T Ok(Guid requestId)
         {
             return new T
             {
                 RequestId = requestId,
-                IsSuccess = true,
-                Warnings = warnings?.ToList()
+                Success = true,
             };
         }
 
-        public static T Error(Guid requestId, string errorCode, string errorMessage, IEnumerable<string> warnings = null)
+        public static T Ok(IRequest request)
+        {
+            return request.Confirm ? new T { RequestId = request.Id, Success = true } : default;
+        }
+
+        public static T Error(Guid requestId, string errorCode, string errorMessage)
         {
             return new T
             {
                 RequestId = requestId,
-                IsSuccess = false,
-                ErrorCode = errorCode.ToString(),
+                Success = false,
+                ErrorCode = errorCode,
                 ErrorMessage = errorMessage,
-                Warnings = warnings?.ToList()
             };
         }
 
-        public static T Error(string errorCode, string errorMessage, IEnumerable<string> warnings = null)
+        public static T Error(string errorCode, string errorMessage)
         {
-            return Error(Guid.Empty, errorCode, errorMessage, warnings);
+            return Error(Guid.Empty, errorCode, errorMessage);
         }
     }
 }

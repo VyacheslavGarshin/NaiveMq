@@ -19,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.UserOrPasswordNotCorrect, ErrorCode.UserOrPasswordNotCorrect.GetDescription());
             }
 
-            return Task.FromResult((Confirmation)null);
+            return Task.FromResult(Confirmation.Ok(command));
         }
 
         public void Dispose()

@@ -13,7 +13,7 @@ namespace NaiveMq.Service.Handlers
 
             var userQueues = context.Storage.GetUserQueues(context);
 
-            if (context.Storage.Subscriptions.TryGetValue(context.Client, out var subscriptions))
+            if (context.Storage.Subscriptions.TryGetValue(context.Client.Id, out var subscriptions))
             {
                 if (userQueues.TryGetValue(command.Queue, out var queue))
                 {
@@ -36,7 +36,7 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.SubscriptionNotFound, string.Format(ErrorCode.SubscriptionNotFound.GetDescription(), command.Queue));
             }
 
-            return Task.FromResult((Confirmation)null);
+            return Task.FromResult(Confirmation.Ok(command));
         }
 
         public void Dispose()

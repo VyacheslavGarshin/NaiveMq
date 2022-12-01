@@ -35,7 +35,7 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Name));
             }
 
-            return null;
+            return Confirmation.Ok(command);
         }
 
         public void Dispose()

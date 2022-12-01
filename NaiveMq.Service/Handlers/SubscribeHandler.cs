@@ -18,7 +18,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!queue.Exchange)
                 {
-                    var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client, (key) => new ConcurrentDictionary<Queue, Subscription>());
+                    var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client.Id, (key) => new ConcurrentDictionary<Queue, Subscription>());
                     var subscription = new Subscription(context, queue, command.ConfirmMessage, command.ConfirmMessageTimeout);
 
                     if (subscriptions.TryAdd(queue, subscription))
@@ -40,7 +40,7 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Queue));
             }
 
-            return Task.FromResult((Confirmation)null);
+            return Task.FromResult(Confirmation.Ok(command));
         }
 
         public void Dispose()

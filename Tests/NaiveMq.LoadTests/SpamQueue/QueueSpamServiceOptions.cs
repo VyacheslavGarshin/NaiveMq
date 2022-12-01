@@ -69,5 +69,9 @@
         public string SendExchangeMessageWithKey { get; set; }
 
         public TimeSpan? ConfirmMessageTimeout { get; set; }
+
+        public bool Request { get; set; }
+
+        public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
     }
 }

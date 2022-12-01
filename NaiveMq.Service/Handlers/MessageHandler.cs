@@ -33,14 +33,29 @@ namespace NaiveMq.Service.Handlers
                     queues.Add(queue);
                 }
 
+                if (command.Request)
+                {
+                    command.Durable = false;
+                }
+
                 await Enqueue(context, command, queues);
+
+                if (command.Request)
+                {
+                    context.Storage.ClientRequests.AddRequest(context.Client.Id, command.Id, command.ConfirmTimeout);
+
+                    // confirmation will be redirected from subscriber to this client
+                    return null;
+                }
+                else
+                {
+                    return Confirmation.Ok(command);
+                }
             }
             else
             {
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Queue));
             }
-
-            return null;
         }
 
         private static List<Queue> MatchBoundQueues(ClientContext context, Message command, ConcurrentDictionary<string, Queue> userQueues, Queue exchange)
@@ -69,8 +84,9 @@ namespace NaiveMq.Service.Handlers
             {
                 var message = new MessageEntity
                 {
-                    Id = command.Id.Value,
+                    Id = command.Id,
                     Queue = queue.Name,
+                    Request = command.Request,
                     Durable = command.Durable && queue.Durable,
                     BindingKey = command.BindingKey,
                     Text = command.Text

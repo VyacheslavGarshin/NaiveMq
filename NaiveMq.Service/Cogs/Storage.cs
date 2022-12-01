@@ -21,7 +21,9 @@ namespace NaiveMq.Service.Cogs
         /// <remarks>Keys are: user, from queue, to queue.</remarks>
         public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>>> UserBindings = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public readonly ConcurrentDictionary<NaiveMqClient, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
+        public readonly ConcurrentDictionary<int, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
+
+        public ClientRequests ClientRequests { get; set; }
 
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
@@ -33,7 +35,9 @@ namespace NaiveMq.Service.Cogs
         {
             _logger = logger;
             _stoppingToken = stoppingToken;
+
             PersistentStorage = persistentStorage;
+            ClientRequests = new ClientRequests(_logger);
         }
 
         public ConcurrentDictionary<string, Queue> GetUserQueues(ClientContext context)
@@ -56,21 +60,23 @@ namespace NaiveMq.Service.Cogs
             return userBindings;
         }
 
-        public void DeleteSubscriptions(NaiveMqClient client)
+        public void DeleteSubscriptions(int clientId)
         {
-            if (Subscriptions.TryRemove(client, out var subscriptions))
+            if (Subscriptions.TryRemove(clientId, out var clientSubscriptions))
             {
-                foreach (var subscription in subscriptions)
+                foreach (var subscription in clientSubscriptions)
                 {
                     subscription.Value.Dispose();
                 }
 
-                subscriptions.Clear();
+                clientSubscriptions.Clear();
             };
         }
 
         public void Dispose()
         {
+            ClientRequests.Dispose();
+
             foreach (var clientSubscriptions in Subscriptions)
             {
                 DeleteSubscriptions(clientSubscriptions.Key);
@@ -126,7 +132,9 @@ namespace NaiveMq.Service.Cogs
 
         public void DeleteClient(NaiveMqClient client)
         {
-            DeleteSubscriptions(client);
+            DeleteSubscriptions(client.Id);
+            ClientRequests.RemoveClient(client.Id);
+
             _clientContexts.TryRemove(client.Id, out var _);
             client.Dispose();
 

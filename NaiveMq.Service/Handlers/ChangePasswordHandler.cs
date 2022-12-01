@@ -43,7 +43,7 @@ namespace NaiveMq.Service.Handlers
                 throw;
             }
 
-            return null;
+            return Confirmation.Ok(command);
         }
 
         public void Dispose()

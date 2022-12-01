@@ -200,15 +200,14 @@ namespace NaiveMq.Service
 
         private async Task OnClientReceiveRequestAsync(NaiveMqClient sender, IRequest request)
         {
-            IResponse result;
+            IResponse response;
 
             try
             {
-                result = await HandleRequestAsync(sender, request);
+                response = await HandleRequestAsync(sender, request);
 
-                if (request.Confirm)
+                if (response != null)
                 {
-                    var response = result ?? Confirmation.Success(request.Id.Value);
                     await SendAsync(sender, response);
                 }
             }
@@ -216,7 +215,7 @@ namespace NaiveMq.Service
             {
                 if (request.Confirm)
                 {
-                    await SendAsync(sender, Confirmation.Error(request.Id.Value, ex.ErrorCode.ToString(), ex.Message));
+                    await SendAsync(sender, Confirmation.Error(request.Id, ex.ErrorCode.ToString(), ex.Message));
                 }
             }
             catch (Exception ex)
@@ -225,7 +224,7 @@ namespace NaiveMq.Service
 
                 if (request.Confirm)
                 {
-                    await SendAsync(sender, Confirmation.Error(request.Id.Value, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message));
+                    await SendAsync(sender, Confirmation.Error(request.Id, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message));
                 }
             }
         }

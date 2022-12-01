@@ -102,7 +102,12 @@ namespace NaiveMq.LoadTests.SpamQueue
                             {
                                 if (message.Confirm)
                                 {
-                                    await client.SendAsync(Confirmation.Success(message.Id.Value), _stoppingToken);
+                                    await client.SendAsync(Confirmation.Ok(message.Id), _stoppingToken);
+                                }
+
+                                if (message.Request)
+                                {
+                                    await client.SendAsync(Response.Ok(message.Id, "Answer"), _stoppingToken);
                                 }
                             };
 
@@ -153,13 +158,15 @@ namespace NaiveMq.LoadTests.SpamQueue
                             {
                                 try
                                 {
-                                    await c.SendAsync(new Message
-                                    {
-                                        Queue = _options.Value.QueueName,
-                                        Durable = _options.Value.Durable,
-                                        Text = $"{message} {poc} says {j}.",
-                                        Confirm = _options.Value.Confirm
-                                    },
+                                    var response = await c.SendAsync(new Message
+                                        {
+                                            Queue = _options.Value.QueueName,
+                                            Durable = _options.Value.Durable,
+                                            Request = _options.Value.Request,
+                                            Text = $"{message} {poc} says {j}.",
+                                            Confirm = _options.Value.Confirm,
+                                            ConfirmTimeout = _options.Value.ConfirmTimeout,
+                                        },
                                         _stoppingToken);
                                 }
                                 catch (Exception ex)
