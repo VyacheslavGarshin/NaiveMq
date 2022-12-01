@@ -259,6 +259,13 @@ namespace NaiveMq.Client
 
             _writeSemaphore.Dispose();
 
+            foreach (var item in _responses.Values)
+            {
+                item.Dispose();
+            }
+
+            _responses.Clear();
+
             ReadCounter.Dispose();
             WriteCounter.Dispose();
         }
