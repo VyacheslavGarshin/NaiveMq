@@ -107,7 +107,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                                 if (message.Request)
                                 {
-                                    await client.SendAsync(Response.Ok(message.Id, "Answer"), _stoppingToken);
+                                    _ = client.SendAsync(Response.Ok(message.Id, "Answer"), _stoppingToken);
                                 }
                             };
 
