@@ -53,64 +53,69 @@ namespace NaiveMq.LoadTests.SpamQueue
                                      arguments: null);
             }
 
-            var tasks = new List<Task>();
-
             string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
 
-            for (var i = 0; i < _options.Value.ThreadsCount; i++)
+            for (var run = 0; run < _options.Value.Runs; run++)
             {
-                var poc = i;
-                var t = Task.Run(() =>
+                _logger.LogInformation($"Run {run + 1} is started.");
+
+                var tasks = new List<Task>();
+
+                for (var i = 0; i < _options.Value.ThreadsCount; i++)
                 {
-                    using var connection = factory.CreateConnection();
-                    using var channel = connection.CreateModel();
-
-                    if (_options.Value.Confirm)
-                        channel.ConfirmSelect();
-
-                    if (_options.Value.Subscribe)
+                    var poc = i;
+                    var t = Task.Run(() =>
                     {
-                        var consumer = new EventingBasicConsumer(channel);
-                        consumer.Received += (model, ea) =>
-                        {
-                            var body = ea.Body.ToArray();
-                            var message = Encoding.UTF8.GetString(body);
-                            if (!_options.Value.AutoAck)
-                            {
-                                channel.BasicAck(ea.DeliveryTag, false);
-                            }
-                        };
-                        channel.BasicConsume(queue: _options.Value.QueueName,
-                                             autoAck: _options.Value.AutoAck,
-                                             consumer: consumer);
-                    }
-
-                    for (var j = 1; j <= _options.Value.MessageCount; j++)
-                    {
-                        var body = Encoding.UTF8.GetBytes(message);
-
-                        var props = channel.CreateBasicProperties();
-                        props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
-
-                        channel.BasicPublish(exchange: "",
-                                             routingKey: _options.Value.QueueName,
-                                             basicProperties: props,
-                                             body: body);
+                        using var connection = factory.CreateConnection();
+                        using var channel = connection.CreateModel();
 
                         if (_options.Value.Confirm)
-                            channel.WaitForConfirms();
-                    }
+                            channel.ConfirmSelect();
 
-                    return Task.CompletedTask;
-                });
+                        if (_options.Value.Subscribe)
+                        {
+                            var consumer = new EventingBasicConsumer(channel);
+                            consumer.Received += (model, ea) =>
+                            {
+                                var body = ea.Body.ToArray();
+                                var message = Encoding.UTF8.GetString(body);
+                                if (!_options.Value.AutoAck)
+                                {
+                                    channel.BasicAck(ea.DeliveryTag, false);
+                                }
+                            };
+                            channel.BasicConsume(queue: _options.Value.QueueName,
+                                                 autoAck: _options.Value.AutoAck,
+                                                 consumer: consumer);
+                        }
 
-                tasks.Add(t);
+                        for (var j = 1; j <= _options.Value.MessageCount; j++)
+                        {
+                            var body = Encoding.UTF8.GetBytes(message);
+
+                            var props = channel.CreateBasicProperties();
+                            props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
+
+                            channel.BasicPublish(exchange: "",
+                                                 routingKey: _options.Value.QueueName,
+                                                 basicProperties: props,
+                                                 body: body);
+
+                            if (_options.Value.Confirm)
+                                channel.WaitForConfirms();
+                        }
+
+                        return Task.CompletedTask;
+                    });
+
+                    tasks.Add(t);
+                }
+
+                Task.WaitAll(tasks.ToArray());
+
+                Console.WriteLine($"Took {sw.Elapsed}");
+                Console.ReadLine();
             }
-
-            Task.WaitAll(tasks.ToArray());
-
-            Console.WriteLine($"Took {sw.Elapsed}");
-            Console.ReadLine();
 
             return Task.CompletedTask;
         }

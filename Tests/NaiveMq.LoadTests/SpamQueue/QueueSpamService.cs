@@ -64,8 +64,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             await Task.Run(async () =>
             {
                 await Task.Delay(1000);
-                var tasks = new List<Task>();
-
+                
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
@@ -88,8 +87,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
 
-                for (var runs = 0; runs < _options.Value.Runs; runs++)
+                for (var run = 0; run < _options.Value.Runs; run++)
                 {
+                    _logger.LogInformation($"Run {run + 1} is started.");
+
+                    var tasks = new List<Task>();
+
                     for (var i = 0; i < taskCount; i++)
                     {
                         var poc = i;
@@ -120,7 +123,11 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             c.OnReceiveErrorAsync += (client, ex) =>
                             {
-                                _logger.LogError(ex, "Error on message");
+                                if (ex is not ClientException)
+                                {
+                                    _logger.LogError(ex, "Error on message");
+                                }
+
                                 return Task.CompletedTask;
                             };
 
@@ -152,7 +159,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 }
                                 else
                                 {
-                                    if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 10)
+                                    if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
                                     {
                                         delta = DateTime.Now.Subtract(lastActivity);
                                         if (exitSp.CurrentCount == 0)
@@ -200,14 +207,21 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         tasks.Add(t);
                     }
-                }
 
-                Task.WaitAll(tasks.ToArray());
+                    try
+                    {
+                        Task.WaitAll(tasks.ToArray());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+                    }
+
+                    _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
+                }
 
                 if (_options.Value.DeleteQueue)
                     await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
-
-                _logger.LogInformation($"Sent {max * taskCount} messages in {swt.Elapsed}.");
             });
         }
 

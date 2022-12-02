@@ -94,6 +94,10 @@ namespace NaiveMq.Service.Cogs
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // it's ok to exit this way
+            }
             catch (Exception ex)
             {
                 _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");

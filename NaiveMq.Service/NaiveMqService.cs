@@ -101,10 +101,9 @@ namespace NaiveMq.Service
 
         public override void Dispose()
         {
-            Stop();
-
             base.Dispose();
 
+            Stop();
             _storage.Dispose();
             ReadCounter.Dispose();
             WriteCounter.Dispose();
@@ -211,7 +210,7 @@ namespace NaiveMq.Service
         {
             if (ex is not ClientException)
             {
-                _logger.LogError(ex, "Error in client.");
+                _logger.LogError(ex, "Error in service client.");
             }
 
             _storage.DeleteClient(sender);
