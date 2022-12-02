@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System.Diagnostics;
 using System.Text;
 
@@ -43,9 +44,9 @@ namespace NaiveMq.LoadTests.SpamQueue
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
-                channel.QueueDelete("hello");
+                channel.QueueDelete(_options.Value.QueueName);
 
-                channel.QueueDeclare(queue: "hello",
+                channel.QueueDeclare(queue: _options.Value.QueueName,
                                      durable: _options.Value.Durable,
                                      exclusive: false,
                                      autoDelete: false,
@@ -54,7 +55,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             var tasks = new List<Task>();
 
-            string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => x));
+            string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
 
             for (var i = 0; i < _options.Value.ThreadsCount; i++)
             {
@@ -69,7 +70,16 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                     if (_options.Value.Subscribe)
                     {
-
+                        var consumer = new EventingBasicConsumer(channel);
+                        consumer.Received += (model, ea) =>
+                        {
+                            var body = ea.Body.ToArray();
+                            var message = Encoding.UTF8.GetString(body);
+                            channel.BasicAck(ea.DeliveryTag, false);
+                        };
+                        channel.BasicConsume(queue: _options.Value.QueueName,
+                                             autoAck: _options.Value.AutoAck,
+                                             consumer: consumer);
                     }
 
                     for (var j = 1; j <= _options.Value.MessageCount; j++)
@@ -80,7 +90,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                         props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
 
                         channel.BasicPublish(exchange: "",
-                                             routingKey: "hello",
+                                             routingKey: _options.Value.QueueName,
                                              basicProperties: props,
                                              body: body);
 

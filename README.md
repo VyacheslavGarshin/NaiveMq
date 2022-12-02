@@ -13,9 +13,14 @@ Plans:
 + Unit tests ;-)
 
 # Performance vs RabbitMQ
+
 Producers:
-+ In memory queue with/without confirmation, 10 clients, 100 chars message, 2 times faster
-+ Durable queue with/without confirmation, 10 clients, 100 chars message, 2 times faster
++ In memory queue with/without confirmation, 10 clients, 100 chars message, ...
++ Durable queue with/without confirmation, 10 clients, 100 chars message, ...
+
+Producers+Consumers:
++ In memory queue with/without confirmation, 10 clients, 100 chars message, ...
++ Durable queue with/without confirmation, 10 clients, 100 chars message, ...
 
 # Requirements
 + .NET Standart for Client and Service

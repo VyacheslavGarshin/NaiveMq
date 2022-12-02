@@ -4,6 +4,8 @@
     {
         public bool IsEnabled { get; set; }
 
+        public string QueueName { get; set; } = "test";
+
         public bool Durable { get; set; }
 
         public int ThreadsCount { get; set; } = 1;
@@ -15,6 +17,8 @@
         public int Runs { get; set; } = 1;
 
         public bool Subscribe { get; set; }
+
+        public bool AutoAck { get; set; } = true;
 
         public int MessageLength { get; set; } = 100;
     }
