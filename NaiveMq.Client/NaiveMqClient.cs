@@ -185,28 +185,19 @@ namespace NaiveMq.Client
 
                 if (request.Confirm)
                 {
-                    var entered = await responseItem.SemaphoreSlim.WaitAsync((int)(request.ConfirmTimeout ?? Timeout).TotalMilliseconds, cancellationToken);
-
-                    if (!entered)
-                    {
-                        throw new TimeoutException("Command confirmation expired or canceled.");
-                    }
-                    else
-                    {
-                        if (!responseItem.Response.Success)
-                        {
-                            throw new ConfirmationException(responseItem.Response);
-                        }
-                        else
-                        {
-                            response = responseItem.Response;
-                        }
-                    }
+                    response = await WaitForConfirmation(request, responseItem, cancellationToken);
                 }
             }
             catch (OperationCanceledException ex)
             {
-                throw new ClientStoppedException("Sending request is canceled.", ex);
+                if (_isStarted)
+                {
+                    throw;
+                }
+                else
+                {
+                    throw new ClientStoppedException("Sending request is canceled.", ex);
+                };
             }
             finally
             {
@@ -219,11 +210,63 @@ namespace NaiveMq.Client
 
             return (TResponse)response;
         }
-
+        
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
             var text = CreateMessage(response);
             await SendAsync(text, cancellationToken);
+        }
+
+        public void Dispose()
+        {
+            Stop();
+
+            TcpClient.Dispose();
+
+            _writeSemaphore.Dispose();
+
+            foreach (var item in _responses.Values)
+            {
+                item.Dispose();
+            }
+
+            _responses.Clear();
+
+            ReadCounter.Dispose();
+            WriteCounter.Dispose();
+        }
+
+        private async Task<IResponse> WaitForConfirmation<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
+            where TResponse : IResponse
+        {
+            IResponse response;
+
+            var entered = await responseItem.SemaphoreSlim.WaitAsync((int)(request.ConfirmTimeout ?? Timeout).TotalMilliseconds, cancellationToken);
+
+            if (!entered)
+            {
+                if (_isStarted)
+                {
+                    throw new TimeoutException("Command confirmation expired or canceled.");
+                }
+                else
+                {
+                    throw new ClientStoppedException("Sending request is canceled.");
+                }
+            }
+            else
+            {
+                if (!responseItem.Response.Success)
+                {
+                    throw new ConfirmationException(responseItem.Response);
+                }
+                else
+                {
+                    response = responseItem.Response;
+                }
+            }
+
+            return response;
         }
 
         private void DisposeStreams()
@@ -263,25 +306,6 @@ namespace NaiveMq.Client
                 _stream.Dispose();
                 _stream = null;
             }
-        }
-
-        public void Dispose()
-        {
-            Stop();
-
-            TcpClient.Dispose();
-
-            _writeSemaphore.Dispose();
-
-            foreach (var item in _responses.Values)
-            {
-                item.Dispose();
-            }
-
-            _responses.Clear();
-
-            ReadCounter.Dispose();
-            WriteCounter.Dispose();
         }
 
         private static ICommand ParseMessage(string message)
@@ -368,33 +392,30 @@ namespace NaiveMq.Client
                     throw new ClientStoppedException(message);
                 }
 
-                try
+                await _streamWriter.WriteLineAsync(text.ToCharArray(), cancellationToken);
+                await _streamWriter.FlushAsync();
+
+                WriteCounter.Add();
+
+                if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    await _streamWriter.WriteLineAsync(text.ToCharArray(), cancellationToken);
-                    await _streamWriter.FlushAsync();
-
-                    WriteCounter.Add();
-
-                    if (_logger.IsEnabled(LogLevel.Trace))
-                    {
-                        _logger.LogTrace($">{Id}:{text}");
-                    }
-
-                    if (OnSendAsync != null)
-                    {
-                        await OnSendAsync.Invoke(this, text);
-                    }
+                    _logger.LogTrace($">{Id}:{text}");
                 }
-                catch (Exception ex)
+
+                if (OnSendAsync != null)
                 {
-                    Stop();
-                    throw new ConnectionException("Error writing message to client.", ex);
+                    await OnSendAsync.Invoke(this, text);
                 }
             }
             catch (TaskCanceledException ex)
             {
                 Stop();
                 throw new ClientStoppedException(message, ex);
+            }
+            catch (Exception ex)
+            {
+                Stop();
+                throw new ConnectionException("Error writing message to client.", ex);
             }
             finally
             {

@@ -25,7 +25,7 @@ namespace NaiveMq.Service
 
         public SpeedCounter WriteMessageCounter { get; set; } = new SpeedCounter(10);
 
-        public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(10);
+        public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(1);
 
         public bool IsLoaded => _isLoaded;
 
