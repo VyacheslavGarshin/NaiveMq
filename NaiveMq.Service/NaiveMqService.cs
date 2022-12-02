@@ -108,6 +108,8 @@ namespace NaiveMq.Service
             _storage.Dispose();
             ReadCounter.Dispose();
             WriteCounter.Dispose();
+            ReadMessageCounter.Dispose();
+            WriteMessageCounter.Dispose();
         }
 
         private async Task StartAsync()
