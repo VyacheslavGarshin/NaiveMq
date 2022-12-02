@@ -1,5 +1,7 @@
-﻿using NaiveMq.Client.Commands;
+﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
+using NaiveMq.Client.Exceptions;
 using NaiveMq.Service.Handlers;
 using System;
 
@@ -81,32 +83,47 @@ namespace NaiveMq.Service.Cogs
                             await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
                         }
 
-                        await SendConfirmation(messageEntity, result, cancellationToken);
+                        if (messageEntity.Request)
+                        {
+                            await SendConfirmation(messageEntity, result, cancellationToken);
+                        }
                     }
-                    catch
+                    catch (ClientException)
                     {
                         if (!messageEntity.Request)
                         {
-                            var messageCommand = new Message
-                            {
-                                Id = messageEntity.Id,
-                                Queue = messageEntity.Queue,
-                                Request = messageEntity.Request,
-                                Durable = messageEntity.Durable,
-                                BindingKey = messageEntity.BindingKey,
-                                Text = messageEntity.Text
-                            };
-
-                            await new MessageHandler().ExecuteAsync(_context, messageCommand);
+                            await ReEnqueueMessage(messageEntity);
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+                        
+                        // delay subs to prevent spamming error. do not exit sending messages
+                        await Task.Delay(5000);
                     }
                 }
             }
         }
 
+        private async Task ReEnqueueMessage(MessageEntity messageEntity)
+        {
+            var messageCommand = new Message
+            {
+                Id = messageEntity.Id,
+                Queue = messageEntity.Queue,
+                Request = messageEntity.Request,
+                Durable = messageEntity.Durable,
+                BindingKey = messageEntity.BindingKey,
+                Text = messageEntity.Text
+            };
+
+            await new MessageHandler().ExecuteAsync(_context, messageCommand);
+        }
+
         private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
         {
-            if (messageEntity.Request && _context.Storage.TryGetClient(messageEntity.ClientId, out var receiverContext))
+            if (_context.Storage.TryGetClient(messageEntity.ClientId, out var receiverContext))
             {
                 var confirmation = new Confirmation
                 {
