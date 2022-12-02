@@ -63,46 +63,49 @@ namespace NaiveMq.Service.Cogs
         {
             var cancellationToken = _cancellationTokenSource.Token;
 
-            while (_isStarted && !_context.CancellationToken.IsCancellationRequested)
+            try
             {
-                if (cancellationToken.IsCancellationRequested)
+                while (_isStarted && !_context.CancellationToken.IsCancellationRequested)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
+                    await _queue.WaitDequeueAsync(cancellationToken);
 
-                await _queue.WaitDequeueAsync(cancellationToken);
-
-                if (_queue.TryDequeue(out var messageEntity))
-                {
-                    try
+                    if (_queue.TryDequeue(out var messageEntity))
                     {
-                        var result = await SendMessage(messageEntity, cancellationToken);
+                        try
+                        {
+                            var result = await SendMessage(messageEntity, cancellationToken);
 
-                        if (messageEntity.Durable)
-                        {
-                            await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
-                        }
+                            if (messageEntity.Durable)
+                            {
+                                await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
+                            }
 
-                        if (messageEntity.Request)
-                        {
-                            await SendConfirmation(messageEntity, result, cancellationToken);
+                            if (messageEntity.Request)
+                            {
+                                await SendConfirmation(messageEntity, result, cancellationToken);
+                            }
                         }
-                    }
-                    catch (ClientException)
-                    {
-                        if (!messageEntity.Request)
+                        catch (ClientException)
                         {
-                            await ReEnqueueMessage(messageEntity);
+                            if (!messageEntity.Request)
+                            {
+                                await ReEnqueueMessage(messageEntity);
+                            }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
-                        
-                        // delay subs to prevent spamming error. do not exit sending messages
-                        await Task.Delay(5000);
+                        catch (Exception ex)
+                        {
+                            _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+
+                            // delay subs to prevent spamming error. do not exit sending messages
+                            await Task.Delay(TimeSpan.FromSeconds(10));
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+                throw;
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client.Exceptions;
 using System.Diagnostics;
 
 namespace NaiveMq.LoadTests.SpamQueue
@@ -102,7 +103,18 @@ namespace NaiveMq.LoadTests.SpamQueue
                             {
                                 if (message.Confirm || message.Request)
                                 {
-                                    await client.SendAsync(Confirmation.Ok(message.Id, "Answer"), _stoppingToken);
+                                    try
+                                    {
+                                        await client.SendAsync(Confirmation.Ok(message.Id, "Answer"), _stoppingToken);
+                                    }
+                                    catch (ClientException)
+                                    {
+                                        // it's ok
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogError(ex, "Send errr");
+                                    }
                                 }
                             };
 
@@ -163,6 +175,10 @@ namespace NaiveMq.LoadTests.SpamQueue
                                             ConfirmTimeout = _options.Value.ConfirmTimeout,
                                         },
                                         _stoppingToken);
+                                }
+                                catch (ClientException)
+                                {
+                                    // it's ok
                                 }
                                 catch (Exception ex)
                                 {

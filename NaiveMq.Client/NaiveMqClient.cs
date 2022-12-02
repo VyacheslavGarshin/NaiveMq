@@ -204,6 +204,10 @@ namespace NaiveMq.Client
                     }
                 }
             }
+            catch (OperationCanceledException ex)
+            {
+                throw new ClientStoppedException("Sending request is canceled.", ex);
+            }
             finally
             {
                 if (request.Confirm)
@@ -355,10 +359,10 @@ namespace NaiveMq.Client
                 throw new ClientStoppedException(message);
             }
 
-            await _writeSemaphore.WaitAsync(cancellationToken);
-
             try
             {
+                await _writeSemaphore.WaitAsync(cancellationToken);
+
                 if (!_isStarted)
                 {
                     throw new ClientStoppedException(message);
@@ -387,6 +391,11 @@ namespace NaiveMq.Client
                     throw new ConnectionException("Error writing message to client.", ex);
                 }
             }
+            catch (TaskCanceledException ex)
+            {
+                Stop();
+                throw new ClientStoppedException(message, ex);
+            }
             finally
             {
                 if (_isStarted)
@@ -408,8 +417,9 @@ namespace NaiveMq.Client
                 }
                 catch (Exception ex)
                 {
-                    await HandleReceiveErrorAsync(ex);
-                    throw;
+                    var clEx = new ConnectionException("Error reading stream.", ex);
+                    await HandleReceiveErrorAsync(clEx);
+                    throw clEx;
                 }
 
                 ReadCounter.Add();
