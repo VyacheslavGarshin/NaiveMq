@@ -158,7 +158,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                             Queue = _options.Value.QueueName,
                                             Durable = _options.Value.DurableMessage,
                                             Request = _options.Value.Request,
-                                            Text = $"{message} {poc} says {j}.",
+                                            Text = message,
                                             Confirm = _options.Value.Confirm,
                                             ConfirmTimeout = _options.Value.ConfirmTimeout,
                                         },

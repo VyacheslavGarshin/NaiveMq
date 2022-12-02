@@ -75,7 +75,10 @@ namespace NaiveMq.LoadTests.SpamQueue
                         {
                             var body = ea.Body.ToArray();
                             var message = Encoding.UTF8.GetString(body);
-                            channel.BasicAck(ea.DeliveryTag, false);
+                            if (!_options.Value.AutoAck)
+                            {
+                                channel.BasicAck(ea.DeliveryTag, false);
+                            }
                         };
                         channel.BasicConsume(queue: _options.Value.QueueName,
                                              autoAck: _options.Value.AutoAck,
@@ -84,7 +87,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                     for (var j = 1; j <= _options.Value.MessageCount; j++)
                     {
-                        var body = Encoding.UTF8.GetBytes($"{message} {poc} says {j}.");
+                        var body = Encoding.UTF8.GetBytes(message);
 
                         var props = channel.CreateBasicProperties();
                         props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
