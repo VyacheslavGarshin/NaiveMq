@@ -39,7 +39,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 using var timer = new Timer((s) =>
                 {
-                    _logger.LogInformation($"{DateTime.Now:O};{_queueService.ReadCounter.LastResult};{_queueService.WriteCounter.LastResult};{_queueService.ReadCounter.Total};{_queueService.WriteCounter.Total}");
+                    _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.ReadMessageCounter.LastResult};Write message/s;{_queueService.WriteMessageCounter.LastResult};Read/s;{_queueService.ReadCounter.LastResult};Write/s;{_queueService.WriteCounter.LastResult};Total read;{_queueService.ReadCounter.Total};Total write;{_queueService.WriteCounter.Total}");
                 }, null, 0, 1000);
 
                 await QueueSpam();
@@ -100,14 +100,9 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             c.OnReceiveMessageAsync += async (client, message) =>
                             {
-                                if (message.Confirm)
+                                if (message.Confirm || message.Request)
                                 {
-                                    await client.SendAsync(Confirmation.Ok(message.Id), _stoppingToken);
-                                }
-
-                                if (message.Request)
-                                {
-                                    _ = client.SendAsync(Response.Ok(message.Id, "Answer"), _stoppingToken);
+                                    await client.SendAsync(Confirmation.Ok(message.Id, "Answer"), _stoppingToken);
                                 }
                             };
 
@@ -161,7 +156,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     var response = await c.SendAsync(new Message
                                         {
                                             Queue = _options.Value.QueueName,
-                                            Durable = _options.Value.Durable,
+                                            Durable = _options.Value.DurableMessage,
                                             Request = _options.Value.Request,
                                             Text = $"{message} {poc} says {j}.",
                                             Confirm = _options.Value.Confirm,

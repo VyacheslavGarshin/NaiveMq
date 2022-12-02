@@ -42,8 +42,6 @@ namespace NaiveMq.Service.Handlers
 
                 if (command.Request)
                 {
-                    context.Storage.ClientRequests.AddRequest(context.Client.Id, command.Id, command.ConfirmTimeout);
-
                     // confirmation will be redirected from subscriber to this client
                     return null;
                 }
@@ -85,6 +83,7 @@ namespace NaiveMq.Service.Handlers
                 var message = new MessageEntity
                 {
                     Id = command.Id,
+                    ClientId = context?.Client?.Id ?? 0,
                     Queue = queue.Name,
                     Request = command.Request,
                     Durable = command.Durable && queue.Durable,

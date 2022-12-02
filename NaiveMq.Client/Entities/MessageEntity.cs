@@ -6,6 +6,8 @@ namespace NaiveMq.Client.Entities
     {
         public Guid Id { get; set; }
 
+        public int ClientId { get; set; }
+
         public string Queue { get; set; }
 
         public bool Request { get; set; }

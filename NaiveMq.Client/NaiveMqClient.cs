@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NaiveMq.Client
 {
@@ -70,6 +71,10 @@ namespace NaiveMq.Client
         public delegate Task OnSendHandler(NaiveMqClient sender, string message);
 
         public event OnSendHandler OnSendAsync;
+
+        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message command);
+
+        public event OnSendMessageHandler OnSendMessageAsync;
 
         private static readonly Dictionary<string, Type> _commandTypes = new Dictionary<string, Type>();
 
@@ -172,6 +177,11 @@ namespace NaiveMq.Client
                 }
 
                 await SendAsync(commandText, cancellationToken);
+
+                if (request is Message message && OnSendMessageAsync != null)
+                {
+                    await OnSendMessageAsync.Invoke(this, message);
+                }
 
                 if (request.Confirm)
                 {

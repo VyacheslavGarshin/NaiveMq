@@ -73,5 +73,7 @@
         public bool Request { get; set; }
 
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
+
+        public bool DurableMessage { get; set; } = false;        
     }
 }

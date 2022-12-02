@@ -1,5 +1,7 @@
 ﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Entities;
 using NaiveMq.Service.Handlers;
+using System;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -72,40 +74,69 @@ namespace NaiveMq.Service.Cogs
                 {
                     try
                     {
-                        var message = new Message
-                        {
-                            Confirm = _confirm,
-                            ConfirmTimeout = _confirmTimeout,
-                            Queue = messageEntity.Queue,
-                            Request = messageEntity.Request,
-                            Durable = messageEntity.Durable,
-                            BindingKey = messageEntity.BindingKey,
-                            Text = messageEntity.Text
-                        };
+                        var result = await SendMessage(messageEntity, cancellationToken);
 
-                        await _context.Client.SendAsync(message, cancellationToken);
-
-                        if (_queue.Durable)
+                        if (messageEntity.Durable)
                         {
                             await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
                         }
+
+                        await SendConfirmation(messageEntity, result, cancellationToken);
                     }
                     catch
                     {
-                        var messageCommand = new Message
+                        if (!messageEntity.Request)
                         {
-                            Id = messageEntity.Id,
-                            Queue = messageEntity.Queue,
-                            Request = messageEntity.Request,
-                            Durable = messageEntity.Durable,
-                            BindingKey = messageEntity.BindingKey,
-                            Text = messageEntity.Text
-                        };
+                            var messageCommand = new Message
+                            {
+                                Id = messageEntity.Id,
+                                Queue = messageEntity.Queue,
+                                Request = messageEntity.Request,
+                                Durable = messageEntity.Durable,
+                                BindingKey = messageEntity.BindingKey,
+                                Text = messageEntity.Text
+                            };
 
-                        await new MessageHandler().ExecuteAsync(_context, messageCommand);
+                            await new MessageHandler().ExecuteAsync(_context, messageCommand);
+                        }
                     }
                 }
             }
+        }
+
+        private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
+        {
+            if (messageEntity.Request && _context.Storage.TryGetClient(messageEntity.ClientId, out var receiverContext))
+            {
+                var confirmation = new Confirmation
+                {
+                    RequestId = result.RequestId,
+                    Success = result.Success,
+                    ErrorCode = result.ErrorCode,
+                    ErrorMessage = result.ErrorMessage,
+                    Text = result.Text
+                };
+
+                await receiverContext.Client.SendAsync(confirmation, cancellationToken);
+            }
+        }
+
+        private async Task<Confirmation> SendMessage(MessageEntity messageEntity, CancellationToken cancellationToken)
+        {
+            var message = new Message
+            {
+                Id = messageEntity.Id,
+                Confirm = _confirm,
+                ConfirmTimeout = _confirmTimeout,
+                Queue = messageEntity.Queue,
+                Request = messageEntity.Request,
+                Durable = messageEntity.Durable,
+                BindingKey = messageEntity.BindingKey,
+                Text = messageEntity.Text
+            };
+
+            var result = await _context.Client.SendAsync(message, cancellationToken);
+            return result;
         }
     }
 }

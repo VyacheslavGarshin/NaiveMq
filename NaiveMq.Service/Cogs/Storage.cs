@@ -23,8 +23,6 @@ namespace NaiveMq.Service.Cogs
 
         public readonly ConcurrentDictionary<int, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
 
-        public ClientRequests ClientRequests { get; set; }
-
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
         private readonly CancellationToken _stoppingToken;
@@ -37,7 +35,6 @@ namespace NaiveMq.Service.Cogs
             _stoppingToken = stoppingToken;
 
             PersistentStorage = persistentStorage;
-            ClientRequests = new ClientRequests(_logger);
         }
 
         public ConcurrentDictionary<string, Queue> GetUserQueues(ClientContext context)
@@ -75,8 +72,6 @@ namespace NaiveMq.Service.Cogs
 
         public void Dispose()
         {
-            ClientRequests.Dispose();
-
             foreach (var clientSubscriptions in Subscriptions)
             {
                 DeleteSubscriptions(clientSubscriptions.Key);
@@ -133,7 +128,6 @@ namespace NaiveMq.Service.Cogs
         public void DeleteClient(NaiveMqClient client)
         {
             DeleteSubscriptions(client.Id);
-            ClientRequests.RemoveClient(client.Id);
 
             _clientContexts.TryRemove(client.Id, out var _);
             client.Dispose();

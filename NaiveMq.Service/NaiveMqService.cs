@@ -21,6 +21,10 @@ namespace NaiveMq.Service
 
         public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
 
+        public SpeedCounter ReadMessageCounter { get; set; } = new SpeedCounter(10);
+
+        public SpeedCounter WriteMessageCounter { get; set; } = new SpeedCounter(10);
+
         public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(10);
 
         public bool IsLoaded => _isLoaded;
@@ -148,11 +152,14 @@ namespace NaiveMq.Service
             try
             {
                 client = new NaiveMqClient(tcpClient, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
+                
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
                 client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
                 client.OnParseMessageErrorAsync += OnClientParseMessageErrorAsync;
                 client.OnReceiveAsync += OnClientReceiveAsync;
                 client.OnSendAsync += OnClientSendAsync;
+                client.OnSendMessageAsync += OnClientSendMessageAsync;
+                client.OnReceiveMessageAsync += OnClientReceiveMessageAsync;
 
                 client.Start();
                 
@@ -167,7 +174,7 @@ namespace NaiveMq.Service
                     _storage.DeleteClient(client);
                 }
             }
-        }      
+        }
 
         private Task OnClientSendAsync(NaiveMqClient sender, string message)
         {
@@ -175,9 +182,21 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
+        private Task OnClientSendMessageAsync(NaiveMqClient sender, Message command)
+        {
+            WriteMessageCounter.Add();
+            return Task.CompletedTask;
+        }
+
         private Task OnClientReceiveAsync(NaiveMqClient sender, string message)
         {
             ReadCounter.Add();
+            return Task.CompletedTask;
+        }
+
+        private Task OnClientReceiveMessageAsync(NaiveMqClient sender, Message command)
+        {
+            ReadMessageCounter.Add();
             return Task.CompletedTask;
         }
 
