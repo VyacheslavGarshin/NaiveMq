@@ -4,15 +4,15 @@ namespace NaiveMq.Client.Exceptions
 {
     public class ClientException : Exception
     {
-        protected ClientException()
+        public ClientException()
         {
         }
 
-        protected ClientException(string message) : base(message)
+        public ClientException(string message) : base(message)
         {
         }
 
-        protected ClientException(string message, Exception innerException) : base(message, innerException)
+        public ClientException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }

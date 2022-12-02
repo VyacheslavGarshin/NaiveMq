@@ -3,7 +3,6 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
 using NaiveMq.Client.Exceptions;
 using NaiveMq.Service.Handlers;
-using System;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -92,13 +91,6 @@ namespace NaiveMq.Service.Cogs
                                 await ReEnqueueMessage(messageEntity);
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
-
-                            // delay subs to prevent spamming error. do not exit sending messages
-                            await Task.Delay(TimeSpan.FromSeconds(10));
-                        }
                     }
                 }
             }
@@ -155,8 +147,7 @@ namespace NaiveMq.Service.Cogs
                 Text = messageEntity.Text
             };
 
-            var result = await _context.Client.SendAsync(message, cancellationToken);
-            return result;
+            return await _context.Client.SendAsync(message, cancellationToken);
         }
     }
 }

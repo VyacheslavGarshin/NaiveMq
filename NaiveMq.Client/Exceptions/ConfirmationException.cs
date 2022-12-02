@@ -10,5 +10,9 @@ namespace NaiveMq.Client.Exceptions
         {
             Response = response;
         }
+
+        public ConfirmationException(string message) : base(message)
+        {
+        }
     }
 }

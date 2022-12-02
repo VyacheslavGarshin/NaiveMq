@@ -12,7 +12,6 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace NaiveMq.Client
 {
@@ -152,7 +151,7 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// 
+        /// Send request.
         /// </summary>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
@@ -190,14 +189,7 @@ namespace NaiveMq.Client
             }
             catch (OperationCanceledException ex)
             {
-                if (_isStarted)
-                {
-                    throw;
-                }
-                else
-                {
-                    throw new ClientStoppedException("Sending request is canceled.", ex);
-                };
+                throw new ClientException("Sending request is canceled.", ex);
             }
             finally
             {
@@ -211,6 +203,12 @@ namespace NaiveMq.Client
             return (TResponse)response;
         }
         
+        /// <summary>
+        /// Send response.
+        /// </summary>
+        /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
             var text = CreateMessage(response);
@@ -247,7 +245,7 @@ namespace NaiveMq.Client
             {
                 if (_isStarted)
                 {
-                    throw new TimeoutException("Command confirmation expired or canceled.");
+                    throw new ConfirmationException("Command confirmation expired or canceled.");
                 }
                 else
                 {
@@ -392,8 +390,15 @@ namespace NaiveMq.Client
                     throw new ClientStoppedException(message);
                 }
 
-                await _streamWriter.WriteLineAsync(text.ToCharArray(), cancellationToken);
-                await _streamWriter.FlushAsync();
+                try
+                {
+                    await _streamWriter.WriteLineAsync(text.ToCharArray(), cancellationToken);
+                    await _streamWriter.FlushAsync();
+                }
+                catch (Exception ex)
+                {
+                    throw new ConnectionException("Error writing stream.", ex);
+                }
 
                 WriteCounter.Add();
 
@@ -407,15 +412,14 @@ namespace NaiveMq.Client
                     await OnSendAsync.Invoke(this, text);
                 }
             }
-            catch (TaskCanceledException ex)
+            catch (ClientException)
             {
-                Stop();
-                throw new ClientStoppedException(message, ex);
+                throw;
             }
             catch (Exception ex)
             {
                 Stop();
-                throw new ConnectionException("Error writing message to client.", ex);
+                throw new ClientException("Error writing message to client.", ex);
             }
             finally
             {
