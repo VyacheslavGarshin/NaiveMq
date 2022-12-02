@@ -6,6 +6,7 @@ Implemented so far:
 + User management
 + Queue management, publish message, queue subscriptions and message receiving
 + Exchanges, routing with regex
++ Request-response messages with response from consumer passed to producer
 + Durable queues
 
 Plans:
