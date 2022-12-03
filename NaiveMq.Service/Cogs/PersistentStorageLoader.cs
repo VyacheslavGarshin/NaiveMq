@@ -128,18 +128,21 @@ namespace NaiveMq.Service.Cogs
 
                         var message = await _storage.PersistentStorage.LoadMessageAsync(user.Username, queue.Name, key, _cancellationToken);
 
-                        var messageCommand = new Message
+                        if (message != null)
                         {
-                            Id = message.Id,
-                            Queue = message.Queue,
-                            Request = message.Request,
-                            Durable = message.Durable,
-                            BindingKey = message.BindingKey,
-                            Text = message.Text
-                        };
+                            var messageCommand = new Message
+                            {
+                                Id = message.Id,
+                                Queue = message.Queue,
+                                Request = message.Request,
+                                Durable = message.Durable,
+                                BindingKey = message.BindingKey,
+                                Text = message.Text
+                            };
 
-                        await new MessageHandler().ExecuteAsync(context, messageCommand);
-                        messageCount++;
+                            await new MessageHandler().ExecuteAsync(context, messageCommand);
+                            messageCount++;
+                        }
                     }
                 }
             }

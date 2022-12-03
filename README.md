@@ -32,7 +32,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | Durable message with confirmation        |  1.600    |  1.200    |              |                 |
 | **Producers+Consumers**                  |           |           |              |                 |
 | In memory message without confirmation   | 21.000    | 31.000*   |              |                 |
-| In memory message with confirmation      |  7.600    |  7.000    |              |                 |
+| In memory message with confirmation      |  8.400    |  7.000    |              |                 |
 | Durable message without confirmation     |  1.400    | 28.000**  |              |                 |
 | Durable message with confirmation        |  1.400    |  1.200    |              |                 |
 
