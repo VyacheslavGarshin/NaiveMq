@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
+using System.Diagnostics;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -114,6 +115,8 @@ namespace NaiveMq.Service.Cogs
         private async Task LoadMessagesAsync()
         {
             var messageCount = 0;
+            var sw = new Stopwatch();
+            sw.Start();
 
             foreach (var user in _storage.Users.Values)
             {
@@ -122,6 +125,7 @@ namespace NaiveMq.Service.Cogs
                     var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
                     var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.User, queue.Name, _cancellationToken)).ToList();
+                    var queueMessageCount = 0;
 
                     foreach (var key in messages)
                     {
@@ -142,6 +146,14 @@ namespace NaiveMq.Service.Cogs
 
                             await new MessageHandler().ExecuteAsync(context, messageCommand);
                             messageCount++;
+                        }
+
+                        queueMessageCount++;
+
+                        if (sw.Elapsed > TimeSpan.FromSeconds(10))
+                        {
+                            _logger.LogInformation($"{messageCount} persistent messages are loaded. {queueMessageCount}/{messages.Count} loaded for queue '{queue.Name}'.");
+                            sw.Restart();
                         }
                     }
                 }
