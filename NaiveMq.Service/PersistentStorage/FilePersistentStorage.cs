@@ -249,8 +249,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         private string GetMessagePath(string user, string queue, Guid messageId)
         {
-            var chunk = messageId.ToString();
-            return Path.Combine(_basePath, MessagesDirectory, user, queue, chunk.Substring(0, 2), chunk.Substring(2, 2), $"{messageId}.json");
+            return Path.Combine(_basePath, MessagesDirectory, user, queue, $"{messageId}.json");
         }
 
         public void Dispose()
