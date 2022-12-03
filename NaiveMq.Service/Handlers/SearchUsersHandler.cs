@@ -10,15 +10,15 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin(context);
 
-            return Task.FromResult(new SearchUsersResponse
+            return Task.FromResult(SearchUsersResponse.Ok(command, (response) =>
             {
-                Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Username.Contains(command.Username)).Select(x =>
+                response.Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Username.Contains(command.Username)).Select(x =>
                     new UserEntity
                     {
                         Username = x.Username,
                         Administrator = x.Administrator
-                    }).OrderBy(x => x.Username).ToList()
-            });
+                    }).OrderBy(x => x.Username).ToList();
+            }));
         }
 
         public void Dispose()

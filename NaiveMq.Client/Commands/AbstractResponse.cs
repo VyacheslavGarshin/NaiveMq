@@ -15,6 +15,11 @@ namespace NaiveMq.Client.Commands
 
         public string ErrorMessage { get; set; }
 
+        /// <summary>
+        /// Returns new(T) with set <see cref="RequestId"/>.
+        /// </summary>
+        /// <param name="requestId"></param>
+        /// <returns></returns>
         public static T Ok(Guid requestId)
         {
             return new T
@@ -24,9 +29,19 @@ namespace NaiveMq.Client.Commands
             };
         }
 
-        public static T Ok(IRequest request)
+        /// <summary>
+        /// Returns new(T) with set <see cref="RequestId"/> if <see cref="request.Confirm"/>.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static T Ok(IRequest request, Action<T> action = null)
         {
-            return request.Confirm ? new T { RequestId = request.Id, Success = true } : default;
+            var result = request.Confirm ? new T { RequestId = request.Id, Success = true } : default;
+
+            action?.Invoke(result);
+
+            return result;
         }
 
         public static T Error(Guid requestId, string errorCode, string errorMessage)

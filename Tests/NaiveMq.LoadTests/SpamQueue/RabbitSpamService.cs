@@ -54,6 +54,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
 
             string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
+            var body = Encoding.UTF8.GetBytes(message);
 
             for (var run = 0; run < _options.Value.Runs; run++)
             {
@@ -77,8 +78,8 @@ namespace NaiveMq.LoadTests.SpamQueue
                             var consumer = new EventingBasicConsumer(channel);
                             consumer.Received += (model, ea) =>
                             {
-                                var body = ea.Body.ToArray();
-                                var message = Encoding.UTF8.GetString(body);
+                                //var body = ea.Body.ToArray();
+                                //var message = Encoding.UTF8.GetString(body);
                                 if (!_options.Value.AutoAck)
                                 {
                                     channel.BasicAck(ea.DeliveryTag, false);
@@ -91,8 +92,6 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         for (var j = 1; j <= _options.Value.MessageCount; j++)
                         {
-                            var body = Encoding.UTF8.GetBytes(message);
-
                             var props = channel.CreateBasicProperties();
                             props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
 

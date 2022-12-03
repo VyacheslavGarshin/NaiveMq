@@ -16,9 +16,9 @@ namespace NaiveMq.Service.Handlers
 
             if (userQueues.TryGetValue(command.Name, out var queue) || command.Try)
             {
-                return Task.FromResult(new GetQueueResponse
+                return Task.FromResult(GetQueueResponse.Ok(command, (response) =>
                 {
-                    Queue = queue != null
+                    response.Queue = queue != null
                         ? new QueueEntity
                         {
                             User = queue.User,
@@ -26,8 +26,8 @@ namespace NaiveMq.Service.Handlers
                             Durable = queue.Durable,
                             Exchange = queue.Exchange,
                         }
-                        : null
-                });
+                        : null;
+                }));
             }
             else
             {

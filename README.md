@@ -1,4 +1,6 @@
-# NaiveMq
+NaiveMq
+=======
+
 .NET libraries for creating a message queue server. And the default server project.
 
 Implemented so far:
@@ -16,20 +18,29 @@ Plans:
 + Unit tests
 + Integration tests
 
-# Performance vs RabbitMQ
+Performance vs RabbitMQ
+-----------------------
+Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb
 
-Producers:
-+ In memory queue without confirmation, 10 clients, 100 chars message, ...
-+ In memory queue with confirmation, 10 clients, 100 chars message, ...
-+ Durable queue without confirmation, 10 clients, 100 chars message, ...
-+ Durable queue with confirmation, 10 clients, 100 chars message, ...
+| Scenario, 1 queue, 10 clients in/out     | 100 chars |           | 10.000 chars | 1.000.000 chars |
+|------------------------------------------|-----------|-----------|--------------|-----------------|
+|                                          | NaiveMq   | RabbitMq  |              |                 |
+| **Producers**                            |           |           |              |                 |
+| In memory message without confirmation   | 52.000    | 25.000*   |              |                 |
+| In memory message with confirmation      | 17.000    |  8.000    |              |                 |
+| Durable message without confirmation     |  1.800    | 10.000**  |              |                 |
+| Durable message with confirmation        |  1.600    |  1.200    |              |                 |
+| **Producers+Consumers**                  |           |           |              |                 |
+| In memory message without confirmation   | 21.000    | 31.000*   |              |                 |
+| In memory message with confirmation      |  7.600    |  7.000    |              |                 |
+| Durable message without confirmation     |  1.400    | 28.000**  |              |                 |
+| Durable message with confirmation        |  1.400    |  1.200    |              |                 |
 
-Producers+Consumers:
-+ In memory queue without confirmation, 10 clients, 100 chars message, ...
-+ In memory queue with confirmation, 10 clients, 100 chars message, ...
-+ Durable queue without confirmation, 10 clients, 100 chars message, ...
-+ Durable queue with confirmation, 10 clients, 100 chars message, ...
+\* RabbitMq .NET Client eats up memory and crashes, so the test is stable for about a minute.
 
-# Requirements
+\*\* Same as * but disk I/O is low, not sure it's durable after all.
+
+Requirements
+--------------
 + .NET Standart for Client and Service
 + .NET 6 for tests and Server

@@ -10,6 +10,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -131,8 +132,8 @@ namespace NaiveMq.Client
                 DisposeStreams();
 
                 _stream = TcpClient.GetStream();
-                _streamReader = new StreamReader(_stream);
-                _streamWriter = new StreamWriter(_stream);
+                _streamReader = new StreamReader(_stream, Encoding.UTF8);
+                _streamWriter = new StreamWriter(_stream, Encoding.UTF8);
 
                 Task.Run(async () => await ReceiveAsync());
 
@@ -310,7 +311,7 @@ namespace NaiveMq.Client
         {
             try
             {
-                var split = (message ?? string.Empty).Split("|", 3);
+                var split = (message ?? string.Empty).Split("|", 2);
 
                 if (split.Length < 2)
                 {
@@ -374,31 +375,11 @@ namespace NaiveMq.Client
         /// <exception cref="ClientStoppedException"></exception>
         private async Task SendAsync(string text, CancellationToken cancellationToken)
         {
-            const string message = "Writing message failed because connection is stopped.";
-
-            if (!_isStarted)
-            {
-                throw new ClientStoppedException(message);
-            }
-
             try
             {
-                await _writeSemaphore.WaitAsync(cancellationToken);
-
-                if (!_isStarted)
-                {
-                    throw new ClientStoppedException(message);
-                }
-
-                try
-                {
-                    await _streamWriter.WriteLineAsync(text.ToCharArray(), cancellationToken);
-                    await _streamWriter.FlushAsync();
-                }
-                catch (Exception ex)
-                {
-                    throw new ConnectionException("Error writing stream.", ex);
-                }
+                var charArray = text.ToCharArray();
+                
+                await WriteLineAsync(charArray, cancellationToken);
 
                 WriteCounter.Add();
 
@@ -421,12 +402,39 @@ namespace NaiveMq.Client
                 Stop();
                 throw new ClientException("Error writing message to client.", ex);
             }
+        }
+
+        private async Task WriteLineAsync(char[] charArray, CancellationToken cancellationToken)
+        {
+            const string stoppedMessage = "Writing message failed because connection is stopped.";
+
+            if (!_isStarted)
+            {
+                throw new ClientStoppedException(stoppedMessage);
+            }
+
+            try
+            {
+                await _writeSemaphore.WaitAsync(cancellationToken);
+
+                if (!_isStarted)
+                {
+                    throw new ClientStoppedException(stoppedMessage);
+                }
+
+                try
+                {
+                    await _streamWriter.WriteLineAsync(charArray, cancellationToken);
+                    await _streamWriter.FlushAsync();
+                }
+                catch (Exception ex)
+                {
+                    throw new ConnectionException("Error writing stream.", ex);
+                }
+            }
             finally
             {
-                if (_isStarted)
-                {
-                    _writeSemaphore.Release();
-                }
+                _writeSemaphore.Release();
             }
         }
 

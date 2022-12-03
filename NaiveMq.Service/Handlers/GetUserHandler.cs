@@ -14,16 +14,16 @@ namespace NaiveMq.Service.Handlers
             
             if (context.Storage.Users.TryGetValue(command.Username, out var userEntity) || command.Try)
             {
-                return Task.FromResult(new GetUserResponse
+                return Task.FromResult(GetUserResponse.Ok(command, (response) =>
                 {
-                    User = userEntity != null
+                    response.User = userEntity != null
                         ? new UserEntity
                         {
                             Username = userEntity.Username,
                             Administrator = userEntity.Administrator
                         }
-                        : null
-                });
+                        : null;
+                }));
             }
             else
             {

@@ -10,14 +10,14 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            return Task.FromResult(new GetProfileResponse
+            return Task.FromResult(GetProfileResponse.Ok(command, (response) =>
             {
-                Profile = new ProfileEntity
+                response.Profile = new ProfileEntity
                 {
                     Username = context.User.Username,
                     Administrator = context.User.Administrator
-                }
-            });
+                };
+            }));
         }
 
         public void Dispose()

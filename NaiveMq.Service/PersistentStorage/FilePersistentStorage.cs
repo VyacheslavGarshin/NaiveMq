@@ -107,7 +107,6 @@ namespace NaiveMq.Service.PersistentStorage
         public async Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
             await DeleteFileAsync(GetMessagePath(user, queue, messageId), cancellationToken);
-            await DeleteEmptyDirectoriesAsync(Path.GetDirectoryName(GetMessagePath(user, queue, messageId)), cancellationToken);
         }
 
         public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
@@ -143,18 +142,6 @@ namespace NaiveMq.Service.PersistentStorage
                     Directory.Delete(path, true);
                 }
             }, cancellationToken);
-        }
-
-        private async Task DeleteEmptyDirectoriesAsync(string path, CancellationToken cancellationToken)
-        {
-            var info = new DirectoryInfo(path);
-            var parent = info.Parent;
-
-            if (info.Exists && !info.EnumerateFiles().Any() && !info.EnumerateDirectories().Any())
-            {
-                info.Delete();
-                await DeleteEmptyDirectoriesAsync(parent.FullName, cancellationToken);
-            }
         }
 
         private async Task DeleteAsync(string path, Action action, CancellationToken cancellationToken)
