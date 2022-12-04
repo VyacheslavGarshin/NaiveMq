@@ -129,7 +129,6 @@ namespace NaiveMq.Service.Cogs
 
                     foreach (var key in messages)
                     {
-
                         var message = await _storage.PersistentStorage.LoadMessageAsync(user.Username, queue.Name, key, _cancellationToken);
 
                         if (message != null)

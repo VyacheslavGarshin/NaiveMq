@@ -172,7 +172,7 @@ namespace NaiveMq.Service.PersistentStorage
         {
             if (Directory.Exists(path))
             {
-                var result = Directory.EnumerateFiles(path).Select(x => Path.GetFileNameWithoutExtension(x));
+                var result = Directory.EnumerateFiles(path).Select(Path.GetFileNameWithoutExtension(x));
 
                 foreach (var dir in Directory.EnumerateDirectories(path))
                 {
@@ -188,7 +188,15 @@ namespace NaiveMq.Service.PersistentStorage
         private static async Task<T> LoadEntityAsync<T>(string path, CancellationToken cancellationToken)
         {
             var text = await File.ReadAllTextAsync(path, Encoding.UTF8, cancellationToken);
-            return JsonConvert.DeserializeObject<T>(text);
+
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(text);
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         private static async Task WriteFileAsync(string path, string text, bool overwrite, CancellationToken cancellationToken)
