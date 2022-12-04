@@ -20,7 +20,7 @@ namespace NaiveMq.Client
     {
         private class ResponseItem : IDisposable
         {
-            public SemaphoreSlim SemaphoreSlim { get; set; } = new SemaphoreSlim(0, 1);
+            public SemaphoreSlim SemaphoreSlim { get; set; } = new(0, 1);
 
             public IResponse Response { get; set; }
 
@@ -34,11 +34,11 @@ namespace NaiveMq.Client
 
         public TcpClient TcpClient { get; set; }
 
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
-        public SpeedCounter WriteCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter WriteCounter { get; set; } = new(10);
 
-        public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter ReadCounter { get; set; } = new(10);
 
         public delegate Task OnReceiveErrorHandler(NaiveMqClient sender, Exception ex);
 
@@ -76,7 +76,7 @@ namespace NaiveMq.Client
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
-        private static readonly Dictionary<string, Type> _commandTypes = new Dictionary<string, Type>();
+        private static readonly Dictionary<string, Type> _commandTypes = new();
 
         private NetworkStream _stream;
 
@@ -86,13 +86,17 @@ namespace NaiveMq.Client
 
         private bool _isStarted;
 
+        private SemaphoreSlim _readSemaphore;
+        
+        private readonly int _readConcurrency;
+        
         private readonly ILogger<NaiveMqClient> _logger;
 
         private readonly CancellationToken _stoppingToken;
 
-        private readonly SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _writeSemaphore = new(1, 1);
 
-        private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new ConcurrentDictionary<Guid, ResponseItem>();
+        private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
         static NaiveMqClient()
         {
@@ -102,27 +106,33 @@ namespace NaiveMq.Client
             }
         }
 
-        public NaiveMqClient()
+        public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
         {
+            if (options.TcpClient != null)
+            {
+                TcpClient = options.TcpClient;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(options.Host) && options.Port != null)
+                {
+                    TcpClient = new TcpClient(options.Host, options.Port.Value);
+                }
+            }
 
-        }
+            if (options.ConfirmTimeout != null)
+            {
+                ConfirmTimeout = options.ConfirmTimeout.Value;
+            }
 
-        public NaiveMqClient(ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
-        {
+            _readConcurrency = options.ReadConcurrency;
             _logger = logger;
             _stoppingToken = stoppingToken;
-        }
 
-        public NaiveMqClient(TcpClient tcpClient, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken) : this(logger, stoppingToken)
-        {
-            TcpClient = tcpClient;
-            Start();
-        }
-
-        public NaiveMqClient(string host, int port, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken) : this(logger, stoppingToken)
-        {
-            TcpClient = new TcpClient(host, port);
-            Start();
+            if (TcpClient != null)
+            {
+                Start();
+            }
         }
 
         public void Start()
@@ -135,7 +145,9 @@ namespace NaiveMq.Client
                 _streamReader = new StreamReader(_stream, Encoding.UTF8);
                 _streamWriter = new StreamWriter(_stream, Encoding.UTF8);
 
-                Task.Run(async () => await ReceiveAsync());
+                _readSemaphore = new(_readConcurrency, _readConcurrency);
+
+                Task.Run(ReceiveAsync);
 
                 _isStarted = true;
             }
@@ -145,6 +157,9 @@ namespace NaiveMq.Client
         {
             if (_isStarted)
             {
+                _readSemaphore.Dispose();
+                _readSemaphore = null;
+
                 DisposeStreams();
 
                 _isStarted = false;
@@ -240,7 +255,7 @@ namespace NaiveMq.Client
         {
             IResponse response;
 
-            var entered = await responseItem.SemaphoreSlim.WaitAsync((int)(request.ConfirmTimeout ?? Timeout).TotalMilliseconds, cancellationToken);
+            var entered = await responseItem.SemaphoreSlim.WaitAsync((int)(request.ConfirmTimeout ?? ConfirmTimeout).TotalMilliseconds, cancellationToken);
 
             if (!entered)
             {
@@ -455,6 +470,16 @@ namespace NaiveMq.Client
                     throw clEx;
                 }
 
+                await _readSemaphore.WaitAsync(_stoppingToken);
+
+                _ = Task.Run(async () => await HandleReceivedText(text), _stoppingToken);
+            };
+        }
+
+        private async Task HandleReceivedText(string text)
+        {
+            try
+            {
                 ReadCounter.Add();
 
                 if (_logger.IsEnabled(LogLevel.Trace))
@@ -485,12 +510,21 @@ namespace NaiveMq.Client
                         throw;
                     }
                 }
-            };
+            }
+            finally
+            {
+                _readSemaphore.Release();
+            }
         }
 
         private async Task HandleReceiveErrorAsync(Exception ex)
         {
             Stop();
+
+            if (ex is not ClientException)
+            {
+                _logger.LogError(ex, "Unexpected error occured during handling an incoming command.");
+            }
 
             if (OnReceiveErrorAsync != null)
             {

@@ -74,6 +74,10 @@
 
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
-        public bool DurableMessage { get; set; } = false;        
+        public bool DurableMessage { get; set; } = false;
+
+        public int ReadConcurrency { get; set; } = 8;
+
+        public TimeSpan? ReceiveDelay { get; set; }
     }
 }

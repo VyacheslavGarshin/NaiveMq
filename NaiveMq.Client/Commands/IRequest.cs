@@ -13,7 +13,7 @@ namespace NaiveMq.Client.Commands
         /// <summary>
         /// Optional confirmation timeout.
         /// </summary>
-        /// <remarks>If not set then <see cref="NaiveMqClient.Timeout"/> is used.</remarks>
+        /// <remarks>If not set then <see cref="NaiveMqClient.ConfirmTimeout"/> is used.</remarks>
         TimeSpan? ConfirmTimeout { get; }
     }
 

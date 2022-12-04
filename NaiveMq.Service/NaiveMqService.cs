@@ -17,13 +17,13 @@ namespace NaiveMq.Service
 {
     public sealed class NaiveMqService : BackgroundService
     {
-        public SpeedCounter WriteCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter WriteCounter { get; set; } = new(10);
 
-        public SpeedCounter ReadCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter ReadCounter { get; set; } = new(10);
 
-        public SpeedCounter ReadMessageCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
 
-        public SpeedCounter WriteMessageCounter { get; set; } = new SpeedCounter(10);
+        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
 
         public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(1);
 
@@ -152,7 +152,7 @@ namespace NaiveMq.Service
 
             try
             {
-                client = new NaiveMqClient(tcpClient, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
+                client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient }, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
                 
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
                 client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;

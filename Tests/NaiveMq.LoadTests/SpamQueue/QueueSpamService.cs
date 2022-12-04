@@ -68,7 +68,9 @@ namespace NaiveMq.LoadTests.SpamQueue
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
-                using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
+                var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, ReadConcurrency = _options.Value.ReadConcurrency };
+
+                using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
                 // c.Start();
 
@@ -98,7 +100,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                         var poc = i;
                         var t = Task.Run(async () =>
                         {
-                            using var c = new NaiveMqClient(_options.Value.Host, _options.Value.Port, clientLogger, _stoppingToken);
+                            using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
                             // c.Start();
 
@@ -118,6 +120,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     {
                                         _logger.LogError(ex, "Send errr");
                                     }
+                                }
+
+                                if (_options.Value.ReceiveDelay != null)
+                                {
+                                    await Task.Delay(_options.Value.ReceiveDelay.Value);
                                 }
                             };
 
