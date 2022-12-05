@@ -4,7 +4,7 @@ NaiveMq
 .NET libraries for creating a message queue server. And the default server project.
 
 Implemented so far:
-+ Simple custom text client-server messaging protocol
++ Simple custom client-server messaging protocol
 + User management
 + Queue management, publish message, queue subscriptions and message receiving, message confirmation
 + Exchanges, routing with regex
@@ -12,7 +12,6 @@ Implemented so far:
 + Durable queues
 
 Plans:
-+ Binary messaging protocol variant
 + Better durable queues
 + Command console
 + Management UI
