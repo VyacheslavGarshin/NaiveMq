@@ -146,10 +146,6 @@ namespace NaiveMq.Service.Cogs
                             await new MessageHandler().ExecuteAsync(context, messageCommand);
                             messageCount++;
                         }
-                        else
-                        {
-                            await _storage.PersistentStorage.DeleteMessageAsync(user.Username, queue.Name, key, _cancellationToken);
-                        }
 
                         queueMessageCount++;
 
