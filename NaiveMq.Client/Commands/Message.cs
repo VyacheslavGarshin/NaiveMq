@@ -1,6 +1,8 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using Newtonsoft.Json;
+
+namespace NaiveMq.Client.Commands
 {
-    public class Message : AbstractRequest<Confirmation>
+    public class Message : AbstractRequest<Confirmation>, IDataCommand
     {
         public string Queue { get; set; }
 
@@ -10,6 +12,7 @@
 
         public string BindingKey { get; set; }
 
-        public string Text { get; set; }
+        [JsonIgnore]
+        public byte[] Data { get; set; }
     }
 }

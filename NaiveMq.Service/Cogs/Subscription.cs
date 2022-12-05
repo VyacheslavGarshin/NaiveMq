@@ -114,7 +114,7 @@ namespace NaiveMq.Service.Cogs
                 Request = messageEntity.Request,
                 Durable = messageEntity.Durable,
                 BindingKey = messageEntity.BindingKey,
-                Text = messageEntity.Text
+                Data = messageEntity.Data
             };
 
             await new MessageHandler().ExecuteAsync(_context, messageCommand);
@@ -148,7 +148,7 @@ namespace NaiveMq.Service.Cogs
                 Request = messageEntity.Request,
                 Durable = messageEntity.Durable,
                 BindingKey = messageEntity.BindingKey,
-                Text = messageEntity.Text
+                Data = messageEntity.Data
             };
 
             return await _context.Client.SendAsync(message, cancellationToken);

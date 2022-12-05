@@ -16,6 +16,6 @@ namespace NaiveMq.Client.Entities
 
         public string BindingKey { get; set; }
 
-        public string Text { get; set; }
+        public byte[] Data { get; set; }
     }
 }

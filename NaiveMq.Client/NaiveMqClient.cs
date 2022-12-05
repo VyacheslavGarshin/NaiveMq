@@ -297,11 +297,23 @@ namespace NaiveMq.Client
             {
                 var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
                 var commandBytes = _converter.Serialize(command);
+                var dataLength = 0;
+                var data = Array.Empty<byte>();
+
+                if (command is IDataCommand dataCommand && dataCommand.Data != null)
+                {
+                    dataLength = dataCommand.Data.Length;
+                    data = dataCommand.Data;
+                }
 
                 var bytes = BitConverter.GetBytes(commandNameBytes.Length)
                     .Concat(commandNameBytes)
                     .Concat(BitConverter.GetBytes(commandBytes.Length))
-                    .Concat(commandBytes).ToArray();
+                    .Concat(commandBytes)
+                    .Concat(BitConverter.GetBytes(dataLength))
+                    .Concat(data)
+                    .ToArray();
+
 
                 await WriteBytesAsync(bytes, cancellationToken);
 
@@ -377,9 +389,14 @@ namespace NaiveMq.Client
                     var commandLength = await ReadLengthAsync(stream);
                     var commandBytes = await ReadContentAsync(stream, commandLength);
 
+                    var dataLength = await ReadLengthAsync(stream);
+                    var dataBytes = dataLength > 0 ? await ReadContentAsync(stream, dataLength) : Array.Empty<byte>();
+
+                    var commandName = Encoding.UTF8.GetString(commandNameBytes);
+
                     await _readSemaphore.WaitAsync(_stoppingToken);
 
-                    _ = Task.Run(async () => await HandleReceivedDataAsync(Encoding.UTF8.GetString(commandNameBytes), commandBytes), _stoppingToken);
+                    _ = Task.Run(async () => await HandleReceivedDataAsync(commandName, commandBytes, dataBytes), _stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -405,13 +422,18 @@ namespace NaiveMq.Client
             return commandNameBytes;
         }
 
-        private async Task HandleReceivedDataAsync(string commandName, byte[] commandBytes)
+        private async Task HandleReceivedDataAsync(string commandName, byte[] commandBytes, byte[] dataBytes)
         {
             try
             {
                 ReadCounter.Add();
 
                 var command = ParseMessage(commandName, commandBytes);
+
+                if (command is IDataCommand dataCommand)
+                {
+                    dataCommand.Data = dataBytes;
+                }                
 
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {

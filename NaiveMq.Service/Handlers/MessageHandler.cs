@@ -88,7 +88,7 @@ namespace NaiveMq.Service.Handlers
                     Request = command.Request,
                     Durable = command.Durable && queue.Durable,
                     BindingKey = command.BindingKey,
-                    Text = command.Text
+                    Data = command.Data
                 };
 
                 queue.Enqueue(message);

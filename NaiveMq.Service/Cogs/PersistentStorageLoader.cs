@@ -140,7 +140,7 @@ namespace NaiveMq.Service.Cogs
                                 Request = message.Request,
                                 Durable = message.Durable,
                                 BindingKey = message.BindingKey,
-                                Text = message.Text
+                                Data = message.Data
                             };
 
                             await new MessageHandler().ExecuteAsync(context, messageCommand);

@@ -3,6 +3,7 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Exceptions;
 using System.Diagnostics;
+using System.Text;
 
 namespace NaiveMq.LoadTests.SpamQueue
 {
@@ -87,7 +88,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 var swt = Stopwatch.StartNew();
 
-                string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
+                var message = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*")));
 
                 for (var run = 0; run < _options.Value.Runs; run++)
                 {
@@ -184,7 +185,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                             Queue = _options.Value.QueueName,
                                             Durable = _options.Value.DurableMessage,
                                             Request = _options.Value.Request,
-                                            Text = message,
+                                            Data = message,
                                             Confirm = _options.Value.Confirm,
                                             ConfirmTimeout = _options.Value.ConfirmTimeout,
                                         },
@@ -247,7 +248,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Durable = true, BindingKey = _options.Value.SendExchangeMessageWithKey, Text = "Some text to exchange" }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Durable = true, BindingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)
