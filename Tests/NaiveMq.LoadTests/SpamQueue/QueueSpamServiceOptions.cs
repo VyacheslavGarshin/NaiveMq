@@ -79,5 +79,7 @@
         public int ReadConcurrency { get; set; } = 8;
 
         public TimeSpan? ReceiveDelay { get; set; }
+
+        public TimeSpan? SendDelay { get; set; }
     }
 }

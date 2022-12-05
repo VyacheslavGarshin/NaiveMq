@@ -190,6 +190,12 @@ namespace NaiveMq.LoadTests.SpamQueue
                                             ConfirmTimeout = _options.Value.ConfirmTimeout,
                                         },
                                         _stoppingToken);
+
+
+                                    if (_options.Value.SendDelay != null)
+                                    {
+                                        await Task.Delay(_options.Value.SendDelay.Value);
+                                    }
                                 }
                                 catch (ClientException)
                                 {
