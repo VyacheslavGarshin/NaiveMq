@@ -172,7 +172,7 @@ namespace NaiveMq.Service.PersistentStorage
         {
             if (Directory.Exists(path))
             {
-                var result = Directory.EnumerateFiles(path).Select(Path.GetFileNameWithoutExtension(x));
+                var result = Directory.EnumerateFiles(path).Select(Path.GetFileNameWithoutExtension);
 
                 foreach (var dir in Directory.EnumerateDirectories(path))
                 {

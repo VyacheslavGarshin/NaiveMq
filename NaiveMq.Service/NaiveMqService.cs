@@ -157,8 +157,8 @@ namespace NaiveMq.Service
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
                 client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
                 client.OnParseMessageErrorAsync += OnClientParseMessageErrorAsync;
-                client.OnReceiveAsync += OnClientReceiveAsync;
-                client.OnSendAsync += OnClientSendAsync;
+                client.OnReceiveCommandAsync += OnClientReceiveCommandAsync;
+                client.OnSendCommandAsync += OnClientSendCommandAsync;
                 client.OnSendMessageAsync += OnClientSendMessageAsync;
                 client.OnReceiveMessageAsync += OnClientReceiveMessageAsync;
 
@@ -177,7 +177,7 @@ namespace NaiveMq.Service
             }
         }
 
-        private Task OnClientSendAsync(NaiveMqClient sender, string message)
+        private Task OnClientSendCommandAsync(NaiveMqClient sender, ICommand command)
         {
             WriteCounter.Add();
             return Task.CompletedTask;
@@ -189,7 +189,7 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task OnClientReceiveAsync(NaiveMqClient sender, string message)
+        private Task OnClientReceiveCommandAsync(NaiveMqClient sender, ICommand command)
         {
             ReadCounter.Add();
             return Task.CompletedTask;

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
+using NaiveMq.Client.Converters;
 using NaiveMq.Client.Exceptions;
 using Newtonsoft.Json;
 using System;
@@ -10,9 +11,11 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NaiveMq.Client
 {
@@ -44,45 +47,35 @@ namespace NaiveMq.Client
 
         public event OnReceiveErrorHandler OnReceiveErrorAsync;
 
-        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message command);
+        public delegate Task OnParseCommandErrorHandler(NaiveMqClient sender, ParseCommandException exception);
 
-        public event OnReceiveMessageHandler OnReceiveMessageAsync;
+        public event OnParseCommandErrorHandler OnParseMessageErrorAsync;
 
         public delegate Task OnReceiveCommandHandler(NaiveMqClient sender, ICommand command);
 
         public event OnReceiveCommandHandler OnReceiveCommandAsync;
 
-        public delegate Task OnReceiveRequestHandler(NaiveMqClient sender, IRequest command);
+        public delegate Task OnReceiveRequestHandler(NaiveMqClient sender, IRequest request);
 
         public event OnReceiveRequestHandler OnReceiveRequestAsync;
 
-        public delegate Task OnReceiveResponseHandler(NaiveMqClient sender, IResponse command);
+        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message message);
+
+        public event OnReceiveMessageHandler OnReceiveMessageAsync;
+
+        public delegate Task OnReceiveResponseHandler(NaiveMqClient sender, IResponse response);
 
         public event OnReceiveResponseHandler OnReceiveResponseAsync;
 
-        public delegate Task OnParseCommandErrorHandler(NaiveMqClient sender, ParseCommandException exception);
+        public delegate Task OnSendCommandHandler(NaiveMqClient sender, ICommand command);
 
-        public event OnParseCommandErrorHandler OnParseMessageErrorAsync;
+        public event OnSendCommandHandler OnSendCommandAsync;
 
-        public delegate Task OnReceiveHandler(NaiveMqClient sender, string message);
-
-        public event OnReceiveHandler OnReceiveAsync;
-
-        public delegate Task OnSendHandler(NaiveMqClient sender, string message);
-
-        public event OnSendHandler OnSendAsync;
-
-        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message command);
+        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message message);
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
         private static readonly Dictionary<string, Type> _commandTypes = new();
-
-        private NetworkStream _stream;
-
-        private StreamReader _streamReader;
-
-        private StreamWriter _streamWriter;
 
         private bool _isStarted;
 
@@ -97,6 +90,8 @@ namespace NaiveMq.Client
         private readonly SemaphoreSlim _writeSemaphore = new(1, 1);
 
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
+
+        private ICommandConverter _converter = new JsonCommandConverter();
 
         static NaiveMqClient()
         {
@@ -139,12 +134,6 @@ namespace NaiveMq.Client
         {
             if (!_isStarted)
             {
-                DisposeStreams();
-
-                _stream = TcpClient.GetStream();
-                _streamReader = new StreamReader(_stream, Encoding.UTF8);
-                _streamWriter = new StreamWriter(_stream, Encoding.UTF8);
-
                 _readSemaphore = new(_readConcurrency, _readConcurrency);
 
                 Task.Run(ReceiveAsync);
@@ -159,8 +148,6 @@ namespace NaiveMq.Client
             {
                 _readSemaphore.Dispose();
                 _readSemaphore = null;
-
-                DisposeStreams();
 
                 _isStarted = false;
             }
@@ -183,7 +170,7 @@ namespace NaiveMq.Client
 
             try
             {
-                var commandText = CreateMessage(request);
+                PrepareCommand(request);
 
                 if (request.Confirm)
                 {
@@ -191,7 +178,7 @@ namespace NaiveMq.Client
                     _responses[request.Id] = responseItem;
                 }
 
-                await SendAsync(commandText, cancellationToken);
+                await WriteCommandAsync(request, cancellationToken);
 
                 if (request is Message message && OnSendMessageAsync != null)
                 {
@@ -218,7 +205,7 @@ namespace NaiveMq.Client
 
             return (TResponse)response;
         }
-        
+
         /// <summary>
         /// Send response.
         /// </summary>
@@ -227,8 +214,8 @@ namespace NaiveMq.Client
         /// <returns></returns>
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
-            var text = CreateMessage(response);
-            await SendAsync(text, cancellationToken);
+            PrepareCommand(response);
+            await WriteCommandAsync(response, cancellationToken);
         }
 
         public void Dispose()
@@ -248,6 +235,14 @@ namespace NaiveMq.Client
 
             ReadCounter.Dispose();
             WriteCounter.Dispose();
+        }
+
+        private static void PrepareCommand(ICommand command)
+        {
+            if (command.Id == Guid.Empty)
+            {
+                command.Id = Guid.NewGuid();
+            }
         }
 
         private async Task<IResponse> WaitForConfirmation<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
@@ -283,103 +278,6 @@ namespace NaiveMq.Client
             return response;
         }
 
-        private void DisposeStreams()
-        {
-            if (_streamReader != null)
-            {
-                try
-                {
-                    // somehow NetworkStream it's already disposed
-                    _streamReader.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-
-                }
-
-                _streamReader = null;
-            }
-
-            if (_streamWriter != null)
-            {
-                try
-                {
-                    // somehow NetworkStream it's already disposed
-                    _streamWriter.Dispose();
-                }
-                catch (ObjectDisposedException)
-                {
-
-                }
-
-                _streamWriter = null;
-            }
-
-            if (_stream != null)
-            {
-                _stream.Dispose();
-                _stream = null;
-            }
-        }
-
-        private static ICommand ParseMessage(string message)
-        {
-            try
-            {
-                var split = (message ?? string.Empty).Split("|", 2);
-
-                if (split.Length < 2)
-                {
-                    throw new ParseCommandException(ErrorCode.WrongMessageFormat, ErrorCode.WrongMessageFormat.GetDescription());
-                }
-
-                var commandName = split[0];
-                var commandJson = split[1];
-
-                if (_commandTypes.TryGetValue(commandName, out Type commandType))
-                {
-                    return ParseCommand(commandJson, commandType);
-                }
-                else
-                {
-                    throw new ParseCommandException(ErrorCode.WrongMessageFormat, string.Format(ErrorCode.CommandNotFound.GetDescription(), commandName));
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new ParseCommandException(ErrorCode.UnexpectedErrorDuringMessageParsing, string.Format(ErrorCode.UnexpectedErrorDuringMessageParsing.GetDescription(), ex.GetBaseException().Message));
-            }
-        }
-
-        private static ICommand ParseCommand(string commandJson, Type commandType)
-        {
-            ICommand command;
-
-            try
-            {
-                command = (ICommand)JsonConvert.DeserializeObject(commandJson, commandType);
-            }
-            catch (Exception ex)
-            {
-                throw new ParseCommandException(ErrorCode.WrongCommandFormat, string.Format(ErrorCode.WrongCommandFormat.GetDescription(), ex.GetBaseException().Message));
-            }
-
-            if (command.Id == null || command.Id == Guid.Empty)
-            {
-                throw new ParseCommandException(ErrorCode.EmptyCommandId, ErrorCode.EmptyCommandId.GetDescription());
-            }
-
-            return command;
-        }
-
-        private string CreateMessage(ICommand command)
-        {
-            if (command.Id == null || command.Id == Guid.Empty)
-                command.Id = Guid.NewGuid();
-
-            return $"{command.GetType().Name}|{JsonConvert.SerializeObject(command)}";
-        }
-
         /// <summary>
         /// 
         /// </summary>
@@ -388,24 +286,35 @@ namespace NaiveMq.Client
         /// <returns></returns>
         /// <exception cref="ConnectionException"></exception>
         /// <exception cref="ClientStoppedException"></exception>
-        private async Task SendAsync(string text, CancellationToken cancellationToken)
+        private async Task WriteCommandAsync(ICommand command, CancellationToken cancellationToken)
         {
+            if (command == null)
+            {
+                throw new ArgumentNullException(nameof(command));
+            }
+
             try
             {
-                var charArray = text.ToCharArray();
-                
-                await WriteLineAsync(charArray, cancellationToken);
+                var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
+                var commandBytes = _converter.Serialize(command);
+
+                var bytes = BitConverter.GetBytes(commandNameBytes.Length)
+                    .Concat(commandNameBytes)
+                    .Concat(BitConverter.GetBytes(commandBytes.Length))
+                    .Concat(commandBytes).ToArray();
+
+                await WriteBytesAsync(bytes, cancellationToken);
 
                 WriteCounter.Add();
 
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogTrace($">{Id}:{text}");
+                    _logger.LogTrace($">> {TraceCommand(command)} by {Id}");
                 }
 
-                if (OnSendAsync != null)
+                if (OnSendCommandAsync != null)
                 {
-                    await OnSendAsync.Invoke(this, text);
+                    await OnSendCommandAsync.Invoke(this, command);
                 }
             }
             catch (ClientException)
@@ -419,7 +328,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task WriteLineAsync(char[] charArray, CancellationToken cancellationToken)
+        private async Task WriteBytesAsync(byte[] bytes, CancellationToken cancellationToken)
         {
             const string stoppedMessage = "Writing message failed because connection is stopped.";
 
@@ -439,8 +348,9 @@ namespace NaiveMq.Client
 
                 try
                 {
-                    await _streamWriter.WriteLineAsync(charArray, cancellationToken);
-                    await _streamWriter.FlushAsync();
+                    var stream = TcpClient.GetStream();
+
+                    await stream.WriteAsync(bytes, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -457,11 +367,19 @@ namespace NaiveMq.Client
         {
             while (!_stoppingToken.IsCancellationRequested && _isStarted)
             {
-                string text;
-
                 try
                 {
-                    text = await _streamReader.ReadLineAsync();
+                    var stream = TcpClient.GetStream();
+
+                    var commandNameLength = await ReadLengthAsync(stream);
+                    var commandNameBytes = await ReadContentAsync(stream, commandNameLength);
+
+                    var commandLength = await ReadLengthAsync(stream);
+                    var commandBytes = await ReadContentAsync(stream, commandLength);
+
+                    await _readSemaphore.WaitAsync(_stoppingToken);
+
+                    _ = Task.Run(async () => await HandleReceivedDataAsync(Encoding.UTF8.GetString(commandNameBytes), commandBytes), _stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -469,47 +387,38 @@ namespace NaiveMq.Client
                     await HandleReceiveErrorAsync(clEx);
                     throw clEx;
                 }
-
-                await _readSemaphore.WaitAsync(_stoppingToken);
-
-                _ = Task.Run(async () => await HandleReceivedText(text), _stoppingToken);
             };
         }
 
-        private async Task HandleReceivedText(string text)
+        private async Task<int> ReadLengthAsync(NetworkStream stream)
+        {
+            var commandNameLengthBytes = new byte[4];
+            await stream.ReadAsync(commandNameLengthBytes, 0, 4, _stoppingToken);
+            var commandNameLength = BitConverter.ToInt32(commandNameLengthBytes);
+            return commandNameLength;
+        }
+
+        private async Task<byte[]> ReadContentAsync(NetworkStream stream, int commandNameLength)
+        {
+            var commandNameBytes = new byte[commandNameLength];
+            await stream.ReadAsync(commandNameBytes, 0, commandNameLength, _stoppingToken);
+            return commandNameBytes;
+        }
+
+        private async Task HandleReceivedDataAsync(string commandName, byte[] commandBytes)
         {
             try
             {
                 ReadCounter.Add();
 
+                var command = ParseMessage(commandName, commandBytes);
+
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogTrace($"<{Id}:{text}");
+                    _logger.LogTrace($"<< {TraceCommand(command)} by {Id}");
                 }
 
-                if (text == null)
-                {
-                    var ex = new ConnectionException("Incoming message is null.", null);
-                    await HandleReceiveErrorAsync(ex);
-                    throw ex;
-                }
-                else
-                {
-                    try
-                    {
-                        if (OnReceiveAsync != null)
-                        {
-                            await OnReceiveAsync.Invoke(this, text);
-                        }
-
-                        await HandleReceiveCommandAsync(text);
-                    }
-                    catch (Exception ex)
-                    {
-                        await HandleReceiveErrorAsync(ex);
-                        throw;
-                    }
-                }
+                await HandleReceiveCommandAsync(command);
             }
             finally
             {
@@ -532,12 +441,10 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceiveCommandAsync(string text)
+        private async Task HandleReceiveCommandAsync(ICommand command)
         {
             try
             {
-                var command = ParseMessage(text);
-
                 if (OnReceiveCommandAsync != null)
                 {
                     await OnReceiveCommandAsync.Invoke(this, command);
@@ -570,8 +477,9 @@ namespace NaiveMq.Client
                     await OnParseMessageErrorAsync.Invoke(this, ex);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                await HandleReceiveErrorAsync(ex);
                 throw;
             }
         }
@@ -583,6 +491,51 @@ namespace NaiveMq.Client
                 responseItem.Response = response;
                 responseItem.SemaphoreSlim.Release();
             }
+        }
+
+        private ICommand ParseMessage(string commandName, byte[] commandBytes)
+        {
+            try
+            {
+                if (_commandTypes.TryGetValue(commandName, out Type commandType))
+                {
+                    return ParseCommand(commandBytes, commandType);
+                }
+                else
+                {
+                    throw new ParseCommandException(ErrorCode.CommandNotFound, string.Format(ErrorCode.CommandNotFound.GetDescription(), commandName));
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ParseCommandException(ErrorCode.UnexpectedErrorDuringMessageParsing, string.Format(ErrorCode.UnexpectedErrorDuringMessageParsing.GetDescription(), ex.GetBaseException().Message));
+            }
+        }
+
+        private ICommand ParseCommand(byte[] commandBytes, Type commandType)
+        {
+            ICommand command;
+
+            try
+            {
+                command = _converter.Deserialize(commandBytes, commandType);
+            }
+            catch (Exception ex)
+            {
+                throw new ParseCommandException(ErrorCode.WrongCommandFormat, string.Format(ErrorCode.WrongCommandFormat.GetDescription(), ex.GetBaseException().Message));
+            }
+
+            if (command.Id == null || command.Id == Guid.Empty)
+            {
+                throw new ParseCommandException(ErrorCode.EmptyCommandId, ErrorCode.EmptyCommandId.GetDescription());
+            }
+
+            return command;
+        }
+
+        private string TraceCommand(ICommand command)
+        {
+            return $"{command.GetType().Name}: {JsonConvert.SerializeObject(command)}";
         }
     }
 }

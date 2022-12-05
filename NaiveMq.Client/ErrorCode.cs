@@ -4,9 +4,6 @@ namespace NaiveMq.Client
 {
     public enum ErrorCode
     {
-        [Description("Message format is wrong. Must be 'Command|{ Id = ... }'.")]
-        WrongMessageFormat = 1,
-
         [Description("Command '{0}' not found.")]
         CommandNotFound = 2,
 
