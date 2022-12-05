@@ -21,22 +21,22 @@ Plans:
 
 Performance vs RabbitMQ
 -----------------------
-Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb
+Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb, SSD
 
 | Scenario, 1 queue, 10 clients in/out     | 100 chars |           | 10.000 chars |              | 1.000.000 chars |                 |
 |------------------------------------------|-----------|-----------|--------------|--------------|-----------------|-----------------|
 |                                          | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers**                            |           |           |              |              |                 |                 |
-| In memory message without confirmation   | 52.000    | 25.000*   |              |              |                 |                 |
-| In memory message with confirmation      | 17.000    |  8.000    |              |              |                 |                 |
-| Durable message without confirmation     |  2.500    | 10.000**  |              |              |                 |                 |
-| Durable message with confirmation        |  2.200    |  1.200    |              |              |                 |                 |
+| In memory message without confirmation   | 38.000    | 25.000*   |              |              |                 |                 |
+| In memory message with confirmation      | 13.000    |  8.000    |              |              |                 |                 |
+| Durable message without confirmation     |  1.100    | 10.000**  |              |              |                 |                 |
+| Durable message with confirmation        |  1.100    |  1.000    |              |              |                 |                 |
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 21.000    | 31.000*   |              |              |                 |                 |
-| In memory message with confirmation      |  8.400    |  7.000    |  1.900       |  5.000       |  60             |  500            |
-| In memory request-response message       |  8.300    |      -    |              |              |                 |                 |
-| Durable message without confirmation     |  1.900    | 28.000**  |              |              |                 |                 |
-| Durable message with confirmation        |  1.900    |  1.200    |    800       |    500       |  40             |  130            |
+| In memory message with confirmation      |  6.900    |  6.000    |  5.600       |  5.700       |  500            |  500            |
+| In memory request-response message       |  6.700    |      -    |              |              |                 |                 |
+| Durable message without confirmation     |  1.000    | 28.000**  |              |              |                 |                 |
+| Durable message with confirmation        |  1.000    |  1.000    |  1.000       |    500       |  350            |  130            |
 
 \* RabbitMq .NET Client eats up memory and crashes, so the test is stable for about a minute.
 

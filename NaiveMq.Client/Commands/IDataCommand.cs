@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NaiveMq.Client.Commands
+﻿namespace NaiveMq.Client.Commands
 {
     public interface IDataCommand : ICommand
     {
