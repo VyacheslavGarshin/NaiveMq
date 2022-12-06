@@ -117,7 +117,7 @@ namespace NaiveMq.Client
                 ConfirmTimeout = options.ConfirmTimeout.Value;
             }
 
-            _readConcurrency = options.ReadConcurrency;
+            _readConcurrency = options.Parallelism;
             _logger = logger;
             _stoppingToken = stoppingToken;
 

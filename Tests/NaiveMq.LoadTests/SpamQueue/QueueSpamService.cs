@@ -69,7 +69,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
-                var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, ReadConcurrency = _options.Value.ReadConcurrency };
+                var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, Parallelism = _options.Value.Parallelism };
 
                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
@@ -159,7 +159,10 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             using var timer = new Timer((s) =>
                             {
-                                _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+                                if (_options.Value.LogClientCounters)
+                                {
+                                    _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+                                }
 
                                 if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
                                 {

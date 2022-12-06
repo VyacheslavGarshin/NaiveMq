@@ -76,10 +76,12 @@
 
         public bool DurableMessage { get; set; } = false;
 
-        public int ReadConcurrency { get; set; } = 8;
+        public int Parallelism { get; set; } = 8;
 
         public TimeSpan? ReceiveDelay { get; set; }
 
         public TimeSpan? SendDelay { get; set; }
+
+        public bool LogClientCounters { get; set; }
     }
 }

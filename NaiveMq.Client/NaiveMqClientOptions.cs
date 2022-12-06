@@ -13,6 +13,6 @@ namespace NaiveMq.Client
 
         public int? Port { get; set; }
 
-        public int ReadConcurrency { get; set; } = 8;
+        public int Parallelism { get; set; } = 8;
     }
 }
