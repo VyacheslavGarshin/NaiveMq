@@ -1,7 +1,7 @@
 NaiveMq
 =======
 
-.NET Standart message queue server and client.
+.NET Standard message queue server and client.
 
 Implemented so far:
 + All async client interface
@@ -44,5 +44,5 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 
 Requirements
 --------------
-+ .NET Standart for Client and Service
++ .NET Standard for Client and Service
 + .NET 6 for tests and Server
