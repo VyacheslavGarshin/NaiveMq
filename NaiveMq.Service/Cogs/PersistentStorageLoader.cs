@@ -104,7 +104,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     var binding = await _storage.PersistentStorage.LoadBindingAsync(user.Username, key.Exchange, key.Queue, _cancellationToken);
 
-                    await new AddBindingHandler().ExecuteAsync(context, new AddBinding { Id = Guid.NewGuid(), Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Regex = binding.Regex });
+                    await new AddBindingHandler().ExecuteAsync(context, new AddBinding { Id = Guid.NewGuid(), Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Pattern = binding.Pattern });
                     bindingsCount++;
                 }
             }

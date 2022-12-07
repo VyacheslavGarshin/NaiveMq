@@ -62,7 +62,7 @@
 
         public bool AddBinding { get; set; }
 
-        public string BindingRegex { get; set; }
+        public string BindingPattern { get; set; }
 
         public bool DeleteBinding { get; set; }
 

@@ -23,7 +23,7 @@ Performance vs RabbitMQ
 -----------------------
 Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb, SSD
 
-| Scenario, 1 queue, 10 clients in/out     | 100 chars |           | 10.000 chars |              | 1.000.000 chars |                 |
+| Scenario, 1 queue, 10 clients in/out     | 100 bytes |           | 10.000 bytes |              | 1.000.000 bytes |                 |
 |------------------------------------------|-----------|-----------|--------------|--------------|-----------------|-----------------|
 |                                          | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers**                            |           |           |              |              |                 |                 |

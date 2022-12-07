@@ -8,6 +8,10 @@
 
         public bool Durable { get; set; }
 
-        public string Regex { get; set; }
+        /// <summary>
+        /// Reqex pattern.
+        /// </summary>
+        /// <remarks>If null or empty then any message will go to the queue.</remarks>
+        public string Pattern { get; set; }
     }
 }

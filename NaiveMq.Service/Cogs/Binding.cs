@@ -10,6 +10,6 @@ namespace NaiveMq.Service.Cogs
 
         public bool Durable { get; set; }
 
-        public Regex Regex { get; set; }
+        public Regex Pattern { get; set; }
     }
 }

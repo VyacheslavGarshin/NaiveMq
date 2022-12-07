@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client.Exceptions;
 using System.Diagnostics;
 using System.Text;
 
@@ -13,7 +14,6 @@ namespace NaiveMq.LoadTests.SpamQueue
         private IOptions<QueueSpamServiceOptions> _options;
         private readonly NaiveMq.Service.NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
-        private long _sentMessagesCount;
 
         public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMq.Service.NaiveMqService queueService)
         {
@@ -31,7 +31,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (_queueService.Started)
+                    if (_queueService.IsLoaded)
                     {
                         break;
                     }
@@ -64,27 +64,27 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             await Task.Run(async () =>
             {
+                await Task.Delay(1000);
+                
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
                 var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, Parallelism = _options.Value.Parallelism };
 
-                using (var c = new NaiveMqClient(options, clientLogger, _stoppingToken))
+                using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
+
+                // c.Start();
+
+                if (!string.IsNullOrEmpty(_options.Value.Username))
                 {
-
-                    // c.Start();
-
-                    if (!string.IsNullOrEmpty(_options.Value.Username))
-                    {
-                        await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                    }
-
-                    await CheckQueueCommands(c);
-
-                    await CheckUserCommands(c);
-
-                    await CheckExchange(c);
+                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                 }
+
+                await CheckQueueCommands(c);
+
+                await CheckUserCommands(c);
+
+                await CheckExchange(c);
 
                 var swt = Stopwatch.StartNew();
 
@@ -119,7 +119,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.LogError(ex, "Spam send confirmation error.");
+                                        _logger.LogError(ex, "Send errr");
                                     }
                                 }
 
@@ -131,7 +131,10 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             c.OnReceiveErrorAsync += (client, ex) =>
                             {
-                                _logger.LogError(ex, "Spam receive error.");
+                                if (ex is not ClientException)
+                                {
+                                    _logger.LogError(ex, "Error on message");
+                                }
 
                                 return Task.CompletedTask;
                             };
@@ -181,34 +184,29 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 try
                                 {
                                     var response = await c.SendAsync(new Message
-                                    {
-                                        Queue = _options.Value.QueueName,
-                                        Durable = _options.Value.DurableMessage,
-                                        Request = _options.Value.Request,
-                                        Data = message,
-                                        Confirm = _options.Value.Confirm,
-                                        ConfirmTimeout = _options.Value.ConfirmTimeout,
-                                    },
+                                        {
+                                            Queue = _options.Value.QueueName,
+                                            Durable = _options.Value.DurableMessage,
+                                            Request = _options.Value.Request,
+                                            Data = message,
+                                            Confirm = _options.Value.Confirm,
+                                            ConfirmTimeout = _options.Value.ConfirmTimeout,
+                                        },
                                         _stoppingToken);
 
-                                    Interlocked.Add(ref _sentMessagesCount, 1);
 
                                     if (_options.Value.SendDelay != null)
                                     {
                                         await Task.Delay(_options.Value.SendDelay.Value);
                                     }
                                 }
-                                catch (OperationCanceledException)
+                                catch (ClientException)
                                 {
-                                    throw;
+                                    // it's ok
                                 }
                                 catch (Exception ex)
                                 {
-                                    if ((ex as ClientException)?.ErrorCode != ErrorCode.ClientStopped)
-                                    {
-                                        _logger.LogError(ex, "Spam send error.");
-                                    }
-                                    throw;
+                                    _logger.LogError(ex, "Send errr");
                                 }
                             }
 
@@ -233,22 +231,14 @@ namespace NaiveMq.LoadTests.SpamQueue
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning($"Spam not all ended well: {ex.GetBaseException().Message}");
+                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
                     }
 
-                    _logger.LogInformation($"Run {run + 1} is ended. Sent {_sentMessagesCount} messages in {swt.Elapsed}.");
+                    _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                 }
 
-                using (var c = new NaiveMqClient(options, clientLogger, _stoppingToken))
-                {
-                    if (!string.IsNullOrEmpty(_options.Value.Username))
-                    {
-                        await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                    }
-
-                    if (_options.Value.DeleteQueue)
-                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
-                }
+                if (_options.Value.DeleteQueue)
+                    await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
             });
         }
 
@@ -262,7 +252,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (_options.Value.AddBinding)
             {
-                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Regex = _options.Value.BindingRegex }, _stoppingToken);
+                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Pattern = _options.Value.BindingPattern }, _stoppingToken);
             }
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))

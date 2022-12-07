@@ -4,6 +4,6 @@
     {
         public bool Durable { get; set; }
 
-        public string Regex { get; set; }
+        public string Pattern { get; set; }
     }
 }

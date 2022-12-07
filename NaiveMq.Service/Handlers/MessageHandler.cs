@@ -65,7 +65,7 @@ namespace NaiveMq.Service.Handlers
             {
                 foreach (var binding in bindings)
                 {
-                    if ((binding.Value.Regex == null || binding.Value.Regex.IsMatch(command.BindingKey))
+                    if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(command.BindingKey))
                         && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
                     {
                         result.Add(boundQueue);

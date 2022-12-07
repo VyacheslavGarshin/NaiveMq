@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
                 Exchange = command.Exchange,
                 Queue = command.Queue,
                 Durable = command.Durable,
-                Regex = string.IsNullOrEmpty(command.Regex) ? null : new Regex(command.Regex, RegexOptions.IgnoreCase),
+                Pattern = string.IsNullOrEmpty(command.Pattern) ? null : new Regex(command.Pattern, RegexOptions.IgnoreCase),
             };
 
             Check(userQueues, binding);
@@ -33,7 +33,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    var bindingEnity = new BindingEntity { Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Regex = command.Regex };
+                    var bindingEnity = new BindingEntity { Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Pattern = command.Pattern };
                     await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Username, bindingEnity, context.CancellationToken);
                 }
                 catch
