@@ -31,7 +31,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (_queueService.IsLoaded)
+                    if (_queueService.Started)
                     {
                         break;
                     }
@@ -64,27 +64,27 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             await Task.Run(async () =>
             {
-                await Task.Delay(1000);
-                
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
                 var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, Parallelism = _options.Value.Parallelism };
 
-                using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
-
-                // c.Start();
-
-                if (!string.IsNullOrEmpty(_options.Value.Username))
+                using (var c = new NaiveMqClient(options, clientLogger, _stoppingToken))
                 {
-                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+
+                    // c.Start();
+
+                    if (!string.IsNullOrEmpty(_options.Value.Username))
+                    {
+                        await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                    }
+
+                    await CheckQueueCommands(c);
+
+                    await CheckUserCommands(c);
+
+                    await CheckExchange(c);
                 }
-
-                await CheckQueueCommands(c);
-
-                await CheckUserCommands(c);
-
-                await CheckExchange(c);
 
                 var swt = Stopwatch.StartNew();
 
@@ -181,14 +181,14 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 try
                                 {
                                     var response = await c.SendAsync(new Message
-                                        {
-                                            Queue = _options.Value.QueueName,
-                                            Durable = _options.Value.DurableMessage,
-                                            Request = _options.Value.Request,
-                                            Data = message,
-                                            Confirm = _options.Value.Confirm,
-                                            ConfirmTimeout = _options.Value.ConfirmTimeout,
-                                        },
+                                    {
+                                        Queue = _options.Value.QueueName,
+                                        Durable = _options.Value.DurableMessage,
+                                        Request = _options.Value.Request,
+                                        Data = message,
+                                        Confirm = _options.Value.Confirm,
+                                        ConfirmTimeout = _options.Value.ConfirmTimeout,
+                                    },
                                         _stoppingToken);
 
                                     Interlocked.Add(ref _sentMessagesCount, 1);
@@ -239,8 +239,16 @@ namespace NaiveMq.LoadTests.SpamQueue
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {_sentMessagesCount} messages in {swt.Elapsed}.");
                 }
 
-                if (_options.Value.DeleteQueue)
-                    await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                using (var c = new NaiveMqClient(options, clientLogger, _stoppingToken))
+                {
+                    if (!string.IsNullOrEmpty(_options.Value.Username))
+                    {
+                        await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                    }
+
+                    if (_options.Value.DeleteQueue)
+                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                }
             });
         }
 

@@ -9,8 +9,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Net.Sockets;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,7 +33,7 @@ namespace NaiveMq.Client
 
         public int Id => GetHashCode();
 
-        public bool IsStarted => _isStarted;
+        public bool Started => _started;
 
         public SpeedCounter WriteCounter { get; set; } = new(10);
 
@@ -79,7 +79,7 @@ namespace NaiveMq.Client
 
         private TcpClient _tcpClient { get; set; }
 
-        private bool _isStarted;
+        private bool _started;
 
         private SemaphoreSlim _readSemaphore;
         
@@ -118,7 +118,7 @@ namespace NaiveMq.Client
         {
             lock (_startLocker)
             {
-                if (!_isStarted)
+                if (!_started)
                 {
                     if (_options.TcpClient != null)
                     {
@@ -138,7 +138,7 @@ namespace NaiveMq.Client
 
                         Task.Run(ReceiveAsync);
 
-                        _isStarted = true;
+                        _started = true;
 
                         OnStart?.Invoke(this);
                     }
@@ -154,7 +154,7 @@ namespace NaiveMq.Client
         {
             lock (_startLocker)
             {
-                if (_isStarted)
+                if (_started)
                 {
                     _tcpClient.Dispose();
                     _tcpClient = null;
@@ -162,7 +162,7 @@ namespace NaiveMq.Client
                     _readSemaphore.Dispose();
                     _readSemaphore = null;
 
-                    _isStarted = false;
+                    _started = false;
 
                     OnStop?.Invoke(this);
                 }
@@ -265,7 +265,7 @@ namespace NaiveMq.Client
 
             if (!entered)
             {
-                if (_isStarted)
+                if (_started)
                 {
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
@@ -325,7 +325,6 @@ namespace NaiveMq.Client
                     .Concat(data)
                     .ToArray();
 
-
                 await WriteBytesAsync(bytes, cancellationToken);
 
                 WriteCounter.Add();
@@ -346,7 +345,7 @@ namespace NaiveMq.Client
 
         private async Task WriteBytesAsync(byte[] bytes, CancellationToken cancellationToken)
         {
-            if (!_isStarted)
+            if (!_started)
             {
                 throw new ClientException(ErrorCode.ClientStopped);
             }
@@ -366,7 +365,7 @@ namespace NaiveMq.Client
 
                 var stream = _tcpClient?.GetStream();
                 
-                if (!_isStarted || stream == null)
+                if (!_started || stream == null)
                 {
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
@@ -384,7 +383,7 @@ namespace NaiveMq.Client
 
         private async Task ReceiveAsync()
         {
-            while (!_stoppingToken.IsCancellationRequested && _isStarted)
+            while (!_stoppingToken.IsCancellationRequested && _started)
             {
                 try
                 {
@@ -433,15 +432,31 @@ namespace NaiveMq.Client
         private async Task<int> ReadLengthAsync(NetworkStream stream)
         {
             var bytes = new byte[4];
-            await stream.ReadAsync(bytes, 0, 4, _stoppingToken);
+            await ReadAllLength(stream, bytes);
             return BitConverter.ToInt32(bytes);
         }
 
         private async Task<byte[]> ReadContentAsync(NetworkStream stream, int length)
         {
             var bytes = new byte[length];
-            await stream.ReadAsync(bytes, 0, length, _stoppingToken);
+            await ReadAllLength(stream, bytes);
             return bytes;
+        }
+
+        private async Task ReadAllLength(NetworkStream stream, byte[] bytes)
+        {
+            var readLength = 0;
+            var offset = 0;
+            var size = bytes.Length;
+
+            do
+            {
+                var read = await stream.ReadAsync(bytes, offset, size, _stoppingToken);
+                
+                readLength += read;
+                offset += read;
+                size -= read;
+            } while (readLength != bytes.Length);
         }
 
         private async Task HandleReceivedDataAsync(Type commandType, byte[] commandBytes, byte[] dataBytes)

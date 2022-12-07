@@ -100,7 +100,7 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                if (!_context.Client.IsStarted)
+                if (!_context.Client.Started)
                 {
                     _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
                 }
