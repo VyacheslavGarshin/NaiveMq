@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
-using NaiveMq.Client.Exceptions;
 using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
@@ -84,7 +84,7 @@ namespace NaiveMq.Service.Cogs
                                 await SendConfirmation(messageEntity, result, cancellationToken);
                             }
                         }
-                        catch (ClientException)
+                        catch (Exception)
                         {
                             if (!messageEntity.Request)
                             {
@@ -100,7 +100,11 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+                if (!_context.Client.IsStarted)
+                {
+                    _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+                }
+
                 throw;
             }
         }

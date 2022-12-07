@@ -7,11 +7,13 @@ namespace NaiveMq.Client
     {
         public TcpClient TcpClient { get; set; }
 
-        public TimeSpan? ConfirmTimeout { get; set; }
+        public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
+
+        public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         public string Host { get; set; }
 
-        public int? Port { get; set; }
+        public int Port { get; set; }
 
         public int Parallelism { get; set; } = 8;
     }

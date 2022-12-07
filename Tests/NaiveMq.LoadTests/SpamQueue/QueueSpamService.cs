@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Exceptions;
 using System.Diagnostics;
 using System.Text;
 
@@ -131,10 +130,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             c.OnReceiveErrorAsync += (client, ex) =>
                             {
-                                if (ex is not ClientException)
-                                {
-                                    _logger.LogError(ex, "Error on message");
-                                }
+                                _logger.LogError(ex, "Spam receive error.");
 
                                 return Task.CompletedTask;
                             };
@@ -200,13 +196,17 @@ namespace NaiveMq.LoadTests.SpamQueue
                                         await Task.Delay(_options.Value.SendDelay.Value);
                                     }
                                 }
-                                catch (ClientException)
+                                catch (OperationCanceledException)
                                 {
-                                    // it's ok
+                                    throw;
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, "Send errr");
+                                    if ((ex as ClientException)?.ErrorCode != ErrorCode.ClientStopped)
+                                    {
+                                        _logger.LogError(ex, "Spam send error.");
+                                    }
+                                    throw;
                                 }
                             }
 
@@ -231,7 +231,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+                        _logger.LogWarning($"Spam not all ended well: {ex.GetBaseException().Message}");
                     }
 
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");

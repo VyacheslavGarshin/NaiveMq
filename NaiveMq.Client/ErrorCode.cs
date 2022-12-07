@@ -5,19 +5,22 @@ namespace NaiveMq.Client
     public enum ErrorCode
     {
         [Description("Command '{0}' not found.")]
-        CommandNotFound = 2,
-
-        [Description("Cannot deserialize command. Should be in JSON format. Error: {0}")]
-        WrongCommandFormat = 3,
+        CommandNotFound = 1,
 
         [Description("Command Id must be set.")]
-        EmptyCommandId = 4,
+        EmptyCommandId = 2,
 
-        [Description("Error parsing request id. Must be empty of guid.")]
-        WrongRequestId = 5,
+        [Description("Client is stopped.")]
+        ClientStopped = 3,
 
-        [Description("Unexpected error parsing message. Error: {0}")]
-        UnexpectedErrorDuringMessageParsing = 6,
+        [Description("Confirmation timeout.")]
+        ConfirmationTimeout = 4,
+
+        [Description("Confirmation error.")]
+        ConfirmationError = 5,
+
+        [Description("Connection parameters are empty.")]
+        ConnectionParametersAreEmpty = 6,
 
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,

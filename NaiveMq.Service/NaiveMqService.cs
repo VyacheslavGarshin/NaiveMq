@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using NaiveMq.Client.Common;
 using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Exceptions;
 using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
@@ -156,7 +155,6 @@ namespace NaiveMq.Service
                 
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
                 client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
-                client.OnParseMessageErrorAsync += OnClientParseMessageErrorAsync;
                 client.OnReceiveCommandAsync += OnClientReceiveCommandAsync;
                 client.OnSendCommandAsync += OnClientSendCommandAsync;
                 client.OnSendMessageAsync += OnClientSendMessageAsync;
@@ -199,11 +197,6 @@ namespace NaiveMq.Service
         {
             ReadMessageCounter.Add();
             return Task.CompletedTask;
-        }
-
-        private async Task OnClientParseMessageErrorAsync(NaiveMqClient sender, ParseCommandException exception)
-        {
-            await SendAsync(sender, Confirmation.Error(exception.ErrorCode.ToString(), exception.Message));
         }
 
         private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
@@ -255,16 +248,13 @@ namespace NaiveMq.Service
             {
                 await client.SendAsync(response, _stoppingToken);
             }
-            catch (ConnectionException)
-            {
-                _storage.DeleteClient(client);
-            }
-            catch (ClientStoppedException)
+            catch (ClientException)
             {
                 _storage.DeleteClient(client);
             }
             catch (Exception ex)
             {
+                _storage.DeleteClient(client);
                 _logger.LogError(ex, "Unexpected error on sending response.");
             }
         }
