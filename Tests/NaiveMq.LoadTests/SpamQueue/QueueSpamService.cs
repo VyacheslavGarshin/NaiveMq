@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Exceptions;
+using NaiveMq.Service;
 using System.Diagnostics;
 using System.Text;
 
@@ -12,10 +12,10 @@ namespace NaiveMq.LoadTests.SpamQueue
         private CancellationToken _stoppingToken;
         private ILogger<QueueSpamService> _logger;
         private IOptions<QueueSpamServiceOptions> _options;
-        private readonly NaiveMq.Service.NaiveMqService _queueService;
+        private readonly NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
 
-        public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMq.Service.NaiveMqService queueService)
+        public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMqService queueService)
         {
             _logger = logger;
             _options = options;
@@ -31,7 +31,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (_queueService.IsLoaded)
+                    if (_queueService.Loaded)
                     {
                         break;
                     }
