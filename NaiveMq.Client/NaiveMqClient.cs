@@ -39,6 +39,14 @@ namespace NaiveMq.Client
 
         public SpeedCounter ReadCounter { get; set; } = new(10);
 
+        public delegate void OnStartHandler(NaiveMqClient sender);
+
+        public event OnStartHandler OnStart;
+
+        public delegate void OnStopHandler(NaiveMqClient sender);
+
+        public event OnStopHandler OnStop;
+
         public delegate Task OnReceiveErrorHandler(NaiveMqClient sender, Exception ex);
 
         public event OnReceiveErrorHandler OnReceiveErrorAsync;
@@ -131,6 +139,8 @@ namespace NaiveMq.Client
                         Task.Run(ReceiveAsync);
 
                         _isStarted = true;
+
+                        OnStart?.Invoke(this);
                     }
                     else
                     {
@@ -153,6 +163,8 @@ namespace NaiveMq.Client
                     _readSemaphore = null;
 
                     _isStarted = false;
+
+                    OnStop?.Invoke(this);
                 }
             }
         }
@@ -390,7 +402,15 @@ namespace NaiveMq.Client
                         throw new IOException("Incoming command length is 0. Looks like the other side dropped the connection.");
                     }
 
+                    if (commandNameLength > 1000)
+                    {
+                        throw new ClientException(ErrorCode.CommandNameLengthLong, string.Format(ErrorCode.CommandNameLengthLong.GetDescription(), commandNameLength));
+                    }
+
                     var commandNameBytes = await ReadContentAsync(stream, commandNameLength);
+
+                    var commandName = Encoding.UTF8.GetString(commandNameBytes);
+                    var commandType = GetCommandType(commandName);
 
                     var commandLength = await ReadLengthAsync(stream);
                     var commandBytes = await ReadContentAsync(stream, commandLength);
@@ -398,11 +418,9 @@ namespace NaiveMq.Client
                     var dataLength = await ReadLengthAsync(stream);
                     var dataBytes = dataLength > 0 ? await ReadContentAsync(stream, dataLength) : Array.Empty<byte>();
 
-                    var commandName = Encoding.UTF8.GetString(commandNameBytes);
-
                     await _readSemaphore.WaitAsync(_stoppingToken);
 
-                    _ = Task.Run(async () => await HandleReceivedDataAsync(commandName, commandBytes, dataBytes), _stoppingToken);
+                    _ = Task.Run(async () => await HandleReceivedDataAsync(commandType, commandBytes, dataBytes), _stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -426,13 +444,13 @@ namespace NaiveMq.Client
             return bytes;
         }
 
-        private async Task HandleReceivedDataAsync(string commandName, byte[] commandBytes, byte[] dataBytes)
+        private async Task HandleReceivedDataAsync(Type commandType, byte[] commandBytes, byte[] dataBytes)
         {
             try
             {
                 ReadCounter.Add();
 
-                var command = ParseMessage(commandName, commandBytes);
+                var command = ParseCommand(commandBytes, commandType);
 
                 if (command is IDataCommand dataCommand)
                 {
@@ -509,11 +527,11 @@ namespace NaiveMq.Client
             }
         }
 
-        private ICommand ParseMessage(string commandName, byte[] commandBytes)
+        private Type GetCommandType(string commandName)
         {
             if (_commandTypes.TryGetValue(commandName, out Type commandType))
             {
-                return ParseCommand(commandBytes, commandType);
+                return commandType;
             }
             else
             {

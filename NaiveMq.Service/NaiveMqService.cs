@@ -152,7 +152,8 @@ namespace NaiveMq.Service
             try
             {
                 client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient }, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
-                
+
+                client.OnStop += OnClientStop;
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
                 client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
                 client.OnReceiveCommandAsync += OnClientReceiveCommandAsync;
@@ -173,6 +174,11 @@ namespace NaiveMq.Service
                     _storage.DeleteClient(client);
                 }
             }
+        }
+
+        private void OnClientStop(NaiveMqClient sender)
+        {
+            _storage.DeleteClient(sender);
         }
 
         private Task OnClientSendCommandAsync(NaiveMqClient sender, ICommand command)
@@ -201,13 +207,7 @@ namespace NaiveMq.Service
 
         private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
         {
-            if (ex is not ClientException)
-            {
-                _logger.LogError(ex, "Error in service client.");
-            }
-
-            _storage.DeleteClient(sender);
-
+            _logger.LogError(ex, "Client receive error.");
             return Task.CompletedTask;
         }
 
@@ -233,7 +233,7 @@ namespace NaiveMq.Service
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error on handling received command.");
+                _logger.LogError(ex, "Client receive request error.");
 
                 if (request.Confirm)
                 {

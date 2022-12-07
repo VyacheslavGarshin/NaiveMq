@@ -13,6 +13,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         private IOptions<QueueSpamServiceOptions> _options;
         private readonly NaiveMq.Service.NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
+        private long _sentMessagesCount;
 
         public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMq.Service.NaiveMqService queueService)
         {
@@ -118,7 +119,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.LogError(ex, "Send errr");
+                                        _logger.LogError(ex, "Spam send confirmation error.");
                                     }
                                 }
 
@@ -190,6 +191,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                         },
                                         _stoppingToken);
 
+                                    Interlocked.Add(ref _sentMessagesCount, 1);
 
                                     if (_options.Value.SendDelay != null)
                                     {
@@ -234,7 +236,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                         _logger.LogWarning($"Spam not all ended well: {ex.GetBaseException().Message}");
                     }
 
-                    _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
+                    _logger.LogInformation($"Run {run + 1} is ended. Sent {_sentMessagesCount} messages in {swt.Elapsed}.");
                 }
 
                 if (_options.Value.DeleteQueue)
