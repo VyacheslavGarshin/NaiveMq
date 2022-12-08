@@ -31,14 +31,15 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | **Producers**                            |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 38.000    | 25.000*   |              |              |                 |                 |
 | In memory message with confirmation      | 15.000    |  8.000    |              |              |                 |                 |
-| Durable message without confirmation     |  1.100    | 10.000**  |              |              |                 |                 |
-| Durable message with confirmation        |  1.100    |  1.000    |              |              |                 |                 |
+| Persistent message without confirmation  |  1.100    | 10.000**  |              |              |                 |                 |
+| Persistent message with confirmation     |  1.100    |  1.000    |              |              |                 |                 |
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 21.000    | 31.000*   |              |              |                 |                 |
 | In memory message with confirmation      |  7.700    |  6.700    |  6.400       |  6.000       |  500            |  500            |
 | In memory request-response message       |  6.700    |      -    |      -       |      -       |    -            |    -            |
-| Durable message without confirmation     |  1.000    | 28.000**  |              |              |                 |                 |
-| Durable message with confirmation        |  1.000    |  1.000    |  1.000       |    500       |  350            |  130            |
+| Persistent message without confirmation  |  1.000    | 28.000**  |              |              |                 |                 |
+| Persistent message with confirmation     |  1.000    |  1.000    |  1.000       |    500       |  350            |  130            |
+| Disk only message with confirmation      |           |      -    |      -       |      -       |    -            |    -            |
 
 \* RabbitMq .NET Client eats up memory and crashes, so the test is stable for about a minute.
 
