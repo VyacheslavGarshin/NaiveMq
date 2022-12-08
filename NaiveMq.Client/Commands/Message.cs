@@ -8,9 +8,9 @@ namespace NaiveMq.Client.Commands
 
         public bool Request { get; set; }
 
-        public bool Durable { get; set; }
+        public bool Persistent { get; set; }
 
-        public string BindingKey { get; set; }
+        public string RoutingKey { get; set; }
 
         [JsonIgnore]
         public byte[] Data { get; set; }

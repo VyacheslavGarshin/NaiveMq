@@ -74,7 +74,7 @@
 
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
-        public bool DurableMessage { get; set; } = false;
+        public bool PersistentMessage { get; set; } = false;
 
         public int Parallelism { get; set; } = 8;
 

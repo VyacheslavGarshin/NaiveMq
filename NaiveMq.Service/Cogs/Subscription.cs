@@ -74,7 +74,7 @@ namespace NaiveMq.Service.Cogs
                         {
                             var result = await SendMessage(messageEntity, cancellationToken);
 
-                            if (messageEntity.Durable)
+                            if (messageEntity.Persistent)
                             {
                                 await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
                             }
@@ -116,8 +116,8 @@ namespace NaiveMq.Service.Cogs
                 Id = messageEntity.Id,
                 Queue = messageEntity.Queue,
                 Request = messageEntity.Request,
-                Durable = messageEntity.Durable,
-                BindingKey = messageEntity.BindingKey,
+                Persistent = messageEntity.Persistent,
+                RoutingKey = messageEntity.RoutingKey,
                 Data = messageEntity.Data
             };
 
@@ -150,8 +150,8 @@ namespace NaiveMq.Service.Cogs
                 ConfirmTimeout = _confirmTimeout,
                 Queue = messageEntity.Queue,
                 Request = messageEntity.Request,
-                Durable = messageEntity.Durable,
-                BindingKey = messageEntity.BindingKey,
+                Persistent = messageEntity.Persistent,
+                RoutingKey = messageEntity.RoutingKey,
                 Data = messageEntity.Data
             };
 

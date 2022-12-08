@@ -138,8 +138,8 @@ namespace NaiveMq.Service.Cogs
                                 Id = message.Id,
                                 Queue = message.Queue,
                                 Request = message.Request,
-                                Durable = message.Durable,
-                                BindingKey = message.BindingKey,
+                                Persistent = message.Persistent,
+                                RoutingKey = message.RoutingKey,
                                 Data = message.Data
                             };
 

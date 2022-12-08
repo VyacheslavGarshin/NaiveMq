@@ -186,7 +186,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     var response = await c.SendAsync(new Message
                                         {
                                             Queue = _options.Value.QueueName,
-                                            Durable = _options.Value.DurableMessage,
+                                            Persistent = _options.Value.PersistentMessage,
                                             Request = _options.Value.Request,
                                             Data = message,
                                             Confirm = _options.Value.Confirm,
@@ -257,7 +257,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Durable = true, BindingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = true, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)

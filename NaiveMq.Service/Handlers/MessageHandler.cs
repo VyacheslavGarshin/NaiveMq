@@ -35,7 +35,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (command.Request)
                 {
-                    command.Durable = false;
+                    command.Persistent = false;
                 }
 
                 await Enqueue(context, command, queues);
@@ -65,7 +65,7 @@ namespace NaiveMq.Service.Handlers
             {
                 foreach (var binding in bindings)
                 {
-                    if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(command.BindingKey))
+                    if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(command.RoutingKey))
                         && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
                     {
                         result.Add(boundQueue);
@@ -86,14 +86,14 @@ namespace NaiveMq.Service.Handlers
                     ClientId = context?.Client?.Id ?? 0,
                     Queue = queue.Name,
                     Request = command.Request,
-                    Durable = command.Durable && queue.Durable,
-                    BindingKey = command.BindingKey,
+                    Persistent = command.Persistent && queue.Durable,
+                    RoutingKey = command.RoutingKey,
                     Data = command.Data
                 };
 
                 queue.Enqueue(message);
 
-                if (!context.Reinstate && message.Durable)
+                if (!context.Reinstate && message.Persistent)
                 {
                     await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, message.Queue, message, context.CancellationToken);
                 }
