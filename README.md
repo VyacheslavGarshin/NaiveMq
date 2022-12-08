@@ -35,11 +35,11 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | Persistent message with confirmation     |  1.100    |  1.000    |              |              |                 |                 |
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 21.000    | 31.000*   |              |              |                 |                 |
-| In memory message with confirmation      |  7.700    |  6.700    |  6.400       |  6.000       |  500            |  500            |
+| In memory message with confirmation      |  7.700    |  6.700    |  6.600       |  6.000       |  680            |  550            |
 | In memory request-response message       |  6.700    |      -    |      -       |      -       |    -            |    -            |
-| Persistent message without confirmation  |  1.000    | 28.000**  |              |              |                 |                 |
-| Persistent message with confirmation     |  1.000    |  1.000    |  1.000       |    500       |  350            |  130            |
-| Disk only message with confirmation      |           |      -    |      -       |      -       |    -            |    -            |
+| Persistent message without confirmation  |  1.100    | 28.000**  |              |              |                 |                 |
+| Persistent message with confirmation     |  1.100    |  1.000    |  1.000       |    500       |  400            |  130            |
+| Disk only message with confirmation      |    990    |      -    |    930       |      -       |  370            |    -            |
 
 \* RabbitMq .NET Client eats up memory and crashes, so the test is stable for about a minute.
 
