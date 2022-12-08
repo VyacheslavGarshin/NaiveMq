@@ -90,14 +90,14 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetBindingPath(user, exchange, queue), true, cancellationToken);
         }
 
-        public async Task<BindingEntity> LoadBindingAsync(string user, string exchange, string queue, CancellationToken cancellationToken)
+        public async Task<BindingEntity> LoadBindingAsync(string user, string binding, CancellationToken cancellationToken)
         {
-            return await LoadEntityAsync<BindingEntity>(GetBindingPath(user, exchange, queue), cancellationToken);
+            return await LoadEntityAsync<BindingEntity>(GetBindingPath(user, binding), cancellationToken);
         }
 
-        public Task<IEnumerable<BindingKey>> LoadBindingKeysAsync(string user, CancellationToken cancellationToken)
+        public Task<IEnumerable<string>> LoadBindingKeysAsync(string user, CancellationToken cancellationToken)
         {
-            var result = LoadKeys(GetUserBindingsPath(user)).Select(x => new BindingKey { Id = x });
+            var result = LoadKeys(GetUserBindingsPath(user));
             return Task.FromResult(result);
         }
 
@@ -340,6 +340,11 @@ namespace NaiveMq.Service.PersistentStorage
         private string GetBindingPath(string user, string exchange, string queue)
         {
             return Path.Combine(_basePath, BindingsDirectory, user.ToLowerInvariant(), $"{exchange.ToLowerInvariant()}-{queue.ToLowerInvariant()}.json");
+        }
+
+        private string GetBindingPath(string user, string binding)
+        {
+            return Path.Combine(_basePath, BindingsDirectory, user.ToLowerInvariant(), $"{binding.ToLowerInvariant()}.json");
         }
 
         private string GetUserMessagesPath(string user)
