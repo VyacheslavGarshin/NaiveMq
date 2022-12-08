@@ -7,10 +7,12 @@ Implemented so far:
 + All async client interface
 + Simple custom client-server messaging protocol
 + User management
-+ Queue management, publish message, queue subscriptions and message receiving, message confirmation
++ Queue management, publish message, queue subscriptions and message consuming
++ Message publish/consume confirmation
 + Exchanges, routing with regex
 + Request-response messages with response from consumer passed to producer
 + Durable queues
++ Disk only messages for long queues with big message data
 
 Plans:
 + Better durable queues
