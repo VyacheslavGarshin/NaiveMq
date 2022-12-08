@@ -95,13 +95,21 @@ namespace NaiveMq.LoadTests.SpamQueue
                             var props = channel.CreateBasicProperties();
                             props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
 
-                            channel.BasicPublish(exchange: "",
-                                                 routingKey: _options.Value.QueueName,
-                                                 basicProperties: props,
-                                                 body: body);
+                            try
+                            {
+                                channel.BasicPublish(exchange: "",
+                                                     routingKey: _options.Value.QueueName,
+                                                     basicProperties: props,
+                                                     body: body);
 
-                            if (_options.Value.Confirm)
-                                channel.WaitForConfirms();
+                                if (_options.Value.Confirm)
+                                    channel.WaitForConfirms();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Basic publish failed.");
+                                throw;
+                            }
                         }
 
                         return Task.CompletedTask;
