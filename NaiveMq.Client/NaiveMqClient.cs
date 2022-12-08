@@ -4,6 +4,7 @@ using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
 using Newtonsoft.Json;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -303,6 +304,8 @@ namespace NaiveMq.Client
                 throw new ArgumentNullException(nameof(command));
             }
 
+            byte[] bytes = null;
+
             try
             {
                 var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
@@ -316,15 +319,18 @@ namespace NaiveMq.Client
                     data = dataCommand.Data;
                 }
 
-                var bytes = BitConverter.GetBytes(commandNameBytes.Length)
-                    .Concat(commandNameBytes)
-                    .Concat(BitConverter.GetBytes(commandBytes.Length))
-                    .Concat(commandBytes)
-                    .Concat(BitConverter.GetBytes(dataLength))
-                    .Concat(data)
-                    .ToArray();
+                var bytesLength = 4 * 3 + commandNameBytes.Length + commandBytes.Length + dataLength;
+                bytes = ArrayPool<byte>.Shared.Rent(bytesLength);
 
-                await WriteBytesAsync(bytes, cancellationToken);
+                bytes.CopyFrom(new[] {
+                    BitConverter.GetBytes(commandNameBytes.Length),
+                    commandNameBytes,
+                    BitConverter.GetBytes(commandBytes.Length),
+                    commandBytes,
+                    BitConverter.GetBytes(dataLength),
+                    data });
+
+                await WriteBytesAsync(bytes, bytesLength, cancellationToken);
 
                 WriteCounter.Add();
 
@@ -340,9 +346,16 @@ namespace NaiveMq.Client
                 Stop();
                 throw;
             }
+            finally
+            {
+                if (bytes != null)
+                {
+                    ArrayPool<byte>.Shared.Return(bytes);
+                }
+            }
         }
 
-        private async Task WriteBytesAsync(byte[] bytes, CancellationToken cancellationToken)
+        private async Task WriteBytesAsync(byte[] bytes, int size, CancellationToken cancellationToken)
         {
             if (!_started)
             {
@@ -369,7 +382,7 @@ namespace NaiveMq.Client
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
 
-                await stream.WriteAsync(bytes, cancellationToken);                
+                await stream.WriteAsync(bytes, 0, size, cancellationToken);                
             }
             finally
             {
