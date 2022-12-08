@@ -1,4 +1,6 @@
-﻿namespace NaiveMq.LoadTests.SpamQueue
+﻿using NaiveMq.Client.Enums;
+
+namespace NaiveMq.LoadTests.SpamQueue
 {
     public class QueueSpamServiceOptions
     {
@@ -74,7 +76,7 @@
 
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
-        public bool PersistentMessage { get; set; } = false;
+        public Persistent PersistentMessage { get; set; } = Persistent.No;
 
         public int Parallelism { get; set; } = 8;
 

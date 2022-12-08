@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
+using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
@@ -116,33 +118,59 @@ namespace NaiveMq.Service.PersistentStorage
             var messagePath = GetMessagePath(user, queue, messageId);
             var dataPath = GetMessageDataPath(user, queue, messageId);
 
-            var message = await LoadEntityAsync<MessageEntity>(messagePath, cancellationToken);
+            var result = await LoadEntityAsync<MessageEntity>(messagePath, cancellationToken);
+            var isResultBad = false;
 
-            if (message != null)
+            if (result != null)
             {
-                var dataLength = message.DataLength;
-
-                message.Data = await LoadBytesAsync(dataPath, cancellationToken);
-
-                if (dataLength != message.Data?.Length)
+                if (result.Persistent != Persistent.DiskOnly)
                 {
-                    await DeleteFileAsync(messagePath, false, cancellationToken);
-                    message = null;
+                    var dataLength = result.DataLength;
+
+                    result.Data = await LoadMessageDataAsync(user, queue, messageId, cancellationToken);
+
+                    if (dataLength != result.Data?.Length)
+                    {
+                        isResultBad = true;
+                    }
+                }
+                else
+                {
+                    var fileInfo = new FileInfo(dataPath);
+
+                    if (!fileInfo.Exists || fileInfo.Length != result.DataLength)
+                    {
+                        isResultBad = true;
+                    }
                 }
             }
             else
             {
-                await DeleteFileAsync(messagePath, false, cancellationToken);
+                isResultBad = true;
             }
 
-            return message?.Data == null ? null : message;
+            if (isResultBad)
+            {
+                await DeleteFileAsync(messagePath, false, cancellationToken);
+                await DeleteFileAsync(dataPath, false, cancellationToken);
+
+                result = null;
+            }
+
+            return result;
+        }
+
+        public async Task<byte[]> LoadMessageDataAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
+        {
+            var dataPath = GetMessageDataPath(user, queue, messageId);
+            return await LoadBytesAsync(dataPath, cancellationToken);
         }
 
         public Task<IEnumerable<Guid>> LoadMessageKeysAsync(string user, string queue, CancellationToken cancellationToken)
         {
             var result = LoadKeys(GetQueueMessagesPath(user, queue)).Select(x => Guid.Parse(x));
             return Task.FromResult(result);
-        }       
+        }
 
         private async Task DeleteFileAsync(string path, bool waitExists, CancellationToken cancellationToken)
         {
@@ -286,7 +314,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         static async Task WriteAllBytesAsync(string path, byte[] data, CancellationToken cancellationToken)
         {
-            await File.WriteAllBytesAsync(path, data, cancellationToken);
+            await File.WriteAllBytesAsync(path, data ?? Array.Empty<byte>(), cancellationToken);
         }
 
         private string GetUserPath(string user)

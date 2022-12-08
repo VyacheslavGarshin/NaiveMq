@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using NaiveMq.Client.Enums;
+using Newtonsoft.Json;
 using System;
 
 namespace NaiveMq.Client.Entities
@@ -13,7 +14,7 @@ namespace NaiveMq.Client.Entities
 
         public bool Request { get; set; }
 
-        public bool Persistent { get; set; }
+        public Persistent Persistent { get; set; }
 
         public string RoutingKey { get; set; }
 

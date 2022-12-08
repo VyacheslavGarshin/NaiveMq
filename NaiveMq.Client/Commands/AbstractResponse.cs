@@ -59,5 +59,9 @@ namespace NaiveMq.Client.Commands
         {
             return Error(Guid.Empty, errorCode, errorMessage);
         }
+
+        public virtual void Validate()
+        {
+        }
     }
 }

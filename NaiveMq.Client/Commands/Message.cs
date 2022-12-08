@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using NaiveMq.Client.Enums;
+using Newtonsoft.Json;
 
 namespace NaiveMq.Client.Commands
 {
@@ -8,7 +9,7 @@ namespace NaiveMq.Client.Commands
 
         public bool Request { get; set; }
 
-        public bool Persistent { get; set; }
+        public Persistent Persistent { get; set; }
 
         public string RoutingKey { get; set; }
 

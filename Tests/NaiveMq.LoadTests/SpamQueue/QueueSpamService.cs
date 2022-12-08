@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service;
 using System.Diagnostics;
 using System.Text;
@@ -257,7 +258,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = true, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistent.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)

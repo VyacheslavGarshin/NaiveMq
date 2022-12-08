@@ -2,6 +2,7 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Entities;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
@@ -72,11 +73,18 @@ namespace NaiveMq.Service.Cogs
                     {
                         try
                         {
+                            if (messageEntity.Persistent == Persistent.DiskOnly)
+                            {
+                                messageEntity.Data = await _context.Storage.PersistentStorage.LoadMessageDataAsync(_context.User.Username, 
+                                    messageEntity.Queue, messageEntity.Id, cancellationToken);
+                            }
+
                             var result = await SendMessage(messageEntity, cancellationToken);
 
-                            if (messageEntity.Persistent)
+                            if (messageEntity.Persistent != Persistent.No)
                             {
-                                await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, _queue.Name, messageEntity.Id, cancellationToken);
+                                await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, 
+                                    _queue.Name, messageEntity.Id, cancellationToken);
                             }
 
                             if (messageEntity.Request)

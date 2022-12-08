@@ -10,5 +10,9 @@ namespace NaiveMq.Client.Commands
         public bool Confirm { get; set; } = true;
 
         public TimeSpan? ConfirmTimeout { get; set; }
+
+        public virtual void Validate()
+        {
+        }
     }
 }

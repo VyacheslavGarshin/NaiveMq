@@ -8,5 +8,7 @@ namespace NaiveMq.Client.Commands
         /// Id of the command. Will be set by client on send if empty.
         /// </summary>
         public Guid Id { get; set; }
+
+        public void Validate();
     }
 }

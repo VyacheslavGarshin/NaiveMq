@@ -4,6 +4,7 @@ using NaiveMq.Client.Common;
 using NaiveMq.Client.Entities;
 using NaiveMq.Client;
 using System.Collections.Concurrent;
+using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -35,7 +36,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (command.Request)
                 {
-                    command.Persistent = false;
+                    command.Persistent = Persistent.No;
                 }
 
                 await Enqueue(context, command, queues);
@@ -86,16 +87,21 @@ namespace NaiveMq.Service.Handlers
                     ClientId = context?.Client?.Id ?? 0,
                     Queue = queue.Name,
                     Request = command.Request,
-                    Persistent = command.Persistent && queue.Durable,
+                    Persistent = queue.Durable ? command.Persistent : Persistent.No,
                     RoutingKey = command.RoutingKey,
                     Data = command.Data
                 };
 
                 queue.Enqueue(message);
 
-                if (!context.Reinstate && message.Persistent)
+                if (!context.Reinstate && message.Persistent != Persistent.No)
                 {
                     await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, message.Queue, message, context.CancellationToken);
+                }
+
+                if (message.Persistent == Persistent.DiskOnly)
+                {
+                    message.Data = null;
                 }
 
                 queue.ReleaseDequeue();
