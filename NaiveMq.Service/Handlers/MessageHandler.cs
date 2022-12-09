@@ -35,11 +35,6 @@ namespace NaiveMq.Service.Handlers
 
             if (userQueues.TryGetValue(message.Queue, out var queue))
             {
-                if (!queue.Entity.Durable && message.Persistent != Persistent.No)
-                {
-                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue);
-                }
-
                 var queues = new List<QueueCog>();
 
                 if (queue.Entity.Exchange)
@@ -55,6 +50,8 @@ namespace NaiveMq.Service.Handlers
                 {
                     queues.Add(queue);
                 }
+
+                CkeckMessage(message, queues);
 
                 if (await CheckLimitsAndDiscardAsync(context, queues, message, command))
                 {
@@ -76,6 +73,18 @@ namespace NaiveMq.Service.Handlers
             else
             {
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), message.Queue));
+            }
+        }
+
+        private static void CkeckMessage(MessageEntity message, List<QueueCog> queues)
+        {
+            foreach (var queue in queues)
+            {
+                if (!queue.Entity.Durable && message.Persistent != Persistent.No)
+                {
+                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue,
+                        string.Format(ErrorCode.PersistentMessageInNotDurableQueue.GetDescription(), queue.Entity.Name));
+                }
             }
         }
 
