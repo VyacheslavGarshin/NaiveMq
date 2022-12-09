@@ -181,13 +181,15 @@ namespace NaiveMq.Client
         public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
+            PrepareCommand(request);
+            request.Validate();
+
             IResponse response = null;
             ResponseItem responseItem = null;
             var confirm = request.Confirm;
 
             try
             {
-                PrepareCommand(request);
 
                 if (confirm)
                 {
@@ -228,6 +230,7 @@ namespace NaiveMq.Client
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
             PrepareCommand(response);
+            response.Validate();
             await WriteCommandAsync(response, cancellationToken);
         }
 
@@ -248,11 +251,16 @@ namespace NaiveMq.Client
             WriteCounter.Dispose();
         }
 
-        private static void PrepareCommand(ICommand command)
+        private void PrepareCommand(ICommand command)
         {
             if (command.Id == Guid.Empty)
             {
                 command.Id = Guid.NewGuid();
+            }
+
+            if (command is IRequest request && request.Confirm && request.ConfirmTimeout == null)
+            {
+                request.ConfirmTimeout = _options.ConfirmTimeout;
             }
         }
 
@@ -265,15 +273,8 @@ namespace NaiveMq.Client
 
             if (!entered)
             {
-                if (_started)
-                {
-                    throw new ClientException(ErrorCode.ClientStopped);
-                }
-                else
-                {
-                    throw new ClientException(ErrorCode.ConfirmationTimeout);
-                }
-            }
+                throw new ClientException(_started ? ErrorCode.ConfirmationTimeout : ErrorCode.ClientStopped);
+            }   
             else
             {
                 if (!responseItem.Response.Success)

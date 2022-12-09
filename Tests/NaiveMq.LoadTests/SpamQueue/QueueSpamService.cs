@@ -120,7 +120,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     }
                                     catch (Exception ex)
                                     {
-                                        _logger.LogError(ex, "Send errr");
+                                        _logger.LogError(ex, "Spam send error");
                                     }
                                 }
 
@@ -134,7 +134,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                             {
                                 if (ex is not ClientException)
                                 {
-                                    _logger.LogError(ex, "Error on message");
+                                    _logger.LogError(ex, "Spam receive error");
                                 }
 
                                 return Task.CompletedTask;
@@ -201,13 +201,22 @@ namespace NaiveMq.LoadTests.SpamQueue
                                         await Task.Delay(_options.Value.SendDelay.Value);
                                     }
                                 }
-                                catch (ClientException)
+                                catch (ClientException ex)
                                 {
-                                    // it's ok
+                                    if (ex.ErrorCode == ErrorCode.ConfirmationTimeout)
+                                    {
+                                        _logger.LogWarning(ex, "Spam confirmation timeout error");
+                                    }
+                                    else
+                                    {
+                                        _logger.LogError(ex, "Spam send error");
+                                        throw;
+                                    }
                                 }
                                 catch (Exception ex)
                                 {
-                                    _logger.LogError(ex, "Send errr");
+                                    _logger.LogError(ex, "Spam send error");
+                                    throw;
                                 }
                             }
 
@@ -276,13 +285,17 @@ namespace NaiveMq.LoadTests.SpamQueue
                     if (_options.Value.RewriteQueue)
                     {
                         await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
-                        await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
                     }
                 }
-                else
+
+                await c.SendAsync(new AddQueue
                 {
-                    await c.SendAsync(new AddQueue { Name = _options.Value.QueueName, Durable = _options.Value.Durable }, _stoppingToken);
-                }
+                    Name = _options.Value.QueueName,
+                    Durable = _options.Value.Durable,
+                    Limit = _options.Value.Limit,
+                    LimitBy = _options.Value.LimitBy,
+                    LimitStrategy = _options.Value.LimitStrategy,
+                }, _stoppingToken);
             }
 
             if (!string.IsNullOrEmpty(_options.Value.SearchQueues))

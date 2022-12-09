@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -16,6 +17,8 @@ namespace NaiveMq.Service.Cogs
 
         private SemaphoreSlim _dequeueSemaphore { get; set; } = new SemaphoreSlim(0, int.MaxValue);
 
+        private SemaphoreSlim _limitSemaphore { get; set; } = new SemaphoreSlim(1, 1);
+
         private long _volume;
 
         private long _volumeInMemory;
@@ -27,11 +30,11 @@ namespace NaiveMq.Service.Cogs
             Entity = entity;
         }
 
-        public bool TryDequeue(out MessageEntity message)
+        public async Task<MessageEntity> TryDequeue(CancellationToken cancellationToken)
         {
-            var result = _messages.TryDequeue(out message);
+            await _dequeueSemaphore.WaitAsync(cancellationToken);
 
-            if (message != null)
+            if (_messages.TryDequeue(out var message))
             {
                 Interlocked.Add(ref _volume, -message.DataLength);
 
@@ -41,7 +44,19 @@ namespace NaiveMq.Service.Cogs
                 }
             }
 
-            return result;
+            try
+            {
+                if (_limitSemaphore.CurrentCount == 0)
+                {
+                    _limitSemaphore.Release();
+                }
+            }
+            catch (SemaphoreFullException)
+            {
+
+            }
+
+            return message;
         }
 
         public void Enqueue(MessageEntity message)
@@ -54,16 +69,20 @@ namespace NaiveMq.Service.Cogs
             {
                 Interlocked.Add(ref _volumeInMemory, message.DataLength);
             }
-        }
 
-        public async Task WaitDequeueAsync(CancellationToken cancellationToken)
-        {
-            await _dequeueSemaphore.WaitAsync(cancellationToken);
-        }
-
-        public void ReleaseDequeue()
-        {
             _dequeueSemaphore.Release();
+        }
+
+        public async Task<bool> WaitLimitSemaphore(TimeSpan timout, CancellationToken cancellationToken)
+        {
+            return await _limitSemaphore.WaitAsync((int)timout.TotalMilliseconds, cancellationToken);
+        }
+
+        public bool LimitExceeded(MessageEntity message)
+        {
+            return Entity.Limit != null && (
+                Length > Entity.Limit && Entity.LimitBy == LimitBy.Length || 
+                Volume + message.DataLength > Entity.Limit && Entity.LimitBy == LimitBy.Volume);
         }
 
         public void Dispose()

@@ -117,7 +117,7 @@ namespace NaiveMq.Service.Cogs
                 Storage = this,
                 User = null,
                 Client = client,
-                CancellationToken = _stoppingToken,
+                StoppingToken = _stoppingToken,
                 Logger = _logger
             });
 

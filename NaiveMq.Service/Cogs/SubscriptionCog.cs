@@ -64,11 +64,11 @@ namespace NaiveMq.Service.Cogs
 
             try
             {
-                while (_isStarted && !_context.CancellationToken.IsCancellationRequested)
+                while (_isStarted && !_context.StoppingToken.IsCancellationRequested)
                 {
-                    await _queue.WaitDequeueAsync(cancellationToken);
+                    var messageEntity = await _queue.TryDequeue(cancellationToken);
 
-                    if (_queue.TryDequeue(out var messageEntity))
+                    if (messageEntity != null)
                     {
                         try
                         {

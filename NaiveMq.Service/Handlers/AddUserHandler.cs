@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
 
             if (string.IsNullOrEmpty(command.Password))
             {
-                throw new ServerException(ErrorCode.PasswordCannotBeEmpty);
+                throw new ServerException(ErrorCode.PasswordEmpty);
             }
 
             var userEntity = new UserEntity
@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Handlers
                 try
                 {
 
-                    await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.StoppingToken);
                 }
                 catch
                 {

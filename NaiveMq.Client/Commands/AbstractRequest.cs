@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NaiveMq.Client.Enums;
+using System;
 
 namespace NaiveMq.Client.Commands
 {
@@ -13,6 +14,10 @@ namespace NaiveMq.Client.Commands
 
         public virtual void Validate()
         {
+            if (Confirm && (ConfirmTimeout == null || ConfirmTimeout.Value <= TimeSpan.Zero))
+            {
+                throw new ClientException(ErrorCode.ConfirmTimeoutNotSet);
+            }
         }
     }
 }

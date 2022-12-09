@@ -37,7 +37,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!queue.Entity.Durable && message.Persistent != Persistent.No)
                 {
-                    throw new ServerException(ErrorCode.CannotEnqueuePersistentMessageInNotDurableQueue);
+                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue);
                 }
 
                 var queues = new List<QueueCog>();
@@ -56,9 +56,9 @@ namespace NaiveMq.Service.Handlers
                     queues.Add(queue);
                 }
 
-                if (message.Request)
+                if (await CheckLimitsAndDiscardAsync(context, queues, message, command))
                 {
-                    message.Persistent = Persistent.No;
+                    return Confirmation.Ok(command);
                 }
 
                 await Enqueue(context, message, queues);
@@ -77,6 +77,46 @@ namespace NaiveMq.Service.Handlers
             {
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), message.Queue));
             }
+        }
+
+        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, MessageEntity message, Message command)
+        {
+            if (!context.Reinstate) {
+                foreach (var queue in queues)
+                {
+                    if (queue.LimitExceeded(message))
+                    {
+                        switch (queue.Entity.LimitStrategy)
+                        {
+                            case LimitStrategy.Delay:
+                                if (!await queue.WaitLimitSemaphore(command.ConfirmTimeout.Value, context.StoppingToken))
+                                {
+                                    // Client side will fire it's own confirmation timeout and abandon request. 
+                                    // We need to discard the message.
+                                    return true;
+                                }
+
+                                break;
+                            case LimitStrategy.Reject:
+                                switch (queue.Entity.LimitBy)
+                                {
+                                    case LimitBy.Length:
+                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded,
+                                            string.Format(ErrorCode.QueueLengthLimitExceeded.GetDescription(), queue.Entity.Limit));
+                                    case LimitBy.Volume:
+                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded,
+                                            string.Format(ErrorCode.QueueVolumeLimitExceeded.GetDescription(), queue.Entity.Limit));
+                                }
+
+                                break;
+                            case LimitStrategy.Discard:
+                                return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private static List<QueueCog> MatchBoundQueues(ClientContext context, MessageEntity message, ConcurrentDictionary<string, QueueCog> userQueues, QueueCog exchange)
@@ -103,19 +143,20 @@ namespace NaiveMq.Service.Handlers
         {
             foreach (var queue in queues)
             {
-                queue.Enqueue(message);
-
                 if (!context.Reinstate && message.Persistent != Persistent.No)
                 {
-                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, message.Queue, message, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, queue.Entity.Name, message, context.StoppingToken);
                 }
 
                 if (message.Persistent == Persistent.DiskOnly)
                 {
                     message.Data = null;
                 }
+            }
 
-                queue.ReleaseDequeue();
+            foreach (var queue in queues)
+            {
+                queue.Enqueue(message);
             }
         }
 

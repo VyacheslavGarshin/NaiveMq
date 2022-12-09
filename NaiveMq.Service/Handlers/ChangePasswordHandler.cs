@@ -24,17 +24,17 @@ namespace NaiveMq.Service.Handlers
 
                 if (command.NewPassword == command.CurrentPassword)
                 {
-                    throw new ServerException(ErrorCode.NewPasswordCannotBeTheSame);
+                    throw new ServerException(ErrorCode.NewPasswordTheSame);
                 }
 
                 if (string.IsNullOrEmpty(command.NewPassword))
                 {
-                    throw new ServerException(ErrorCode.PasswordCannotBeEmpty);
+                    throw new ServerException(ErrorCode.PasswordEmpty);
                 }
 
                 context.User.PasswordHash = command.NewPassword.ComputeHash();
 
-                await context.Storage.PersistentStorage.SaveUserAsync(context.User, context.CancellationToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(context.User, context.StoppingToken);
             }
             catch
             {

@@ -24,7 +24,7 @@ namespace NaiveMq.Service.Handlers
                         Durable = x.Entity.Durable,
                         Exchange = x.Entity.Exchange,
                         Limit = x.Entity.Limit,
-                        LimitType = x.Entity.LimitType,
+                        LimitBy = x.Entity.LimitBy,
                         LimitStrategy = x.Entity.LimitStrategy,
                     }).OrderBy(x => x.User).ThenBy(x => x.Name).ToList();
             }));

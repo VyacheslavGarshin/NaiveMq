@@ -15,5 +15,15 @@ namespace NaiveMq.Client.Commands
 
         [JsonIgnore]
         public byte[] Data { get; set; }
+
+        public override void Validate()
+        {
+            base.Validate();
+
+            if (Request && Persistent != Persistent.No)
+            {
+                throw new ClientException(ErrorCode.PersistentRequest);
+            }
+        }
     }
 }

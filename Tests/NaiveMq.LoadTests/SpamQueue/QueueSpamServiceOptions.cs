@@ -85,5 +85,11 @@ namespace NaiveMq.LoadTests.SpamQueue
         public TimeSpan? SendDelay { get; set; }
 
         public bool LogClientCounters { get; set; }
+
+        public long? Limit { get; set; }
+
+        public LimitBy LimitBy { get; set; }
+
+        public LimitStrategy LimitStrategy { get; set; }
     }
 }

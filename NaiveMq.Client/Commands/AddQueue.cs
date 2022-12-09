@@ -12,8 +12,16 @@ namespace NaiveMq.Client.Commands
 
         public long? Limit { get; set; }
 
-        public LimitType LimitType { get; set; }
+        public LimitBy LimitBy { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
+
+        public override void Validate()
+        {
+            if (Limit != null && Limit.Value < 1)
+            {
+                throw new ClientException(ErrorCode.QueueLimitLessThanOne);
+            }
+        }
     }
 }

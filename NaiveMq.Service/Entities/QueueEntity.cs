@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Entities
 
         public long? Limit { get; set; }
 
-        public LimitType LimitType { get; set; }
+        public LimitBy LimitBy { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
     }

@@ -19,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 {
                     if (queue.Entity.Durable)
                     {
-                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.CancellationToken);
+                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
                     }
                     
                     queue.Dispose();

@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Enums
 {
-    public enum LimitType
+    public enum LimitBy
     {
         Length = 1,
 

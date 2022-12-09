@@ -39,7 +39,10 @@ namespace NaiveMq.Client.Commands
         {
             var result = (request?.Confirm ?? false) ? new T { RequestId = request.Id, Success = true } : default;
 
-            action?.Invoke(result);
+            if (result != null)
+            {
+                action?.Invoke(result);
+            }
 
             return result;
         }

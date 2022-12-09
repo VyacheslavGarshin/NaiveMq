@@ -68,19 +68,19 @@ namespace NaiveMq.Client
         UserNotFound = 114,
 
         [Description("Users cannot delete themselves.")]
-        UserCannotDeleteSelf = 115,
+        UserDeleteSelf = 115,
 
         [Description("Users cannot unset administrator privilege on themselves.")]
-        UserCannotUnsetAdministratorSelf = 116,
+        UserUnsetAdministratorSelf = 116,
 
         [Description("Wrong password.")]
         WrongPassword = 117,
 
         [Description("New password cannot be the same as an old one.")]
-        NewPasswordCannotBeTheSame = 118,
+        NewPasswordTheSame = 118,
 
         [Description("Password сannot be empty.")]
-        PasswordCannotBeEmpty = 119,
+        PasswordEmpty = 119,
 
         [Description("User '{0}' bindings are not found.")]
         UserBindingsNotFound = 120,
@@ -95,16 +95,16 @@ namespace NaiveMq.Client
         DurableBindingCheck = 123,
 
         [Description("Cannot bind exchange.")]
-        CannotBindExchange = 124,
+        BindExchange = 124,
 
         [Description("Cannot bind to a queue which is not exchange.")]
-        CannotBindToQueue = 125,
+        BindToQueue = 125,
 
         [Description("Binding of exchange '{0}' and queue '{1}' is not found.")]
         BindingNotFound = 126,
 
         [Description("Cannot subscribe to exchange.")]
-        CannotSubscribeToExchange = 127,
+        SubscribeToExchange = 127,
 
         [Description("Exchange cannot route the message.")]
         ExchangeCannotRouteMessage = 128,
@@ -113,6 +113,21 @@ namespace NaiveMq.Client
         RequestAlreadyRegistered = 129,
 
         [Description("Cannot enqueue persistent message in not durable queue.")]
-        CannotEnqueuePersistentMessageInNotDurableQueue = 130,
+        PersistentMessageInNotDurableQueue = 130,
+
+        [Description("Queue limit cannot be less than one. Leave it empty for limitless queue.")]
+        QueueLimitLessThanOne = 131,
+
+        [Description("Request cannot be persistent.")]
+        PersistentRequest = 132,
+
+        [Description("Queue length limit of '{0}' messages is exceeded.")]
+        QueueLengthLimitExceeded = 133,
+
+        [Description("Queue volume limit of '{0}' bytes is exceeded.")]
+        QueueVolumeLimitExceeded = 134,
+
+        [Description("Request confirm timeout must be set when confirmation is requested.")]
+        ConfirmTimeoutNotSet = 135,
     }
 }

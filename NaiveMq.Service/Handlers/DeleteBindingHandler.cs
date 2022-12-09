@@ -29,7 +29,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Username, binding.Entity.Exchange, binding.Entity.Queue, context.CancellationToken);
+                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Username, binding.Entity.Exchange, binding.Entity.Queue, context.StoppingToken);
                 }
                 catch (Exception)
                 {

@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task LoadUsersAsync()
         {
-            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
 
             var count = 0;     
             
@@ -80,7 +80,7 @@ namespace NaiveMq.Service.Cogs
 
             foreach (var user in _storage.Users.Values)
             {
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
 
                 foreach (var keys in await _storage.PersistentStorage.LoadQueueKeysAsync(user.Username, _cancellationToken))
                 {
@@ -104,7 +104,7 @@ namespace NaiveMq.Service.Cogs
             {
                 var bindings = (await _storage.PersistentStorage.LoadBindingKeysAsync(user.Username, _cancellationToken)).ToList();
 
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
 
                 foreach (var key in bindings)
                 {
@@ -130,7 +130,7 @@ namespace NaiveMq.Service.Cogs
             {
                 foreach (var queue in _storage.UserQueues[user.Username].Values)
                 {
-                    var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
+                    var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
 
                     var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.Entity.User, queue.Entity.Name, _cancellationToken)).ToList();
                     var queueMessageCount = 0;

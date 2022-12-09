@@ -45,7 +45,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Username, bindingEnity, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Username, bindingEnity, context.StoppingToken);
                 }
                 catch
                 {
@@ -78,12 +78,12 @@ namespace NaiveMq.Service.Handlers
 
             if (queue.Entity.Exchange)
             {
-                throw new ServerException(ErrorCode.CannotBindExchange);
+                throw new ServerException(ErrorCode.BindExchange);
             }
 
             if (!exchange.Entity.Exchange)
             {
-                throw new ServerException(ErrorCode.CannotBindToQueue);
+                throw new ServerException(ErrorCode.BindToQueue);
             }
 
             if (binding.Entity.Durable && (!exchange.Entity.Durable || !queue.Entity.Durable))

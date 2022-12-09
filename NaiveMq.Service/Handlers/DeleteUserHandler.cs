@@ -23,10 +23,10 @@ namespace NaiveMq.Service.Handlers
 
                 if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    throw new ServerException(ErrorCode.UserCannotDeleteSelf);
+                    throw new ServerException(ErrorCode.UserDeleteSelf);
                 }
 
-                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.CancellationToken);
+                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
 
                 context.Storage.UserQueues.TryRemove(command.Username, out var userQueues);
 

@@ -14,7 +14,7 @@ namespace NaiveMq.Client.Commands
         /// Optional confirmation timeout.
         /// </summary>
         /// <remarks>If not set then <see cref="NaiveMqClient.ConfirmTimeout"/> is used.</remarks>
-        TimeSpan? ConfirmTimeout { get; }
+        TimeSpan? ConfirmTimeout { get; set; }
     }
 
     public interface IRequest<TResponse> : IRequest

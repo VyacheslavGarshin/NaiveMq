@@ -28,7 +28,7 @@ namespace NaiveMq.Service.Handlers
                 if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
                     && !command.Administrator)
                 {
-                    throw new ServerException(ErrorCode.UserCannotUnsetAdministratorSelf);
+                    throw new ServerException(ErrorCode.UserUnsetAdministratorSelf);
                 }
 
                 userEntity.Administrator = command.Administrator;
@@ -38,7 +38,7 @@ namespace NaiveMq.Service.Handlers
                     userEntity.PasswordHash = command.Password.ComputeHash();
                 }
 
-                await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.CancellationToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.StoppingToken);
             }
             catch
             {

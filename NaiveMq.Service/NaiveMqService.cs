@@ -224,6 +224,8 @@ namespace NaiveMq.Service
 
             try
             {
+                request.Validate();
+            
                 response = await HandleRequestAsync(sender, request);
 
                 if (response != null)
@@ -231,22 +233,25 @@ namespace NaiveMq.Service
                     await SendAsync(sender, response);
                 }
             }
+            catch (ClientException ex)
+            {
+                await SendError(sender, request, ex.ErrorCode.ToString(), ex.Message);
+            }
             catch (ServerException ex)
             {
-                if (request.Confirm)
-                {
-                    await SendAsync(sender, Confirmation.Error(request.Id, ex.ErrorCode.ToString(), ex.Message));
-                }
+                await SendError(sender, request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Client receive request error.");
 
-                if (request.Confirm)
-                {
-                    await SendAsync(sender, Confirmation.Error(request.Id, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message));
-                }
+                await SendError(sender, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
             }
+        }
+
+        private async Task SendError(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
+        {
+            await SendAsync(sender, Confirmation.Error(request.Id, errorCode, errorMessage));
         }
 
         private async Task SendAsync(NaiveMqClient client, IResponse response)
@@ -266,7 +271,7 @@ namespace NaiveMq.Service
             }
         }
 
-        private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, ICommand command)
+        private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, IRequest command)
         {
             if (_commandHandlers.TryGetValue(command.GetType(), out var commandHandler))
             {

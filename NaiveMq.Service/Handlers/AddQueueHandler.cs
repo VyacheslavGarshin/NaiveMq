@@ -19,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 Durable = command.Durable,
                 Exchange = command.Exchange,
                 Limit = command.Limit,
-                LimitType = command.LimitType,
+                LimitBy = command.LimitBy,
                 LimitStrategy = command.LimitStrategy,
             };
             
@@ -43,7 +43,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate && queueEnity.Durable)
                 {
-                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);
+                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.StoppingToken);
                 }
             }
             catch (ServerException)
