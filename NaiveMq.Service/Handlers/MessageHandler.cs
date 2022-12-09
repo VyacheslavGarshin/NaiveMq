@@ -1,10 +1,10 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client;
 using System.Collections.Concurrent;
 using NaiveMq.Client.Enums;
+using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -14,19 +14,41 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
+            var message = new MessageEntity
+            {
+                Id = command.Id,
+                ClientId = context.Client?.Id,
+                Queue = command.Queue,
+                Request = command.Request,
+                Persistent = command.Persistent,
+                RoutingKey = command.RoutingKey,
+                Data = command.Data,
+                DataLength = command.Data?.Length ?? 0,
+            };
+
+            return await ExecuteEntityAsync(context, message, command);
+        }
+
+        public async Task<Confirmation> ExecuteEntityAsync(ClientContext context, MessageEntity message, Message command = null)
+        {
             var userQueues = context.Storage.GetUserQueues(context);
 
-            if (userQueues.TryGetValue(command.Queue, out var queue))
+            if (userQueues.TryGetValue(message.Queue, out var queue))
             {
+                if (!queue.Durable && message.Persistent != Persistent.No)
+                {
+                    throw new ServerException(ErrorCode.CannotEnqueuePersistentMessageInNotDurableQueue);
+                }
+
                 var queues = new List<Queue>();
 
                 if (queue.Exchange)
                 {
-                    queues.AddRange(MatchBoundQueues(context, command, userQueues, queue));
+                    queues.AddRange(MatchBoundQueues(context, message, userQueues, queue));
 
                     if (!queues.Any())
                     {
-                        throw new ServerException(ErrorCode.ExchangeCannotRouteMessage, ErrorCode.ExchangeCannotRouteMessage.GetDescription());
+                        throw new ServerException(ErrorCode.ExchangeCannotRouteMessage);
                     }
                 }
                 else
@@ -34,14 +56,14 @@ namespace NaiveMq.Service.Handlers
                     queues.Add(queue);
                 }
 
-                if (command.Request)
+                if (message.Request)
                 {
-                    command.Persistent = Persistent.No;
+                    message.Persistent = Persistent.No;
                 }
 
-                await Enqueue(context, command, queues);
+                await Enqueue(context, message, queues);
 
-                if (command.Request)
+                if (message.Request)
                 {
                     // confirmation will be redirected from subscriber to this client
                     return null;
@@ -53,11 +75,11 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), message.Queue));
             }
         }
 
-        private static List<Queue> MatchBoundQueues(ClientContext context, Message command, ConcurrentDictionary<string, Queue> userQueues, Queue exchange)
+        private static List<Queue> MatchBoundQueues(ClientContext context, MessageEntity message, ConcurrentDictionary<string, Queue> userQueues, Queue exchange)
         {
             var result = new List<Queue>();
             var userBindings = context.Storage.GetUserBindings(context);
@@ -66,7 +88,7 @@ namespace NaiveMq.Service.Handlers
             {
                 foreach (var binding in bindings)
                 {
-                    if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(command.RoutingKey))
+                    if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(message.RoutingKey))
                         && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
                     {
                         result.Add(boundQueue);
@@ -77,21 +99,10 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task Enqueue(ClientContext context, Message command, List<Queue> queues)
+        private static async Task Enqueue(ClientContext context, MessageEntity message, List<Queue> queues)
         {
             foreach (var queue in queues)
             {
-                var message = new MessageEntity
-                {
-                    Id = command.Id,
-                    ClientId = context?.Client?.Id ?? 0,
-                    Queue = queue.Name,
-                    Request = command.Request,
-                    Persistent = queue.Durable ? command.Persistent : Persistent.No,
-                    RoutingKey = command.RoutingKey,
-                    Data = command.Data
-                };
-
                 queue.Enqueue(message);
 
                 if (!context.Reinstate && message.Persistent != Persistent.No)

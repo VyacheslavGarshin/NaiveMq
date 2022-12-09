@@ -19,17 +19,17 @@ namespace NaiveMq.Service.Handlers
 
                 if (context.User.PasswordHash != command.CurrentPassword.ComputeHash())
                 {
-                    throw new ServerException(ErrorCode.WrongPassword, ErrorCode.WrongPassword.GetDescription());
+                    throw new ServerException(ErrorCode.WrongPassword);
                 }
 
                 if (command.NewPassword == command.CurrentPassword)
                 {
-                    throw new ServerException(ErrorCode.NewPasswordCannotBeTheSame, ErrorCode.NewPasswordCannotBeTheSame.GetDescription());
+                    throw new ServerException(ErrorCode.NewPasswordCannotBeTheSame);
                 }
 
                 if (string.IsNullOrEmpty(command.NewPassword))
                 {
-                    throw new ServerException(ErrorCode.PasswordCannotBeEmpty, ErrorCode.PasswordCannotBeEmpty.GetDescription());
+                    throw new ServerException(ErrorCode.PasswordCannotBeEmpty);
                 }
 
                 context.User.PasswordHash = command.NewPassword.ComputeHash();

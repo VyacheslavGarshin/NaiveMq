@@ -41,10 +41,10 @@ namespace NaiveMq.Service
         private Storage _storage;
 
         private readonly ILogger<NaiveMqService> _logger;
-
+        
+        private readonly ILogger<NaiveMqClient> _clientLogger;
+        
         private readonly IOptions<NaiveMqServiceOptions> _options;
-
-        private readonly IServiceProvider _serviceProvider;
 
         private readonly IPersistentStorage _persistentStorage;
 
@@ -52,13 +52,13 @@ namespace NaiveMq.Service
 
         public NaiveMqService(
             ILogger<NaiveMqService> logger,
+            ILogger<NaiveMqClient> clientLogger,
             IOptions<NaiveMqServiceOptions> options,
-            IServiceProvider serviceProvider,
             IPersistentStorage persistentStorage)
         {
             _logger = logger;
+            _clientLogger = clientLogger;
             _options = options;
-            _serviceProvider = serviceProvider;
             _persistentStorage = persistentStorage;
 
             InitCommands();
@@ -159,7 +159,7 @@ namespace NaiveMq.Service
 
             try
             {
-                client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient }, _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>(), _stoppingToken);
+                client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient }, _clientLogger, _stoppingToken);
 
                 client.OnStop += OnClientStop;
                 client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;

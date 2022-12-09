@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using NaiveMq.Client;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client.Enums;
+using NaiveMq.Service.Entities;
 using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
@@ -119,22 +118,13 @@ namespace NaiveMq.Service.Cogs
 
         private async Task ReEnqueueMessage(MessageEntity messageEntity)
         {
-            var messageCommand = new Message
-            {
-                Id = messageEntity.Id,
-                Queue = messageEntity.Queue,
-                Request = messageEntity.Request,
-                Persistent = messageEntity.Persistent,
-                RoutingKey = messageEntity.RoutingKey,
-                Data = messageEntity.Data
-            };
-
-            await new MessageHandler().ExecuteAsync(_context, messageCommand);
+            using var handler = new MessageHandler();
+            await handler.ExecuteEntityAsync(_context, messageEntity);
         }
 
         private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
         {
-            if (_context.Storage.TryGetClient(messageEntity.ClientId, out var receiverContext))
+            if (messageEntity.ClientId != null && _context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverContext))
             {
                 var confirmation = new Confirmation
                 {

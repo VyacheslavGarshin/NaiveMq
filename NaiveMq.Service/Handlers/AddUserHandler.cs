@@ -1,7 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
@@ -17,19 +17,26 @@ namespace NaiveMq.Service.Handlers
 
             if (string.IsNullOrEmpty(command.Password))
             {
-                throw new ServerException(ErrorCode.PasswordCannotBeEmpty, ErrorCode.PasswordCannotBeEmpty.GetDescription());
+                throw new ServerException(ErrorCode.PasswordCannotBeEmpty);
             }
 
             var userEntity = new UserEntity
             {
                 Username = command.Username,
-                PasswordHash = context.Reinstate ? command.Password : command.Password.ComputeHash(),
+                PasswordHash = command.Password.ComputeHash(),
                 Administrator = command.Administrator
             };
+            
+            await ExecuteEntityAsync(context, userEntity);
 
-            if (!context.Storage.Users.TryAdd(command.Username, userEntity))
+            return Confirmation.Ok(command);
+        }
+
+        public async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity)
+        {
+            if (!context.Storage.Users.TryAdd(userEntity.Username, userEntity))
             {
-                throw new ServerException(ErrorCode.UserAlreadyExists, string.Format(ErrorCode.UserAlreadyExists.GetDescription(), command.Username));
+                throw new ServerException(ErrorCode.UserAlreadyExists, string.Format(ErrorCode.UserAlreadyExists.GetDescription(), userEntity.Username));
             }
 
             if (!context.Reinstate)
@@ -46,10 +53,8 @@ namespace NaiveMq.Service.Handlers
                 }
             }
 
-            context.Storage.UserQueues.TryAdd(command.Username, new(StringComparer.InvariantCultureIgnoreCase));
-            context.Storage.UserBindings.TryAdd(command.Username, new(StringComparer.InvariantCultureIgnoreCase));
-
-            return Confirmation.Ok(command);
+            context.Storage.UserQueues.TryAdd(userEntity.Username, new(StringComparer.InvariantCultureIgnoreCase));
+            context.Storage.UserBindings.TryAdd(userEntity.Username, new(StringComparer.InvariantCultureIgnoreCase));
         }
 
         public void Dispose()

@@ -1,6 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -13,7 +13,7 @@ namespace NaiveMq.Service.Handlers
             return Task.FromResult(SearchUsersResponse.Ok(command, (response) =>
             {
                 response.Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Username.Contains(command.Username)).Select(x =>
-                    new UserEntity
+                    new UserDto
                     {
                         Username = x.Username,
                         Administrator = x.Administrator

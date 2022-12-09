@@ -1,6 +1,6 @@
-﻿namespace NaiveMq.Client.Entities
+﻿namespace NaiveMq.Client.Dto
 {
-    public class ProfileEntity
+    public class ProfileDto
     {
         public string Username { get; set; }
 

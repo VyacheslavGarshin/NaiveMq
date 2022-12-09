@@ -16,7 +16,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.UserOrPasswordNotCorrect, ErrorCode.UserOrPasswordNotCorrect.GetDescription());
+                throw new ServerException(ErrorCode.UserOrPasswordNotCorrect);
             }
 
             return Task.FromResult(Confirmation.Ok(command));

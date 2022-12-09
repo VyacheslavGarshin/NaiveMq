@@ -111,5 +111,8 @@ namespace NaiveMq.Client
 
         [Description("Request message '{0}' already registered.")]
         RequestAlreadyRegistered = 129,
+
+        [Description("Cannot enqueue persistent message in not durable queue.")]
+        CannotEnqueuePersistentMessageInNotDurableQueue = 130,
     }
 }

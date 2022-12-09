@@ -1,6 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
             return Task.FromResult(SearchQueuesResponse.Ok(command, (response) =>
             {
                 response.Queues = userQueues.Where(x => string.IsNullOrEmpty(command.Name) || x.Name.Contains(command.Name, StringComparison.InvariantCultureIgnoreCase)).Select(x =>
-                    new QueueEntity
+                    new QueueDto
                     {
                         User = x.User,
                         Name = x.Name,

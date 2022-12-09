@@ -1,6 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Handlers
 
             return Task.FromResult(GetProfileResponse.Ok(command, (response) =>
             {
-                response.Profile = new ProfileEntity
+                response.Profile = new ProfileDto
                 {
                     Username = context.User.Username,
                     Administrator = context.User.Administrator

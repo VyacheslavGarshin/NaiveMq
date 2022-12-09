@@ -1,7 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 using Newtonsoft.Json;
 
@@ -28,7 +28,7 @@ namespace NaiveMq.Service.Handlers
                 if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
                     && !command.Administrator)
                 {
-                    throw new ServerException(ErrorCode.UserCannotUnsetAdministratorSelf, ErrorCode.UserCannotUnsetAdministratorSelf.GetDescription());
+                    throw new ServerException(ErrorCode.UserCannotUnsetAdministratorSelf);
                 }
 
                 userEntity.Administrator = command.Administrator;

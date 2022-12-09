@@ -1,9 +1,9 @@
-﻿using NaiveMq.Client.Entities;
+﻿using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Client.Commands
 {
     public class GetUserResponse : AbstractResponse<GetUserResponse>
     {
-        public UserEntity User { get; set; }
+        public UserDto User { get; set; }
     }
 }

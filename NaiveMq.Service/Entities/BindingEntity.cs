@@ -1,4 +1,4 @@
-﻿namespace NaiveMq.Client.Entities
+﻿namespace NaiveMq.Service.Entities
 {
     public class BindingEntity
     {

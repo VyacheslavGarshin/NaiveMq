@@ -2,6 +2,6 @@
 {
     public class NaiveMqServiceOptions
     {
-        public int Port { get; set; } = 5002;
+        public int Port { get; set; } = 1245;
     }
 }

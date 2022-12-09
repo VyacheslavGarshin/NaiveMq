@@ -1,9 +1,9 @@
-﻿using NaiveMq.Client.Entities;
+﻿using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Client.Commands
 {
     public class GetProfileResponse : AbstractResponse<GetProfileResponse>
     {
-        public ProfileEntity Profile { get; set; }
+        public ProfileDto Profile { get; set; }
     }
 }

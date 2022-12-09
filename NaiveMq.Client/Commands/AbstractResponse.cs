@@ -37,7 +37,7 @@ namespace NaiveMq.Client.Commands
         /// <returns></returns>
         public static T Ok(IRequest request, Action<T> action = null)
         {
-            var result = request.Confirm ? new T { RequestId = request.Id, Success = true } : default;
+            var result = (request?.Confirm ?? false) ? new T { RequestId = request.Id, Success = true } : default;
 
             action?.Invoke(result);
 
@@ -53,11 +53,6 @@ namespace NaiveMq.Client.Commands
                 ErrorCode = errorCode,
                 ErrorMessage = errorMessage,
             };
-        }
-
-        public static T Error(string errorCode, string errorMessage)
-        {
-            return Error(Guid.Empty, errorCode, errorMessage);
         }
 
         public virtual void Validate()

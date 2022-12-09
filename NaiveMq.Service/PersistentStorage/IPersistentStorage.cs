@@ -1,4 +1,4 @@
-﻿using NaiveMq.Client.Entities;
+﻿using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.PersistentStorage
 {

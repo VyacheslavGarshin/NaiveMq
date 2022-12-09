@@ -1,7 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
@@ -12,20 +12,34 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
+            var queueEnity = new QueueEntity
+            {
+                User = context.User.Username,
+                Name = command.Name,
+                Durable = command.Durable,
+                Exchange = command.Exchange
+            };
+            
+            await ExecuteEntityAsync(context, queueEnity);
+
+            return Confirmation.Ok(command);
+        }
+
+        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEnity)
+        {
             var userQueues = context.Storage.GetUserQueues(context);
 
-            var queue = new Queue(command.Name, context.User.Username, command.Durable, command.Exchange);
+            var queue = new Queue(queueEnity.Name, context.User.Username, queueEnity.Durable, queueEnity.Exchange);
 
             try
             {
-                if (!userQueues.TryAdd(command.Name, queue))
+                if (!userQueues.TryAdd(queueEnity.Name, queue))
                 {
-                    throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), command.Name));
+                    throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), queueEnity.Name));
                 }
 
-                if (!context.Reinstate && command.Durable)
+                if (!context.Reinstate && queueEnity.Durable)
                 {
-                    var queueEnity = new QueueEntity { User = queue.User, Name = queue.Name, Durable = queue.Durable, Exchange = queue.Exchange };
                     await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.CancellationToken);
                 }
             }
@@ -39,8 +53,6 @@ namespace NaiveMq.Service.Handlers
                 queue.Dispose();
                 throw;
             }
-
-            return Confirmation.Ok(command);
         }
 
         public void Dispose()

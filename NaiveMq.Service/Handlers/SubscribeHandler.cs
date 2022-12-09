@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Handlers
                 }
                 else
                 {
-                    throw new ServerException(ErrorCode.CannotSubscribeToExchange, ErrorCode.CannotSubscribeToExchange.GetDescription());
+                    throw new ServerException(ErrorCode.CannotSubscribeToExchange);
                 }
             }
             else

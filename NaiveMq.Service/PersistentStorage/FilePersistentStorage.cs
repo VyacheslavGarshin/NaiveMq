@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 using NaiveMq.Client.Enums;
+using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
@@ -125,11 +126,9 @@ namespace NaiveMq.Service.PersistentStorage
             {
                 if (result.Persistent != Persistent.DiskOnly)
                 {
-                    var dataLength = result.DataLength;
-
                     result.Data = await LoadMessageDataAsync(user, queue, messageId, cancellationToken);
 
-                    if (dataLength != result.Data?.Length)
+                    if (result.DataLength != result.Data?.Length)
                     {
                         isResultBad = true;
                     }

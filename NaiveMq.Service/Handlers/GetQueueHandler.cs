@@ -1,8 +1,8 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -19,7 +19,7 @@ namespace NaiveMq.Service.Handlers
                 return Task.FromResult(GetQueueResponse.Ok(command, (response) =>
                 {
                     response.Queue = queue != null
-                        ? new QueueEntity
+                        ? new QueueDto
                         {
                             User = queue.User,
                             Name = queue.Name,

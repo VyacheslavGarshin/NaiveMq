@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -36,7 +36,7 @@ namespace NaiveMq.Service.Cogs
         {
             if (context.User == null || string.IsNullOrWhiteSpace(context.User.Username))
             {
-                throw new ServerException(ErrorCode.UserNotAuthenticated, ErrorCode.UserNotAuthenticated.GetDescription());
+                throw new ServerException(ErrorCode.UserNotAuthenticated);
             }
 
             if (!Storage.Users.TryGetValue(context.User.Username, out var _))
@@ -46,7 +46,7 @@ namespace NaiveMq.Service.Cogs
 
             if (checkAdmin && !context.User.Administrator)
             {
-                throw new ServerException(ErrorCode.AccessDeniedNotAdmin, ErrorCode.AccessDeniedNotAdmin.GetDescription());
+                throw new ServerException(ErrorCode.AccessDeniedNotAdmin);
             }
         }
     }

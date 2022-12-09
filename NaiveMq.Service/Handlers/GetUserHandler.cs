@@ -1,8 +1,8 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
                 return Task.FromResult(GetUserResponse.Ok(command, (response) =>
                 {
                     response.User = userEntity != null
-                        ? new UserEntity
+                        ? new UserDto
                         {
                             Username = userEntity.Username,
                             Administrator = userEntity.Administrator

@@ -1,7 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
+using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
@@ -23,7 +23,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    throw new ServerException(ErrorCode.UserCannotDeleteSelf, ErrorCode.UserCannotDeleteSelf.GetDescription());
+                    throw new ServerException(ErrorCode.UserCannotDeleteSelf);
                 }
 
                 await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.CancellationToken);

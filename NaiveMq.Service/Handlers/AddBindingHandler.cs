@@ -1,10 +1,10 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Entities;
 using NaiveMq.Client;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
+using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -14,45 +14,57 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
+            var bindingEnity = new BindingEntity
+            {
+                Exchange = command.Exchange,
+                Queue = command.Queue,
+                Durable = command.Durable,
+                Pattern = command.Pattern
+            };
+            
+            await ExecuteEntityAsync(context, bindingEnity);
+
+            return Confirmation.Ok(command);
+        }
+
+        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEnity)
+        {
             var userBindings = context.Storage.GetUserBindings(context);
             var userQueues = context.Storage.GetUserQueues(context);
 
             var binding = new Binding
             {
-                Exchange = command.Exchange,
-                Queue = command.Queue,
-                Durable = command.Durable,
-                Pattern = string.IsNullOrEmpty(command.Pattern) ? null : new Regex(command.Pattern, RegexOptions.IgnoreCase),
+                Exchange = bindingEnity.Exchange,
+                Queue = bindingEnity.Queue,
+                Durable = bindingEnity.Durable,
+                Pattern = string.IsNullOrEmpty(bindingEnity.Pattern) ? null : new Regex(bindingEnity.Pattern, RegexOptions.IgnoreCase),
             };
 
             Check(userQueues, binding);
 
             Bind(userBindings, binding, out var exchangeBindings, out var queueBindings);
 
-            if (!context.Reinstate && command.Durable)
+            if (!context.Reinstate && bindingEnity.Durable)
             {
                 try
                 {
-                    var bindingEnity = new BindingEntity { Exchange = binding.Exchange, Queue = binding.Queue, Durable = binding.Durable, Pattern = command.Pattern };
                     await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Username, bindingEnity, context.CancellationToken);
                 }
                 catch
                 {
                     if (exchangeBindings.IsEmpty)
                     {
-                        userBindings.TryRemove(command.Exchange, out var _);
+                        userBindings.TryRemove(bindingEnity.Exchange, out var _);
                     }
 
                     if (queueBindings.IsEmpty)
                     {
-                        userBindings.TryRemove(command.Queue, out var _);
+                        userBindings.TryRemove(bindingEnity.Queue, out var _);
                     }
 
                     throw;
                 }
             }
-
-            return Confirmation.Ok(command);
         }
 
         private static void Check(ConcurrentDictionary<string, Queue> userQueues, Binding binding)
@@ -69,17 +81,17 @@ namespace NaiveMq.Service.Handlers
 
             if (queue.Exchange)
             {
-                throw new ServerException(ErrorCode.CannotBindExchange, ErrorCode.CannotBindExchange.GetDescription());
+                throw new ServerException(ErrorCode.CannotBindExchange);
             }
 
             if (!exchange.Exchange)
             {
-                throw new ServerException(ErrorCode.CannotBindToQueue, ErrorCode.CannotBindToQueue.GetDescription());
+                throw new ServerException(ErrorCode.CannotBindToQueue);
             }
 
             if (binding.Durable && (!exchange.Durable || !queue.Durable))
             {
-                throw new ServerException(ErrorCode.DurableBindingCheck, ErrorCode.DurableBindingCheck.GetDescription());
+                throw new ServerException(ErrorCode.DurableBindingCheck);
             }
         }
 
