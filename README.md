@@ -13,7 +13,7 @@ Implemented so far:
 + Request-response messages with response from consumer passed to producer
 + Durable queues
 + Disk only messages for long queues with big message data
-+ Queue limits by lenth or volume with server behaviour delay, reject or discard the message
++ Queue limits by length or volume with server behaviour delay, reject or discard the message
 
 Plans:
 + Better durable queues

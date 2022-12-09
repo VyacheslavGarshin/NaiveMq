@@ -300,11 +300,6 @@ namespace NaiveMq.Client
         /// <exception cref="ClientStoppedException"></exception>
         private async Task WriteCommandAsync(ICommand command, CancellationToken cancellationToken)
         {
-            if (command == null)
-            {
-                throw new ArgumentNullException(nameof(command));
-            }
-
             byte[] bytes = null;
 
             try
