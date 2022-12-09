@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Dto
 {
-    public class UserDto
+    public class User
     {
         public string Username { get; set; }
 

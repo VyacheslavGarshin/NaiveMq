@@ -1,8 +1,8 @@
 ﻿using NaiveMq.Client.Enums;
 
-namespace NaiveMq.Service.Entities
+namespace NaiveMq.Client.Dto
 {
-    public class QueueEntity
+    public class Queue
     {
         public string User { get; set; }
 

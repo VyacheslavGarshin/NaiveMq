@@ -17,7 +17,10 @@ namespace NaiveMq.Service.Handlers
                 User = context.User.Username,
                 Name = command.Name,
                 Durable = command.Durable,
-                Exchange = command.Exchange
+                Exchange = command.Exchange,
+                Limit = command.Limit,
+                LimitType = command.LimitType,
+                LimitStrategy = command.LimitStrategy,
             };
             
             await ExecuteEntityAsync(context, queueEnity);
@@ -29,7 +32,7 @@ namespace NaiveMq.Service.Handlers
         {
             var userQueues = context.Storage.GetUserQueues(context);
 
-            var queue = new Queue(queueEnity.Name, context.User.Username, queueEnity.Durable, queueEnity.Exchange);
+            var queue = new QueueCog(queueEnity);
 
             try
             {
@@ -49,7 +52,7 @@ namespace NaiveMq.Service.Handlers
             }
             catch
             {
-                userQueues.TryRemove(queue.Name, out var _);
+                userQueues.TryRemove(queue.Entity.Name, out var _);
                 queue.Dispose();
                 throw;
             }

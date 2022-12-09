@@ -4,15 +4,9 @@ using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
 {
-    public class Queue : IDisposable
+    public class QueueCog : IDisposable
     {
-        public string User { get; set; }
-
-        public string Name { get; set; }
-
-        public bool Durable { get; set; }
-
-        public bool Exchange { get; set; }
+        public QueueEntity Entity { get; set; }
 
         public int Length => _messages.Count;
 
@@ -28,12 +22,9 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
-        public Queue(string name, string user, bool durable, bool exchange)
+        public QueueCog(QueueEntity entity)
         {
-            Name = name;
-            User = user;
-            Durable = durable;
-            Exchange = exchange;
+            Entity = entity;
         }
 
         public bool TryDequeue(out MessageEntity message)

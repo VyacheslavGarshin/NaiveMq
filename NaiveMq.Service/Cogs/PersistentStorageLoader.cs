@@ -132,12 +132,12 @@ namespace NaiveMq.Service.Cogs
                 {
                     var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, CancellationToken = _cancellationToken };
 
-                    var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.User, queue.Name, _cancellationToken)).ToList();
+                    var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.Entity.User, queue.Entity.Name, _cancellationToken)).ToList();
                     var queueMessageCount = 0;
 
                     foreach (var key in messages)
                     {
-                        var message = await _storage.PersistentStorage.LoadMessageAsync(user.Username, queue.Name, key, _cancellationToken);
+                        var message = await _storage.PersistentStorage.LoadMessageAsync(user.Username, queue.Entity.Name, key, _cancellationToken);
 
                         if (message != null)
                         {
@@ -151,7 +151,7 @@ namespace NaiveMq.Service.Cogs
 
                         if (sw.Elapsed > TimeSpan.FromSeconds(10))
                         {
-                            _logger.LogInformation($"{messageCount} persistent messages are loaded. {queueMessageCount}/{messages.Count} loaded for queue '{queue.Name}'.");
+                            _logger.LogInformation($"{messageCount} persistent messages are loaded. {queueMessageCount}/{messages.Count} loaded for queue '{queue.Entity.Name}'.");
                             sw.Restart();
                         }
                     }

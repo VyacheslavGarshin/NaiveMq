@@ -4,6 +4,6 @@ namespace NaiveMq.Client.Commands
 {
     public class GetProfileResponse : AbstractResponse<GetProfileResponse>
     {
-        public ProfileDto Profile { get; set; }
+        public Profile Profile { get; set; }
     }
 }

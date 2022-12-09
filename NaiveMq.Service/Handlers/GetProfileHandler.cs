@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Handlers
 
             return Task.FromResult(GetProfileResponse.Ok(command, (response) =>
             {
-                response.Profile = new ProfileDto
+                response.Profile = new Profile
                 {
                     Username = context.User.Username,
                     Administrator = context.User.Administrator

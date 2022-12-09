@@ -10,7 +10,6 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace NaiveMq.Service
 {

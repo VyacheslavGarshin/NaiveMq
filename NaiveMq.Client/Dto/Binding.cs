@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
-namespace NaiveMq.Service.Cogs
+﻿namespace NaiveMq.Client.Dto
 {
     public class Binding
     {
@@ -10,6 +8,6 @@ namespace NaiveMq.Service.Cogs
 
         public bool Durable { get; set; }
 
-        public Regex Pattern { get; set; }
+        public string Pattern { get; set; }
     }
 }

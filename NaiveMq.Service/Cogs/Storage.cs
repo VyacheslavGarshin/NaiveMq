@@ -13,15 +13,15 @@ namespace NaiveMq.Service.Cogs
 
         public readonly ConcurrentDictionary<string, UserEntity> Users = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Queue>> UserQueues = new(StringComparer.InvariantCultureIgnoreCase);
+        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, QueueCog>> UserQueues = new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// 
         /// </summary>
         /// <remarks>Keys are: user, from queue, to queue.</remarks>
-        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>>> UserBindings = new(StringComparer.InvariantCultureIgnoreCase);
+        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>>> UserBindings = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public readonly ConcurrentDictionary<int, ConcurrentDictionary<Queue, Subscription>> Subscriptions = new();
+        public readonly ConcurrentDictionary<int, ConcurrentDictionary<QueueCog, SubscriptionCog>> Subscriptions = new();
 
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
@@ -37,7 +37,7 @@ namespace NaiveMq.Service.Cogs
             PersistentStorage = persistentStorage;
         }
 
-        public ConcurrentDictionary<string, Queue> GetUserQueues(ClientContext context)
+        public ConcurrentDictionary<string, QueueCog> GetUserQueues(ClientContext context)
         {
             if (!UserQueues.TryGetValue(context.User.Username, out var userQueues))
             {
@@ -47,7 +47,7 @@ namespace NaiveMq.Service.Cogs
             return userQueues;
         }
 
-        public ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>> GetUserBindings(ClientContext context)
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> GetUserBindings(ClientContext context)
         {
             if (!UserBindings.TryGetValue(context.User.Username, out var userBindings))
             {

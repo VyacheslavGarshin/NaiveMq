@@ -25,16 +25,16 @@ namespace NaiveMq.Service.Handlers
                 // todo not clear what to do
             }
 
-            if (binding.Durable)
+            if (binding.Entity.Durable)
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Username, binding.Exchange, binding.Queue, context.CancellationToken);
+                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Username, binding.Entity.Exchange, binding.Entity.Queue, context.CancellationToken);
                 }
                 catch (Exception)
                 {
-                    exchangeBindings.TryAdd(binding.Queue, binding);
-                    queueBindings.TryAdd(binding.Exchange, binding);
+                    exchangeBindings.TryAdd(binding.Entity.Queue, binding);
+                    queueBindings.TryAdd(binding.Entity.Exchange, binding);
                     
                     throw;
                 }

@@ -35,14 +35,14 @@ namespace NaiveMq.Service.Handlers
 
             if (userQueues.TryGetValue(message.Queue, out var queue))
             {
-                if (!queue.Durable && message.Persistent != Persistent.No)
+                if (!queue.Entity.Durable && message.Persistent != Persistent.No)
                 {
                     throw new ServerException(ErrorCode.CannotEnqueuePersistentMessageInNotDurableQueue);
                 }
 
-                var queues = new List<Queue>();
+                var queues = new List<QueueCog>();
 
-                if (queue.Exchange)
+                if (queue.Entity.Exchange)
                 {
                     queues.AddRange(MatchBoundQueues(context, message, userQueues, queue));
 
@@ -79,17 +79,17 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private static List<Queue> MatchBoundQueues(ClientContext context, MessageEntity message, ConcurrentDictionary<string, Queue> userQueues, Queue exchange)
+        private static List<QueueCog> MatchBoundQueues(ClientContext context, MessageEntity message, ConcurrentDictionary<string, QueueCog> userQueues, QueueCog exchange)
         {
-            var result = new List<Queue>();
+            var result = new List<QueueCog>();
             var userBindings = context.Storage.GetUserBindings(context);
 
-            if (userBindings.TryGetValue(exchange.Name, out var bindings))
+            if (userBindings.TryGetValue(exchange.Entity.Name, out var bindings))
             {
                 foreach (var binding in bindings)
                 {
                     if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(message.RoutingKey))
-                        && userQueues.TryGetValue(binding.Value.Queue, out var boundQueue))
+                        && userQueues.TryGetValue(binding.Value.Entity.Queue, out var boundQueue))
                     {
                         result.Add(boundQueue);
                     }
@@ -99,7 +99,7 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task Enqueue(ClientContext context, MessageEntity message, List<Queue> queues)
+        private static async Task Enqueue(ClientContext context, MessageEntity message, List<QueueCog> queues)
         {
             foreach (var queue in queues)
             {

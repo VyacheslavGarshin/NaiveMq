@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
                 return Task.FromResult(GetUserResponse.Ok(command, (response) =>
                 {
                     response.User = userEntity != null
-                        ? new UserDto
+                        ? new User
                         {
                             Username = userEntity.Username,
                             Administrator = userEntity.Administrator

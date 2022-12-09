@@ -6,7 +6,7 @@ using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
 {
-    public class Subscription : IDisposable
+    public class SubscriptionCog : IDisposable
     {
         public bool _confirm { get; set; }
 
@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ClientContext _context;
 
-        private readonly Queue _queue;
+        private readonly QueueCog _queue;
 
         private bool _isStarted;
 
@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Cogs
 
         private Task _sendTask;
 
-        public Subscription(ClientContext context, Queue queue, bool confirm, TimeSpan? confirmTimeout)
+        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout)
         {
             _context = context;
             _queue = queue;
@@ -83,7 +83,7 @@ namespace NaiveMq.Service.Cogs
                             if (messageEntity.Persistent != Persistent.No)
                             {
                                 await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Username, 
-                                    _queue.Name, messageEntity.Id, cancellationToken);
+                                    _queue.Entity.Name, messageEntity.Id, cancellationToken);
                             }
 
                             if (messageEntity.Request)

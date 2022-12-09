@@ -19,12 +19,15 @@ namespace NaiveMq.Service.Handlers
                 return Task.FromResult(GetQueueResponse.Ok(command, (response) =>
                 {
                     response.Queue = queue != null
-                        ? new QueueDto
+                        ? new Queue
                         {
-                            User = queue.User,
-                            Name = queue.Name,
-                            Durable = queue.Durable,
-                            Exchange = queue.Exchange,
+                            User = queue.Entity.User,
+                            Name = queue.Entity.Name,
+                            Durable = queue.Entity.Durable,
+                            Exchange = queue.Entity.Exchange,
+                            Limit = queue.Entity.Limit,
+                            LimitType = queue.Entity.LimitType,
+                            LimitStrategy = queue.Entity.LimitStrategy,
                         }
                         : null;
                 }));

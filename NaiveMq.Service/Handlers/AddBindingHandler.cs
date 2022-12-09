@@ -32,11 +32,8 @@ namespace NaiveMq.Service.Handlers
             var userBindings = context.Storage.GetUserBindings(context);
             var userQueues = context.Storage.GetUserQueues(context);
 
-            var binding = new Binding
+            var binding = new BindingCog(bindingEnity)
             {
-                Exchange = bindingEnity.Exchange,
-                Queue = bindingEnity.Queue,
-                Durable = bindingEnity.Durable,
                 Pattern = string.IsNullOrEmpty(bindingEnity.Pattern) ? null : new Regex(bindingEnity.Pattern, RegexOptions.IgnoreCase),
             };
 
@@ -67,62 +64,62 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private static void Check(ConcurrentDictionary<string, Queue> userQueues, Binding binding)
+        private static void Check(ConcurrentDictionary<string, QueueCog> userQueues, BindingCog binding)
         {
-            if (!userQueues.TryGetValue(binding.Exchange, out var exchange))
+            if (!userQueues.TryGetValue(binding.Entity.Exchange, out var exchange))
             {
-                throw new ServerException(ErrorCode.ExchangeNotFound, string.Format(ErrorCode.ExchangeNotFound.GetDescription(), binding.Exchange));
+                throw new ServerException(ErrorCode.ExchangeNotFound, string.Format(ErrorCode.ExchangeNotFound.GetDescription(), binding.Entity.Exchange));
             }
 
-            if (!userQueues.TryGetValue(binding.Queue, out var queue))
+            if (!userQueues.TryGetValue(binding.Entity.Queue, out var queue))
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), binding.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), binding.Entity.Queue));
             }
 
-            if (queue.Exchange)
+            if (queue.Entity.Exchange)
             {
                 throw new ServerException(ErrorCode.CannotBindExchange);
             }
 
-            if (!exchange.Exchange)
+            if (!exchange.Entity.Exchange)
             {
                 throw new ServerException(ErrorCode.CannotBindToQueue);
             }
 
-            if (binding.Durable && (!exchange.Durable || !queue.Durable))
+            if (binding.Entity.Durable && (!exchange.Entity.Durable || !queue.Entity.Durable))
             {
                 throw new ServerException(ErrorCode.DurableBindingCheck);
             }
         }
 
         private static void Bind(
-            ConcurrentDictionary<string, ConcurrentDictionary<string, Binding>> userBindings, 
-            Binding binding,
-            out ConcurrentDictionary<string, Binding> exchangeBindings,
-            out ConcurrentDictionary<string, Binding> queueBindings)
+            ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> userBindings, 
+            BindingCog binding,
+            out ConcurrentDictionary<string, BindingCog> exchangeBindings,
+            out ConcurrentDictionary<string, BindingCog> queueBindings)
         {            
-            if (!userBindings.TryGetValue(binding.Exchange, out exchangeBindings))
+            if (!userBindings.TryGetValue(binding.Entity.Exchange, out exchangeBindings))
             {
                 exchangeBindings = new(StringComparer.InvariantCultureIgnoreCase);
-                userBindings.TryAdd(binding.Exchange, exchangeBindings);
+                userBindings.TryAdd(binding.Entity.Exchange, exchangeBindings);
             }
 
-            if (!exchangeBindings.TryAdd(binding.Queue, binding))
+            if (!exchangeBindings.TryAdd(binding.Entity.Queue, binding))
             {
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Exchange, binding.Queue));
+                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Entity.Exchange, binding.Entity.Queue));
             }
 
-            if (!userBindings.TryGetValue(binding.Queue, out queueBindings))
+            if (!userBindings.TryGetValue(binding.Entity.Queue, out queueBindings))
             {
                 queueBindings = new(StringComparer.InvariantCultureIgnoreCase);
-                userBindings.TryAdd(binding.Queue, queueBindings);
+                userBindings.TryAdd(binding.Entity.Queue, queueBindings);
             }
 
-            if (!queueBindings.TryAdd(binding.Exchange, binding))
+            if (!queueBindings.TryAdd(binding.Entity.Exchange, binding))
             {
-                exchangeBindings.TryRemove(binding.Queue, out var _);
+                exchangeBindings.TryRemove(binding.Entity.Queue, out var _);
 
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Exchange, binding.Queue));
+                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Entity.Exchange, binding.Entity.Queue));
             }
         }
 

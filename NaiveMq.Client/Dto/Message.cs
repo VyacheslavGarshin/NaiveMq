@@ -4,7 +4,7 @@ using System;
 
 namespace NaiveMq.Client.Dto
 {
-    public class MessageDto
+    public class Message
     {
         public Guid Id { get; set; }
 
