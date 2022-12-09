@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Cogs
 
         private SemaphoreSlim _dequeueSemaphore { get; set; } = new SemaphoreSlim(0, int.MaxValue);
 
-        private SemaphoreSlim _limitSemaphore { get; set; } = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim _limitSemaphore { get; set; } = new SemaphoreSlim(0, 1);
 
         private long _volume;
 
@@ -46,7 +46,7 @@ namespace NaiveMq.Service.Cogs
 
             try
             {
-                if (_limitSemaphore.CurrentCount == 0)
+                if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message))
                 {
                     _limitSemaphore.Release();
                 }
