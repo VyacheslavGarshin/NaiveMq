@@ -74,8 +74,10 @@ namespace NaiveMq.Service.Cogs
                         {
                             if (messageEntity.Persistent == Persistent.DiskOnly)
                             {
-                                messageEntity.Data = await _context.Storage.PersistentStorage.LoadMessageDataAsync(_context.User.Username, 
+                                var diskMessageEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Username,
                                     messageEntity.Queue, messageEntity.Id, cancellationToken);
+                                
+                                messageEntity.Data = diskMessageEntity.Data;
                             }
 
                             var result = await SendMessage(messageEntity, cancellationToken);

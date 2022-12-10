@@ -1,5 +1,4 @@
-﻿using NaiveMq.Client.Enums;
-using System;
+﻿using System;
 
 namespace NaiveMq.Client.Commands
 {

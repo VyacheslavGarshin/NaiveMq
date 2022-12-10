@@ -4,7 +4,6 @@ using NaiveMq.Client.Common;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace NaiveMq.Service.Cogs
 {

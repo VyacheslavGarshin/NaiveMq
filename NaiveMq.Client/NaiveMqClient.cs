@@ -326,7 +326,7 @@ namespace NaiveMq.Client
                     BitConverter.GetBytes(dataLength),
                     data });
 
-                await WriteBytesAsync(bytes, bytesLength, cancellationToken);
+                await WriteBytesAsync(bytes.AsMemory(0, bytesLength), cancellationToken);
 
                 WriteCounter.Add();
 
@@ -351,7 +351,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task WriteBytesAsync(byte[] bytes, int size, CancellationToken cancellationToken)
+        private async Task WriteBytesAsync(Memory<byte> bytes, CancellationToken cancellationToken)
         {
             if (!_started)
             {
@@ -378,7 +378,7 @@ namespace NaiveMq.Client
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
 
-                await stream.WriteAsync(bytes, 0, size, cancellationToken);                
+                await stream.WriteAsync(bytes, cancellationToken);                
             }
             finally
             {

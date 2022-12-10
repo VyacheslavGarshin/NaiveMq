@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NaiveMq.Service.Entities;
-using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
+using System.Buffers;
+using NaiveMq.Client.Common;
 
 namespace NaiveMq.Service.PersistentStorage
 {
@@ -102,70 +103,51 @@ namespace NaiveMq.Service.PersistentStorage
 
         public async Task SaveMessageAsync(string user, string queue, MessageEntity message, CancellationToken cancellationToken)
         {
-            await WriteFileAsync(GetMessagePath(user, queue, message.Id), JsonConvert.SerializeObject(message), false, cancellationToken);
-            await WriteFileAsync(GetMessageDataPath(user, queue, message.Id), message.Data, cancellationToken);
+            var messageBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+            var messageLengthBytes = BitConverter.GetBytes(messageBytes.Length);
+
+            await WriteFileAsync(GetMessagePath(user, queue, message.Id), new[] { messageLengthBytes, messageBytes, message.Data }, cancellationToken);
         }
 
         public async Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
             await DeleteFileAsync(GetMessagePath(user, queue, messageId), true, cancellationToken);
-            await DeleteFileAsync(GetMessageDataPath(user, queue, messageId), true, cancellationToken);
         }
 
         public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
-            var messagePath = GetMessagePath(user, queue, messageId);
-            var dataPath = GetMessageDataPath(user, queue, messageId);
+            MessageEntity result = null;
+            var path = GetMessagePath(user, queue, messageId);
 
-            var result = await LoadEntityAsync<MessageEntity>(messagePath, cancellationToken);
-            var isResultBad = false;
-
-            if (result != null)
+            using (var file = File.OpenRead(path))
             {
-                if (result.Persistent != Persistent.DiskOnly)
+                if (file.Length > 4)
                 {
-                    result.Data = await LoadMessageDataAsync(user, queue, messageId, cancellationToken);
+                    var messageLengthBytes = new byte[4];
+                    await file.ReadAsync(messageLengthBytes, cancellationToken);
+                    var messageLength = BitConverter.ToInt32(messageLengthBytes);
 
-                    if (result.DataLength != result.Data?.Length)
-                    {
-                        isResultBad = true;
-                    }
-                }
-                else
-                {
-                    var fileInfo = new FileInfo(dataPath);
+                    var messageBytes = new byte[messageLength];
+                    await file.ReadAsync(messageBytes, cancellationToken);
 
-                    if (!fileInfo.Exists || fileInfo.Length != result.DataLength)
-                    {
-                        isResultBad = true;
-                    }
+                    result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));
+
+                    result.Data = new byte[result.DataLength];
+                    await file.ReadAsync(result.Data, cancellationToken);
                 }
             }
-            else
-            {
-                isResultBad = true;
-            }
 
-            if (isResultBad)
+            if (result == null)
             {
-                await DeleteFileAsync(messagePath, false, cancellationToken);
-                await DeleteFileAsync(dataPath, false, cancellationToken);
-
-                result = null;
+                await DeleteFileAsync(path, false, cancellationToken);
             }
 
             return result;
         }
 
-        public async Task<byte[]> LoadMessageDataAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
-        {
-            var dataPath = GetMessageDataPath(user, queue, messageId);
-            return await LoadBytesAsync(dataPath, cancellationToken);
-        }
-
         public Task<IEnumerable<Guid>> LoadMessageKeysAsync(string user, string queue, CancellationToken cancellationToken)
         {
-            var result = LoadKeys(GetQueueMessagesPath(user, queue)).Select(x => Guid.Parse(x));
+            var result = LoadKeys(GetQueueMessagesPath(user, queue), "*.msg").Select(Guid.Parse);
             return Task.FromResult(result);
         }
 
@@ -288,7 +270,7 @@ namespace NaiveMq.Service.PersistentStorage
             }
         }
 
-        private static async Task WriteFileAsync(string path, byte[] data, CancellationToken cancellationToken)
+        private static async Task WriteFileAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
         {
             if (!File.Exists(path))
             {
@@ -309,9 +291,14 @@ namespace NaiveMq.Service.PersistentStorage
             await File.WriteAllTextAsync(path, text, Encoding.UTF8, cancellationToken);
         }
 
-        static async Task WriteAllBytesAsync(string path, byte[] data, CancellationToken cancellationToken)
+        static async Task WriteAllBytesAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
         {
-            await File.WriteAllBytesAsync(path, data ?? Array.Empty<byte>(), cancellationToken);
+            using var file = File.OpenWrite(path);
+
+            foreach (var chunk in data)
+            {
+                await file.WriteAsync(chunk, cancellationToken);
+            }
         }
 
         private string GetUserPath(string user)
@@ -356,12 +343,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         private string GetMessagePath(string user, string queue, Guid messageId)
         {
-            return Path.Combine(_basePath, MessagesDirectory, user.ToLowerInvariant(), queue.ToLowerInvariant(), $"{messageId}.json");
-        }
-
-        private string GetMessageDataPath(string user, string queue, Guid messageId)
-        {
-            return Path.Combine(_basePath, MessagesDirectory, user.ToLowerInvariant(), queue.ToLowerInvariant(), $"{messageId}.bytes");
+            return Path.Combine(_basePath, MessagesDirectory, user.ToLowerInvariant(), queue.ToLowerInvariant(), $"{messageId}.msg");
         }
 
         public void Dispose()

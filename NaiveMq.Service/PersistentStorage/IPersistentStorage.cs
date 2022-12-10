@@ -34,8 +34,6 @@ namespace NaiveMq.Service.PersistentStorage
 
         public Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken);
 
-        public Task<byte[]> LoadMessageDataAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken);
-
         public Task<IEnumerable<Guid>> LoadMessageKeysAsync(string user, string queue, CancellationToken cancellationToken);
     }
 }

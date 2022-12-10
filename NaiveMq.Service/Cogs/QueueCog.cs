@@ -1,7 +1,6 @@
 ﻿using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using System.Collections.Concurrent;
-using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {
