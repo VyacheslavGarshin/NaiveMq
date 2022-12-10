@@ -14,6 +14,7 @@ Implemented so far:
 + Durable queues
 + Disk only messages for long queues with big message data
 + Queue limits by length or volume with server behaviour delay, reject or discard the message
++ Server memory limits manual/automatic
 
 Plans:
 + Better durable queues
