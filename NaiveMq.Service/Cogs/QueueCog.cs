@@ -9,6 +9,8 @@ namespace NaiveMq.Service.Cogs
     {
         public QueueEntity Entity { get; set; }
 
+        public long? LengthLimit { get; set; }
+
         public int Length => _messages.Count;
 
         public long Volume => _volume;
@@ -48,6 +50,8 @@ namespace NaiveMq.Service.Cogs
             {
                 if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message))
                 {
+                    LengthLimit = null;
+
                     _limitSemaphore.Release();
                 }
             }
@@ -80,9 +84,11 @@ namespace NaiveMq.Service.Cogs
 
         public bool LimitExceeded(MessageEntity message)
         {
-            return Entity.Limit != null && (
-                Length > Entity.Limit && Entity.LimitBy == LimitBy.Length || 
-                Volume + message.DataLength > Entity.Limit && Entity.LimitBy == LimitBy.Volume);
+            return
+                Entity.Limit != null && (
+                    Length >= Entity.Limit && Entity.LimitBy == LimitBy.Length ||
+                    Volume + message.DataLength >= Entity.Limit && Entity.LimitBy == LimitBy.Volume) ||
+                (LengthLimit != null && Length >= LengthLimit);
         }
 
         public void Dispose()

@@ -80,7 +80,7 @@ namespace NaiveMq.Service
         {
             _stoppingToken = stoppingToken;
 
-            _storage = new Storage(_persistentStorage, _logger, _stoppingToken);
+            _storage = new Storage(_options.Value, _persistentStorage, _logger, _stoppingToken);
 
             await new PersistentStorageLoader(_storage, _logger, _stoppingToken).LoadAsync();
 

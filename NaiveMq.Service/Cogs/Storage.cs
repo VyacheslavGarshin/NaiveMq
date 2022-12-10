@@ -4,12 +4,15 @@ using NaiveMq.Client.Common;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace NaiveMq.Service.Cogs
 {
     public class Storage : IDisposable
     {
         public IPersistentStorage PersistentStorage { get; set; }
+
+        public bool MemoryLimitExceeded { get; private set; }
 
         public readonly ConcurrentDictionary<string, UserEntity> Users = new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -29,12 +32,19 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ILogger _logger;
 
-        public Storage(IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
+        private readonly Timer _timer;
+
+        private readonly NaiveMqServiceOptions _options;
+
+        public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
         {
+            _options = options;
             _logger = logger;
             _stoppingToken = stoppingToken;
 
             PersistentStorage = persistentStorage;
+
+            _timer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
 
         public ConcurrentDictionary<string, QueueCog> GetUserQueues(ClientContext context)
@@ -72,6 +82,8 @@ namespace NaiveMq.Service.Cogs
 
         public void Dispose()
         {
+            _timer.Dispose();
+
             foreach (var clientSubscriptions in Subscriptions)
             {
                 DeleteSubscriptions(clientSubscriptions.Key);
@@ -133,6 +145,19 @@ namespace NaiveMq.Service.Cogs
             client.Dispose();
 
             _logger.LogInformation($"Client deleted {client.Id}.");
+        }
+
+        private void OnTimer(object state)
+        {
+            UpdateMemoryLimitExceeded();
+        }
+
+        private void UpdateMemoryLimitExceeded()
+        {
+            var memoryInfo = GC.GetGCMemoryInfo();
+            var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes;
+            MemoryLimitExceeded = ((double)freeMemory / memoryInfo.HighMemoryLoadThresholdBytes) < 0.1
+                || (_options.MemoryLimit != null && memoryInfo.HeapSizeBytes > _options.MemoryLimit);
         }
     }
 }

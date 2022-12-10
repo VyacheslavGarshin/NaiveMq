@@ -93,6 +93,11 @@ namespace NaiveMq.Service.Handlers
             if (!context.Reinstate) {
                 foreach (var queue in queues)
                 {
+                    if (context.Storage.MemoryLimitExceeded && queue.LengthLimit == null && queue.Length > 1)
+                    {
+                        queue.LengthLimit = (long)(queue.Length * 0.9);
+                    }
+
                     if (queue.LimitExceeded(message))
                     {
                         switch (queue.Entity.LimitStrategy)
