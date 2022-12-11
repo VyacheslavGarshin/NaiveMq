@@ -110,47 +110,6 @@ namespace NaiveMq.LoadTests.SpamQueue
                             {
                                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
-                                // c.Start();
-
-                                c.OnReceiveMessageAsync += async (client, message) =>
-                                {
-                                    if (_options.Value.ReadBody)
-                                    {
-                                        var body = message.Data.ToArray();
-                                    }
-
-                                    if (message.Confirm || message.Request)
-                                    {
-                                        try
-                                        {
-                                            await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
-                                        }
-                                        catch (ClientException)
-                                        {
-                                            // it's ok
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            _logger.LogError(ex, "Spam send error");
-                                        }
-                                    }
-
-                                    if (_options.Value.ReceiveDelay != null)
-                                    {
-                                        await Task.Delay(_options.Value.ReceiveDelay.Value);
-                                    }
-                                };
-
-                                c.OnReceiveErrorAsync += (client, ex) =>
-                                {
-                                    if (ex is not ClientException)
-                                    {
-                                        _logger.LogError(ex, "Spam receive error");
-                                    }
-
-                                    return Task.CompletedTask;
-                                };
-
                                 if (!string.IsNullOrEmpty(_options.Value.Username))
                                 {
                                     await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
@@ -160,6 +119,8 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 {
                                     await c.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
                                 }
+
+                                Consume(c);
 
                                 using var exitSp = new SemaphoreSlim(1, 1);
 
@@ -171,64 +132,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                                 using var timer = new Timer((s) =>
                                 {
-                                    if (_options.Value.LogClientCounters)
-                                    {
-                                        _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
-                                    }
-
-                                    if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
-                                    {
-                                        lastActivity = DateTime.Now;
-                                    }
-                                    else
-                                    {
-                                        if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
-                                        {
-                                            delta = DateTime.Now.Subtract(lastActivity);
-                                            if (exitSp.CurrentCount == 0)
-                                                exitSp.Release(1);
-                                        }
-                                    }
+                                    CheckClientActivity(c, exitSp, ref lastActivity, ref delta);
                                 }, null, 0, 1000);
 
                                 for (var j = 1; j <= max; j++)
                                 {
-                                    try
-                                    {
-                                        var response = await c.SendAsync(new Message
-                                        {
-                                            Queue = queueName ,
-                                            Persistent = _options.Value.PersistentMessage,
-                                            Request = _options.Value.Request,
-                                            Data = message,
-                                            Confirm = _options.Value.Confirm,
-                                            ConfirmTimeout = _options.Value.ConfirmTimeout,
-                                        },
-                                            _stoppingToken);
-
-
-                                        if (_options.Value.SendDelay != null)
-                                        {
-                                            await Task.Delay(_options.Value.SendDelay.Value);
-                                        }
-                                    }
-                                    catch (ClientException ex)
-                                    {
-                                        if (ex.ErrorCode == ErrorCode.ConfirmationTimeout)
-                                        {
-                                            _logger.LogWarning(ex, "Spam confirmation timeout error");
-                                        }
-                                        else
-                                        {
-                                            _logger.LogError(ex, "Spam send error");
-                                            throw;
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.LogError(ex, "Spam send error");
-                                        throw;
-                                    }
+                                    await Produce(message, queueName, c);
                                 }
 
                                 await exitSp.WaitAsync();
@@ -237,7 +146,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                                 if (_options.Value.Subscribe)
                                 {
-                                    await c.SendAsync(new Unsubscribe { Queue = queueName  }, _stoppingToken);
+                                    await c.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
                                 }
 
                                 _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
@@ -265,6 +174,110 @@ namespace NaiveMq.LoadTests.SpamQueue
                         await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName + queue }, _stoppingToken);
                 }
             });
+        }
+
+        private async Task Produce(byte[] message, string queueName, NaiveMqClient c)
+        {
+            try
+            {
+                var response = await c.SendAsync(new Message
+                    {
+                        Queue = queueName,
+                        Persistent = _options.Value.PersistentMessage,
+                        Request = _options.Value.Request,
+                        Data = message,
+                        Confirm = _options.Value.Confirm,
+                        ConfirmTimeout = _options.Value.ConfirmTimeout,
+                    },
+                    _stoppingToken);
+
+
+                if (_options.Value.SendDelay != null)
+                {
+                    await Task.Delay(_options.Value.SendDelay.Value);
+                }
+            }
+            catch (ClientException ex)
+            {
+                if (ex.ErrorCode == ErrorCode.ConfirmationTimeout)
+                {
+                    _logger.LogWarning(ex, "Spam confirmation timeout error");
+                }
+                else
+                {
+                    _logger.LogError(ex, "Spam send error");
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Spam send error");
+                throw;
+            }
+        }
+
+        private void CheckClientActivity(NaiveMqClient c, SemaphoreSlim exitSp, ref DateTime lastActivity, ref TimeSpan delta)
+        {
+            if (_options.Value.LogClientCounters)
+            {
+                _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+            }
+
+            if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
+            {
+                lastActivity = DateTime.Now;
+            }
+            else
+            {
+                if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
+                {
+                    delta = DateTime.Now.Subtract(lastActivity);
+                    if (exitSp.CurrentCount == 0)
+                        exitSp.Release(1);
+                }
+            }
+        }
+
+        private void Consume(NaiveMqClient c)
+        {
+            c.OnReceiveMessageAsync += async (client, message) =>
+            {
+                if (_options.Value.ReadBody)
+                {
+                    var body = message.Data.ToArray();
+                }
+
+                if (message.Confirm || message.Request)
+                {
+                    try
+                    {
+                        await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
+                    }
+                    catch (ClientException)
+                    {
+                        // it's ok
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Spam send error");
+                    }
+                }
+
+                if (_options.Value.ReceiveDelay != null)
+                {
+                    await Task.Delay(_options.Value.ReceiveDelay.Value);
+                }
+            };
+
+            c.OnReceiveErrorAsync += (client, ex) =>
+            {
+                if (ex is not ClientException)
+                {
+                    _logger.LogError(ex, "Spam receive error");
+                }
+
+                return Task.CompletedTask;
+            };
         }
 
         private async Task CheckExchange(NaiveMqClient c)

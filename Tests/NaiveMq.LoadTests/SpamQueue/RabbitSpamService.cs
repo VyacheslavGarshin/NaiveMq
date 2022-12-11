@@ -41,19 +41,10 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             var factory = new ConnectionFactory() { HostName = "localhost" };
 
-            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            using (var connection = factory.CreateConnection())
+            using (var channel = connection.CreateModel())
             {
-                using (var connection = factory.CreateConnection())
-                using (var channel = connection.CreateModel())
-                {
-                    channel.QueueDelete(_options.Value.QueueName + queue);
-
-                    channel.QueueDeclare(queue: _options.Value.QueueName + queue,
-                                         durable: _options.Value.Durable,
-                                         exclusive: false,
-                                         autoDelete: false,
-                                         arguments: null);
-                }
+                CreateQueues(channel);
             }
 
             string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
@@ -69,56 +60,21 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     for (var i = 0; i < _options.Value.ThreadsCount; i++)
                     {
+                        var queueName = _options.Value.QueueName + queue;
+
                         var t = Task.Run(() =>
                         {
-                            var queueName = _options.Value.QueueName + queue;
-
                             using var connection = factory.CreateConnection();
                             using var channel = connection.CreateModel();
 
                             if (_options.Value.Confirm)
                                 channel.ConfirmSelect();
 
-                            if (_options.Value.Subscribe)
-                            {
-                                var consumer = new EventingBasicConsumer(channel);
-                                consumer.Received += (model, ea) =>
-                                {
-                                    if (_options.Value.ReadBody)
-                                    {
-                                        var body = ea.Body.ToArray();
-                                    }
-
-                                    if (!_options.Value.AutoAck)
-                                    {
-                                        channel.BasicAck(ea.DeliveryTag, false);
-                                    }
-                                };
-                                channel.BasicConsume(queue: queueName,
-                                                     autoAck: _options.Value.AutoAck,
-                                                     consumer: consumer);
-                            }
+                            Consume(queueName, channel);
 
                             for (var j = 1; j <= _options.Value.MessageCount; j++)
                             {
-                                var props = channel.CreateBasicProperties();
-                                props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
-
-                                try
-                                {
-                                    channel.BasicPublish(exchange: "",
-                                                         routingKey: queueName,
-                                                         basicProperties: props,
-                                                         body: body);
-
-                                    if (_options.Value.Confirm)
-                                        channel.WaitForConfirms();
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex, "Basic publish failed.");
-                                    throw;
-                                }
+                                Publish(body, queueName, channel);
                             }
 
                             return Task.CompletedTask;
@@ -135,6 +91,67 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
 
             return Task.CompletedTask;
+        }
+
+        private void CreateQueues(IModel channel)
+        {
+            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            {
+                {
+                    channel.QueueDelete(_options.Value.QueueName + queue);
+
+                    channel.QueueDeclare(queue: _options.Value.QueueName + queue,
+                                         durable: _options.Value.Durable,
+                                         exclusive: false,
+                                         autoDelete: false,
+                                         arguments: null);
+                }
+            }
+        }
+
+        private void Publish(byte[] body, string queueName, IModel channel)
+        {
+            var props = channel.CreateBasicProperties();
+            props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
+
+            try
+            {
+                channel.BasicPublish(exchange: "",
+                                     routingKey: queueName,
+                                     basicProperties: props,
+                                     body: body);
+
+                if (_options.Value.Confirm)
+                    channel.WaitForConfirms();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Basic publish failed.");
+                throw;
+            }
+        }
+
+        private void Consume(string queueName, IModel channel)
+        {
+            if (_options.Value.Subscribe)
+            {
+                var consumer = new EventingBasicConsumer(channel);
+                consumer.Received += (model, ea) =>
+                {
+                    if (_options.Value.ReadBody)
+                    {
+                        var body = ea.Body.ToArray();
+                    }
+
+                    if (!_options.Value.AutoAck)
+                    {
+                        channel.BasicAck(ea.DeliveryTag, false);
+                    }
+                };
+                channel.BasicConsume(queue: queueName,
+                                     autoAck: _options.Value.AutoAck,
+                                     consumer: consumer);
+            }
         }
     }
 }
