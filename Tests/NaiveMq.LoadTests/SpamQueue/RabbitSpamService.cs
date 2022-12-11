@@ -82,12 +82,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         tasks.Add(t);
                     }
-
-                    Task.WaitAll(tasks.ToArray());
-
-                    Console.WriteLine($"Took {sw.Elapsed}");
-                    Console.ReadLine();
                 }
+
+                Task.WaitAll(tasks.ToArray());
+
+                Console.WriteLine($"Took {sw.Elapsed}");
+                Console.ReadLine();
             }
 
             return Task.CompletedTask;

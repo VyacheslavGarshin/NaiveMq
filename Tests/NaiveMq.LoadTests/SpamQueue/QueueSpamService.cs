@@ -153,19 +153,19 @@ namespace NaiveMq.LoadTests.SpamQueue
                             });
 
                             tasks.Add(t);
-                        }
-
-                        try
-                        {
-                            Task.WaitAll(tasks.ToArray());
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
-                        }
-
-                        _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
+                        }                        
                     }
+
+                    try
+                    {
+                        Task.WaitAll(tasks.ToArray());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+                    }
+
+                    _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                 }
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
