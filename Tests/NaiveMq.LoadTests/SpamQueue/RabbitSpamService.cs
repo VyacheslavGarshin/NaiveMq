@@ -41,16 +41,19 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             var factory = new ConnectionFactory() { HostName = "localhost" };
 
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
+            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
             {
-                channel.QueueDelete(_options.Value.QueueName);
+                using (var connection = factory.CreateConnection())
+                using (var channel = connection.CreateModel())
+                {
+                    channel.QueueDelete(_options.Value.QueueName + queue);
 
-                channel.QueueDeclare(queue: _options.Value.QueueName,
-                                     durable: _options.Value.Durable,
-                                     exclusive: false,
-                                     autoDelete: false,
-                                     arguments: null);
+                    channel.QueueDeclare(queue: _options.Value.QueueName + queue,
+                                         durable: _options.Value.Durable,
+                                         exclusive: false,
+                                         autoDelete: false,
+                                         arguments: null);
+                }
             }
 
             string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
@@ -62,69 +65,73 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 var tasks = new List<Task>();
 
-                for (var i = 0; i < _options.Value.ThreadsCount; i++)
+                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                 {
-                    var poc = i;
-                    var t = Task.Run(() =>
+                    for (var i = 0; i < _options.Value.ThreadsCount; i++)
                     {
-                        using var connection = factory.CreateConnection();
-                        using var channel = connection.CreateModel();
-
-                        if (_options.Value.Confirm)
-                            channel.ConfirmSelect();
-
-                        if (_options.Value.Subscribe)
+                        var t = Task.Run(() =>
                         {
-                            var consumer = new EventingBasicConsumer(channel);
-                            consumer.Received += (model, ea) =>
+                            var queueName = _options.Value.QueueName + queue;
+
+                            using var connection = factory.CreateConnection();
+                            using var channel = connection.CreateModel();
+
+                            if (_options.Value.Confirm)
+                                channel.ConfirmSelect();
+
+                            if (_options.Value.Subscribe)
                             {
-                                if (_options.Value.ReadBody)
+                                var consumer = new EventingBasicConsumer(channel);
+                                consumer.Received += (model, ea) =>
                                 {
-                                    var body = ea.Body.ToArray();
-                                }
+                                    if (_options.Value.ReadBody)
+                                    {
+                                        var body = ea.Body.ToArray();
+                                    }
 
-                                if (!_options.Value.AutoAck)
+                                    if (!_options.Value.AutoAck)
+                                    {
+                                        channel.BasicAck(ea.DeliveryTag, false);
+                                    }
+                                };
+                                channel.BasicConsume(queue: queueName,
+                                                     autoAck: _options.Value.AutoAck,
+                                                     consumer: consumer);
+                            }
+
+                            for (var j = 1; j <= _options.Value.MessageCount; j++)
+                            {
+                                var props = channel.CreateBasicProperties();
+                                props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
+
+                                try
                                 {
-                                    channel.BasicAck(ea.DeliveryTag, false);
+                                    channel.BasicPublish(exchange: "",
+                                                         routingKey: queueName,
+                                                         basicProperties: props,
+                                                         body: body);
+
+                                    if (_options.Value.Confirm)
+                                        channel.WaitForConfirms();
                                 }
-                            };
-                            channel.BasicConsume(queue: _options.Value.QueueName,
-                                                 autoAck: _options.Value.AutoAck,
-                                                 consumer: consumer);
-                        }
-
-                        for (var j = 1; j <= _options.Value.MessageCount; j++)
-                        {
-                            var props = channel.CreateBasicProperties();
-                            props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
-
-                            try
-                            {
-                                channel.BasicPublish(exchange: "",
-                                                     routingKey: _options.Value.QueueName,
-                                                     basicProperties: props,
-                                                     body: body);
-
-                                if (_options.Value.Confirm)
-                                    channel.WaitForConfirms();
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "Basic publish failed.");
+                                    throw;
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex, "Basic publish failed.");
-                                throw;
-                            }
-                        }
 
-                        return Task.CompletedTask;
-                    });
+                            return Task.CompletedTask;
+                        });
 
-                    tasks.Add(t);
+                        tasks.Add(t);
+                    }
+
+                    Task.WaitAll(tasks.ToArray());
+
+                    Console.WriteLine($"Took {sw.Elapsed}");
+                    Console.ReadLine();
                 }
-
-                Task.WaitAll(tasks.ToArray());
-
-                Console.WriteLine($"Took {sw.Elapsed}");
-                Console.ReadLine();
             }
 
             return Task.CompletedTask;

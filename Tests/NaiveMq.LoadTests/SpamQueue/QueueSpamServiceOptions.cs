@@ -33,7 +33,9 @@ namespace NaiveMq.LoadTests.SpamQueue
         public bool DeleteQueue { get; set; } = true;
 
         public string QueueName { get; set; } = "test";
-        
+
+        public int QueueCount { get; set; } = 1;
+
         public bool RewriteQueue { get; set; }
         
         public bool ConfirmSubscription { get; set; }

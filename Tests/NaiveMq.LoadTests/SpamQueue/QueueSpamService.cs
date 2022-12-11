@@ -81,7 +81,10 @@ namespace NaiveMq.LoadTests.SpamQueue
                     await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                 }
 
-                await CheckQueueCommands(c);
+                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                {
+                    await CheckQueueCommands(c, queue);
+                }
 
                 await CheckUserCommands(c);
 
@@ -97,163 +100,170 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                     var tasks = new List<Task>();
 
-                    for (var i = 0; i < taskCount; i++)
+                    for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                     {
-                        var poc = i;
-                        var t = Task.Run(async () =>
+                        var queueName = _options.Value.QueueName + queue;
+
+                        for (var i = 0; i < taskCount; i++)
                         {
-                            using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
-
-                            // c.Start();
-
-                            c.OnReceiveMessageAsync += async (client, message) =>
+                            var t = Task.Run(async () =>
                             {
-                                if (_options.Value.ReadBody)
+                                using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
+
+                                // c.Start();
+
+                                c.OnReceiveMessageAsync += async (client, message) =>
                                 {
-                                    var body = message.Data.ToArray();
+                                    if (_options.Value.ReadBody)
+                                    {
+                                        var body = message.Data.ToArray();
+                                    }
+
+                                    if (message.Confirm || message.Request)
+                                    {
+                                        try
+                                        {
+                                            await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
+                                        }
+                                        catch (ClientException)
+                                        {
+                                            // it's ok
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.LogError(ex, "Spam send error");
+                                        }
+                                    }
+
+                                    if (_options.Value.ReceiveDelay != null)
+                                    {
+                                        await Task.Delay(_options.Value.ReceiveDelay.Value);
+                                    }
+                                };
+
+                                c.OnReceiveErrorAsync += (client, ex) =>
+                                {
+                                    if (ex is not ClientException)
+                                    {
+                                        _logger.LogError(ex, "Spam receive error");
+                                    }
+
+                                    return Task.CompletedTask;
+                                };
+
+                                if (!string.IsNullOrEmpty(_options.Value.Username))
+                                {
+                                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
                                 }
 
-                                if (message.Confirm || message.Request)
+                                if (_options.Value.Subscribe)
+                                {
+                                    await c.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
+                                }
+
+                                using var exitSp = new SemaphoreSlim(1, 1);
+
+                                var sw = Stopwatch.StartNew();
+                                await exitSp.WaitAsync();
+
+                                var lastActivity = DateTime.Now;
+                                TimeSpan delta = TimeSpan.Zero;
+
+                                using var timer = new Timer((s) =>
+                                {
+                                    if (_options.Value.LogClientCounters)
+                                    {
+                                        _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
+                                    }
+
+                                    if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
+                                    {
+                                        lastActivity = DateTime.Now;
+                                    }
+                                    else
+                                    {
+                                        if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
+                                        {
+                                            delta = DateTime.Now.Subtract(lastActivity);
+                                            if (exitSp.CurrentCount == 0)
+                                                exitSp.Release(1);
+                                        }
+                                    }
+                                }, null, 0, 1000);
+
+                                for (var j = 1; j <= max; j++)
                                 {
                                     try
                                     {
-                                        await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
-                                    }
-                                    catch (ClientException)
-                                    {
-                                        // it's ok
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.LogError(ex, "Spam send error");
-                                    }
-                                }
-
-                                if (_options.Value.ReceiveDelay != null)
-                                {
-                                    await Task.Delay(_options.Value.ReceiveDelay.Value);
-                                }
-                            };
-
-                            c.OnReceiveErrorAsync += (client, ex) =>
-                            {
-                                if (ex is not ClientException)
-                                {
-                                    _logger.LogError(ex, "Spam receive error");
-                                }
-
-                                return Task.CompletedTask;
-                            };
-
-                            if (!string.IsNullOrEmpty(_options.Value.Username))
-                            {
-                                await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                            }
-
-                            if (_options.Value.Subscribe)
-                            {
-                                await c.SendAsync(new Subscribe { Queue = _options.Value.QueueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
-                            }
-
-                            using var exitSp = new SemaphoreSlim(1, 1);
-
-                            var sw = Stopwatch.StartNew();
-                            await exitSp.WaitAsync();
-
-                            var lastActivity = DateTime.Now;
-                            TimeSpan delta = TimeSpan.Zero;
-
-                            using var timer = new Timer((s) =>
-                            {
-                                if (_options.Value.LogClientCounters)
-                                {
-                                    _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
-                                }
-
-                                if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
-                                {
-                                    lastActivity = DateTime.Now;
-                                }
-                                else
-                                {
-                                    if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
-                                    {
-                                        delta = DateTime.Now.Subtract(lastActivity);
-                                        if (exitSp.CurrentCount == 0)
-                                            exitSp.Release(1);
-                                    }
-                                }
-                            }, null, 0, 1000);
-
-                            for (var j = 1; j <= max; j++)
-                            {
-                                try
-                                {
-                                    var response = await c.SendAsync(new Message
+                                        var response = await c.SendAsync(new Message
                                         {
-                                            Queue = _options.Value.QueueName,
+                                            Queue = queueName ,
                                             Persistent = _options.Value.PersistentMessage,
                                             Request = _options.Value.Request,
                                             Data = message,
                                             Confirm = _options.Value.Confirm,
                                             ConfirmTimeout = _options.Value.ConfirmTimeout,
                                         },
-                                        _stoppingToken);
+                                            _stoppingToken);
 
 
-                                    if (_options.Value.SendDelay != null)
-                                    {
-                                        await Task.Delay(_options.Value.SendDelay.Value);
+                                        if (_options.Value.SendDelay != null)
+                                        {
+                                            await Task.Delay(_options.Value.SendDelay.Value);
+                                        }
                                     }
-                                }
-                                catch (ClientException ex)
-                                {
-                                    if (ex.ErrorCode == ErrorCode.ConfirmationTimeout)
+                                    catch (ClientException ex)
                                     {
-                                        _logger.LogWarning(ex, "Spam confirmation timeout error");
+                                        if (ex.ErrorCode == ErrorCode.ConfirmationTimeout)
+                                        {
+                                            _logger.LogWarning(ex, "Spam confirmation timeout error");
+                                        }
+                                        else
+                                        {
+                                            _logger.LogError(ex, "Spam send error");
+                                            throw;
+                                        }
                                     }
-                                    else
+                                    catch (Exception ex)
                                     {
                                         _logger.LogError(ex, "Spam send error");
                                         throw;
                                     }
                                 }
-                                catch (Exception ex)
+
+                                await exitSp.WaitAsync();
+
+                                timer.Dispose();
+
+                                if (_options.Value.Subscribe)
                                 {
-                                    _logger.LogError(ex, "Spam send error");
-                                    throw;
+                                    await c.SendAsync(new Unsubscribe { Queue = queueName  }, _stoppingToken);
                                 }
-                            }
 
-                            await exitSp.WaitAsync();
+                                _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
+                            });
 
-                            timer.Dispose();
+                            tasks.Add(t);
+                        }
 
-                            if (_options.Value.Subscribe)
-                            {
-                                await c.SendAsync(new Unsubscribe { Queue = _options.Value.QueueName }, _stoppingToken);
-                            }
+                        try
+                        {
+                            Task.WaitAll(tasks.ToArray());
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+                        }
 
-                            _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
-                        });
-
-                        tasks.Add(t);
+                        _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                     }
-
-                    try
-                    {
-                        Task.WaitAll(tasks.ToArray());
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
-                    }
-
-                    _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                 }
 
-                if (_options.Value.DeleteQueue)
-                    await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                {
+                    if (_options.Value.DeleteQueue)
+                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName + queue }, _stoppingToken);
+                }
             });
         }
 
@@ -281,21 +291,23 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private async Task CheckQueueCommands(NaiveMqClient c)
+        private async Task CheckQueueCommands(NaiveMqClient c, int queue)
         {
+            var queueName = _options.Value.QueueName + queue;
+
             if (_options.Value.AddQueue)
             {
-                if ((await c.SendAsync(new GetQueue { Name = _options.Value.QueueName, Try = true }, _stoppingToken)).Queue != null)
+                if ((await c.SendAsync(new GetQueue { Name = queueName, Try = true }, _stoppingToken)).Queue != null)
                 {
                     if (_options.Value.RewriteQueue)
                     {
-                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName }, _stoppingToken);
+                        await c.SendAsync(new DeleteQueue { Name = queueName }, _stoppingToken);
                     }
                 }
 
                 await c.SendAsync(new AddQueue
                 {
-                    Name = _options.Value.QueueName,
+                    Name = queueName,
                     Durable = _options.Value.Durable,
                     Limit = _options.Value.Limit,
                     LimitBy = _options.Value.LimitBy,

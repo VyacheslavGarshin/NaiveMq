@@ -6,6 +6,8 @@
 
         public string QueueName { get; set; } = "test";
 
+        public int QueueCount { get; set; } = 1;
+
         public bool Durable { get; set; }
 
         public int ThreadsCount { get; set; } = 1;
