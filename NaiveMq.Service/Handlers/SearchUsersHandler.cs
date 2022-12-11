@@ -12,11 +12,11 @@ namespace NaiveMq.Service.Handlers
 
             return Task.FromResult(SearchUsersResponse.Ok(command, (response) =>
             {
-                response.Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Username.Contains(command.Username)).Select(x =>
+                response.Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username)).Select(x =>
                     new User
                     {
-                        Username = x.Username,
-                        Administrator = x.Administrator
+                        Username = x.Entity.Username,
+                        Administrator = x.Entity.Administrator
                     }).OrderBy(x => x.Username).ToList();
             }));
         }

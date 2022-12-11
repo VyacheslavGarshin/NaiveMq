@@ -12,9 +12,7 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = context.Storage.GetUserQueues(context);
-
-            if (userQueues.TryGetValue(command.Name, out var queue) || command.Try)
+            if (context.User.Queues.TryGetValue(command.Name, out var queue) || command.Try)
             {
                 return Task.FromResult(GetQueueResponse.Ok(command, (response) =>
                 {

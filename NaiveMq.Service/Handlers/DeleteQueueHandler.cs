@@ -11,9 +11,7 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = context.Storage.GetUserQueues(context);
-
-            if (userQueues.TryRemove(command.Name, out var queue))
+            if (context.User.Queues.TryRemove(command.Name, out var queue))
             {
                 try
                 {
@@ -26,7 +24,7 @@ namespace NaiveMq.Service.Handlers
                 }
                 catch
                 {
-                    userQueues.TryAdd(command.Name, queue);
+                    context.User.Queues.TryAdd(command.Name, queue);
                     throw;
                 }
             }

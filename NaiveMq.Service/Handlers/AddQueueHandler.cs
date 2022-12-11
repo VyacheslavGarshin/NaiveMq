@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Handlers
 
             var queueEnity = new QueueEntity
             {
-                User = context.User.Username,
+                User = context.User.Entity.Username,
                 Name = command.Name,
                 Durable = command.Durable,
                 Exchange = command.Exchange,
@@ -28,22 +28,20 @@ namespace NaiveMq.Service.Handlers
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEnity)
+        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity)
         {
-            var userQueues = context.Storage.GetUserQueues(context);
-
-            var queue = new QueueCog(queueEnity);
+            var queue = new QueueCog(queueEntity);
 
             try
             {
-                if (!userQueues.TryAdd(queueEnity.Name, queue))
+                if (!context.User.Queues.TryAdd(queueEntity.Name, queue))
                 {
-                    throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), queueEnity.Name));
+                    throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), queueEntity.Name));
                 }
 
-                if (!context.Reinstate && queueEnity.Durable)
+                if (!context.Reinstate && queueEntity.Durable)
                 {
-                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Username, queueEnity, context.StoppingToken);
+                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, context.StoppingToken);
                 }
             }
             catch (ServerException)
@@ -52,7 +50,7 @@ namespace NaiveMq.Service.Handlers
             }
             catch
             {
-                userQueues.TryRemove(queue.Entity.Name, out var _);
+                context.User.Queues.TryRemove(queue.Entity.Name, out var _);
                 queue.Dispose();
                 throw;
             }

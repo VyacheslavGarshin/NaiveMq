@@ -34,7 +34,7 @@ namespace NaiveMq.Service.Handlers
 
         public async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity)
         {
-            if (!context.Storage.Users.TryAdd(userEntity.Username, userEntity))
+            if (!context.Storage.Users.TryAdd(userEntity.Username, new UserCog(userEntity)))
             {
                 throw new ServerException(ErrorCode.UserAlreadyExists, string.Format(ErrorCode.UserAlreadyExists.GetDescription(), userEntity.Username));
             }
@@ -52,9 +52,6 @@ namespace NaiveMq.Service.Handlers
                     throw;
                 }
             }
-
-            context.Storage.UserQueues.TryAdd(userEntity.Username, new(StringComparer.InvariantCultureIgnoreCase));
-            context.Storage.UserBindings.TryAdd(userEntity.Username, new(StringComparer.InvariantCultureIgnoreCase));
         }
 
         public void Dispose()

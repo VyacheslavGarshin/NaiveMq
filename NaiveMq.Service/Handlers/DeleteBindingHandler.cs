@@ -11,15 +11,13 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userBindings = context.Storage.GetUserBindings(context);
-
-            if (!(userBindings.TryGetValue(command.Exchange, out var exchangeBindings)
+            if (!(context.User.Bindings.TryGetValue(command.Exchange, out var exchangeBindings)
                 && exchangeBindings.TryRemove(command.Queue, out var binding)))
             {
                 throw new ServerException(ErrorCode.BindingNotFound, string.Format(ErrorCode.BindingNotFound.GetDescription(), command.Exchange, command.Queue));
             }
 
-            if (!(userBindings.TryGetValue(command.Queue, out var queueBindings)
+            if (!(context.User.Bindings.TryGetValue(command.Queue, out var queueBindings)
                 && queueBindings.TryRemove(command.Exchange, out var _)))
             {
                 // todo not clear what to do
@@ -29,7 +27,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Username, binding.Entity.Exchange, binding.Entity.Queue, context.StoppingToken);
+                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Entity.Username, binding.Entity.Exchange, binding.Entity.Queue, context.StoppingToken);
                 }
                 catch (Exception)
                 {
@@ -42,12 +40,12 @@ namespace NaiveMq.Service.Handlers
 
             if (exchangeBindings.IsEmpty)
             {
-                userBindings.TryRemove(command.Exchange, out var _);
+                context.User.Bindings.TryRemove(command.Exchange, out var _);
             }
 
             if (queueBindings != null && queueBindings.IsEmpty)
             {
-                userBindings.TryRemove(command.Queue, out var _);
+                context.User.Bindings.TryRemove(command.Queue, out var _);
             }
 
             return Confirmation.Ok(command);

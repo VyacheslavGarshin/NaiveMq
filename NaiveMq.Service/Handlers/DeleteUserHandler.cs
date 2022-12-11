@@ -12,36 +12,27 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin(context);
 
-            UserEntity userEntity = null;
+            UserCog user = null;
 
             try
             {
-                if (!context.Storage.Users.TryRemove(command.Username, out userEntity))
-                {
-                    throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), command.Username));
-                }
-
-                if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
+                if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
                 {
                     throw new ServerException(ErrorCode.UserDeleteSelf);
                 }
 
-                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
-
-                context.Storage.UserQueues.TryRemove(command.Username, out var userQueues);
-
-                foreach (var queue in userQueues.Values)
+                if (!context.Storage.Users.TryRemove(command.Username, out user))
                 {
-                    queue.Dispose();
+                    throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), command.Username));
                 }
 
-                userQueues.Clear();
+                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
 
-                context.Storage.UserBindings.TryRemove(command.Username, out var _);
+                user.Dispose();
             }
             catch
             {
-                context.Storage.Users.TryAdd(command.Username, userEntity);
+                context.Storage.Users.TryAdd(command.Username, user);
                 throw;
             }
 

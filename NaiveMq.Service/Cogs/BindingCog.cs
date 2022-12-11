@@ -12,6 +12,7 @@ namespace NaiveMq.Service.Cogs
         public BindingCog(BindingEntity entity)
         {
             Entity = entity;
+            Pattern = string.IsNullOrEmpty(Entity.Pattern) ? null : new Regex(Entity.Pattern, RegexOptions.IgnoreCase);
         }
     }
 }

@@ -9,10 +9,10 @@ namespace NaiveMq.Service.Handlers
     {
         public Task<Confirmation> ExecuteAsync(ClientContext context, Login command)
         {           
-            if (context.Storage.Users.TryGetValue(command.Username, out var userEntity)
-                && userEntity.PasswordHash == command.Password.ComputeHash())
+            if (context.Storage.Users.TryGetValue(command.Username, out var user)
+                && user.Entity.PasswordHash == command.Password.ComputeHash())
             {
-                context.User = userEntity;
+                context.User = user;
             }
             else
             {

@@ -2,7 +2,6 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client;
-using System.Collections.Concurrent;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 
@@ -29,17 +28,15 @@ namespace NaiveMq.Service.Handlers
             return await ExecuteEntityAsync(context, message, command);
         }
 
-        public async Task<Confirmation> ExecuteEntityAsync(ClientContext context, MessageEntity message, Message command = null)
+        public async Task<Confirmation> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command = null)
         {
-            var userQueues = context.Storage.GetUserQueues(context);
-
-            if (userQueues.TryGetValue(message.Queue, out var queue))
+            if (context.User.Queues.TryGetValue(messageEntity.Queue, out var queue))
             {
                 var queues = new List<QueueCog>();
 
                 if (queue.Entity.Exchange)
                 {
-                    queues.AddRange(MatchBoundQueues(context, message, userQueues, queue));
+                    queues.AddRange(MatchBoundQueues(context, messageEntity, queue));
 
                     if (!queues.Any())
                     {
@@ -51,16 +48,16 @@ namespace NaiveMq.Service.Handlers
                     queues.Add(queue);
                 }
 
-                CkeckMessage(message, queues);
+                CkeckMessage(messageEntity, queues);
 
-                if (await CheckLimitsAndDiscardAsync(context, queues, message, command))
+                if (await CheckLimitsAndDiscardAsync(context, queues, messageEntity, command))
                 {
                     return Confirmation.Ok(command);
                 }
 
-                await Enqueue(context, message, queues);
+                await Enqueue(context, messageEntity, queues);
 
-                if (message.Request)
+                if (messageEntity.Request)
                 {
                     // confirmation will be redirected from subscriber to this client
                     return null;
@@ -72,7 +69,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), message.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), messageEntity.Queue));
             }
         }
 
@@ -133,17 +130,16 @@ namespace NaiveMq.Service.Handlers
             return false;
         }
 
-        private static List<QueueCog> MatchBoundQueues(ClientContext context, MessageEntity message, ConcurrentDictionary<string, QueueCog> userQueues, QueueCog exchange)
+        private static List<QueueCog> MatchBoundQueues(ClientContext context, MessageEntity message, QueueCog exchange)
         {
             var result = new List<QueueCog>();
-            var userBindings = context.Storage.GetUserBindings(context);
 
-            if (userBindings.TryGetValue(exchange.Entity.Name, out var bindings))
+            if (context.User.Bindings.TryGetValue(exchange.Entity.Name, out var bindings))
             {
                 foreach (var binding in bindings)
                 {
                     if ((binding.Value.Pattern == null || binding.Value.Pattern.IsMatch(message.RoutingKey))
-                        && userQueues.TryGetValue(binding.Value.Entity.Queue, out var boundQueue))
+                        && context.User.Queues.TryGetValue(binding.Value.Entity.Queue, out var boundQueue))
                     {
                         result.Add(boundQueue);
                     }
@@ -159,7 +155,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.Reinstate && message.Persistent != Persistent.No)
                 {
-                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Username, queue.Entity.Name, message, context.StoppingToken);
+                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, message, context.StoppingToken);
                 }
 
                 if (message.Persistent == Persistent.DiskOnly)

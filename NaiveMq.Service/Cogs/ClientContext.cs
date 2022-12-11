@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Common;
-using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -15,7 +14,7 @@ namespace NaiveMq.Service.Cogs
 
         public CancellationToken StoppingToken { get; set; }
 
-        public UserEntity User { get; set; }
+        public UserCog User { get; set; }
 
         /// <summary>
         /// True in case handler is called on reinstating persistent data.
@@ -34,17 +33,17 @@ namespace NaiveMq.Service.Cogs
 
         private void CheckUser(ClientContext context, bool checkAdmin)
         {
-            if (context.User == null || string.IsNullOrWhiteSpace(context.User.Username))
+            if (context.User == null || string.IsNullOrWhiteSpace(context.User.Entity.Username))
             {
                 throw new ServerException(ErrorCode.UserNotAuthenticated);
             }
 
-            if (!Storage.Users.TryGetValue(context.User.Username, out var _))
+            if (!Storage.Users.TryGetValue(context.User.Entity.Username, out var _))
             {
-                throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), context.User.Username));
+                throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), context.User.Entity.Username));
             }
 
-            if (checkAdmin && !context.User.Administrator)
+            if (checkAdmin && !context.User.Entity.Administrator)
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotAdmin);
             }

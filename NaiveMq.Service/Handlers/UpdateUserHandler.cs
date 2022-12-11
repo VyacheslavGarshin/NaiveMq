@@ -13,39 +13,39 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin(context);
 
-            UserEntity userEntity = null;
+            UserCog user = null;
             UserEntity oldEntity = null;
 
             try
             {
-                if (!context.Storage.Users.TryGetValue(command.Username, out userEntity))
+                if (!context.Storage.Users.TryGetValue(command.Username, out user))
                 {
                     throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), command.Username));
                 }
 
-                oldEntity = JsonConvert.DeserializeObject<UserEntity>(JsonConvert.SerializeObject(userEntity));
+                oldEntity = JsonConvert.DeserializeObject<UserEntity>(JsonConvert.SerializeObject(user.Entity));
 
-                if (string.Equals(context.User.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
+                if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
                     && !command.Administrator)
                 {
                     throw new ServerException(ErrorCode.UserUnsetAdministratorSelf);
                 }
 
-                userEntity.Administrator = command.Administrator;
+                user.Entity.Administrator = command.Administrator;
 
                 if (!string.IsNullOrEmpty(command.Password))
                 {
-                    userEntity.PasswordHash = command.Password.ComputeHash();
+                    user.Entity.PasswordHash = command.Password.ComputeHash();
                 }
 
-                await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.StoppingToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(user.Entity, context.StoppingToken);
             }
             catch
             {
-                if (userEntity != null && oldEntity != null)
+                if (user != null && oldEntity != null)
                 {
-                    userEntity.Administrator = oldEntity.Administrator;
-                    userEntity.PasswordHash = oldEntity.PasswordHash;
+                    user.Entity.Administrator = oldEntity.Administrator;
+                    user.Entity.PasswordHash = oldEntity.PasswordHash;
                 }
 
                 throw;

@@ -2,7 +2,6 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client;
-using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using NaiveMq.Service.Entities;
 
@@ -27,36 +26,30 @@ namespace NaiveMq.Service.Handlers
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEnity)
+        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEntity)
         {
-            var userBindings = context.Storage.GetUserBindings(context);
-            var userQueues = context.Storage.GetUserQueues(context);
+            var binding = new BindingCog(bindingEntity);
 
-            var binding = new BindingCog(bindingEnity)
-            {
-                Pattern = string.IsNullOrEmpty(bindingEnity.Pattern) ? null : new Regex(bindingEnity.Pattern, RegexOptions.IgnoreCase),
-            };
+            Check(context, binding);
 
-            Check(userQueues, binding);
+            Bind(context, binding, out var exchangeBindings, out var queueBindings);
 
-            Bind(userBindings, binding, out var exchangeBindings, out var queueBindings);
-
-            if (!context.Reinstate && bindingEnity.Durable)
+            if (!context.Reinstate && bindingEntity.Durable)
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Username, bindingEnity, context.StoppingToken);
+                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Entity.Username, bindingEntity, context.StoppingToken);
                 }
                 catch
                 {
                     if (exchangeBindings.IsEmpty)
                     {
-                        userBindings.TryRemove(bindingEnity.Exchange, out var _);
+                        context.User.Bindings.TryRemove(bindingEntity.Exchange, out var _);
                     }
 
                     if (queueBindings.IsEmpty)
                     {
-                        userBindings.TryRemove(bindingEnity.Queue, out var _);
+                        context.User.Bindings.TryRemove(bindingEntity.Queue, out var _);
                     }
 
                     throw;
@@ -64,14 +57,14 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private static void Check(ConcurrentDictionary<string, QueueCog> userQueues, BindingCog binding)
+        private static void Check(ClientContext context, BindingCog binding)
         {
-            if (!userQueues.TryGetValue(binding.Entity.Exchange, out var exchange))
+            if (!context.User.Queues.TryGetValue(binding.Entity.Exchange, out var exchange))
             {
                 throw new ServerException(ErrorCode.ExchangeNotFound, string.Format(ErrorCode.ExchangeNotFound.GetDescription(), binding.Entity.Exchange));
             }
 
-            if (!userQueues.TryGetValue(binding.Entity.Queue, out var queue))
+            if (!context.User.Queues.TryGetValue(binding.Entity.Queue, out var queue))
             {
                 throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), binding.Entity.Queue));
             }
@@ -93,15 +86,15 @@ namespace NaiveMq.Service.Handlers
         }
 
         private static void Bind(
-            ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> userBindings, 
+            ClientContext context, 
             BindingCog binding,
             out ConcurrentDictionary<string, BindingCog> exchangeBindings,
             out ConcurrentDictionary<string, BindingCog> queueBindings)
         {            
-            if (!userBindings.TryGetValue(binding.Entity.Exchange, out exchangeBindings))
+            if (!context.User.Bindings.TryGetValue(binding.Entity.Exchange, out exchangeBindings))
             {
                 exchangeBindings = new(StringComparer.InvariantCultureIgnoreCase);
-                userBindings.TryAdd(binding.Entity.Exchange, exchangeBindings);
+                context.User.Bindings.TryAdd(binding.Entity.Exchange, exchangeBindings);
             }
 
             if (!exchangeBindings.TryAdd(binding.Entity.Queue, binding))
@@ -109,10 +102,10 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Entity.Exchange, binding.Entity.Queue));
             }
 
-            if (!userBindings.TryGetValue(binding.Entity.Queue, out queueBindings))
+            if (!context.User.Bindings.TryGetValue(binding.Entity.Queue, out queueBindings))
             {
                 queueBindings = new(StringComparer.InvariantCultureIgnoreCase);
-                userBindings.TryAdd(binding.Entity.Queue, queueBindings);
+                context.User.Bindings.TryAdd(binding.Entity.Queue, queueBindings);
             }
 
             if (!queueBindings.TryAdd(binding.Entity.Exchange, binding))

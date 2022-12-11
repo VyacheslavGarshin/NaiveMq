@@ -12,9 +12,7 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = context.Storage.GetUserQueues(context);
-
-            if (userQueues.TryGetValue(command.Queue, out var queue))
+            if (context.User.Queues.TryGetValue(command.Queue, out var queue))
             {
                 if (!queue.Entity.Exchange)
                 {

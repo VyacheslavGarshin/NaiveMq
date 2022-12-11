@@ -10,9 +10,9 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = context.User.Administrator 
-                ? context.Storage.UserQueues.SelectMany(x => x.Value.Values.Where(y => string.IsNullOrEmpty(command.User) || y.Entity.User.Contains(command.User, StringComparison.InvariantCultureIgnoreCase)))
-                : context.Storage.GetUserQueues(context).Values;
+            var userQueues = (context.User.Entity.Administrator 
+                ? context.Storage.Users.SelectMany(x => x.Value.Queues.Where(y => string.IsNullOrEmpty(command.User) || y.Value.Entity.User.Contains(command.User, StringComparison.InvariantCultureIgnoreCase)))
+                : context.User.Queues).Select(x => x.Value);
 
             return Task.FromResult(SearchQueuesResponse.Ok(command, (response) =>
             {

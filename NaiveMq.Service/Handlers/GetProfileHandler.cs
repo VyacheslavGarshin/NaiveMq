@@ -14,8 +14,8 @@ namespace NaiveMq.Service.Handlers
             {
                 response.Profile = new Profile
                 {
-                    Username = context.User.Username,
-                    Administrator = context.User.Administrator
+                    Username = context.User.Entity.Username,
+                    Administrator = context.User.Entity.Administrator
                 };
             }));
         }

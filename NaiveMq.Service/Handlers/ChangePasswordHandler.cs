@@ -15,9 +15,9 @@ namespace NaiveMq.Service.Handlers
 
             try
             {
-                oldPasswordHash = context.User.PasswordHash;
+                oldPasswordHash = context.User.Entity.PasswordHash;
 
-                if (context.User.PasswordHash != command.CurrentPassword.ComputeHash())
+                if (context.User.Entity.PasswordHash != command.CurrentPassword.ComputeHash())
                 {
                     throw new ServerException(ErrorCode.WrongPassword);
                 }
@@ -32,13 +32,13 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.PasswordEmpty);
                 }
 
-                context.User.PasswordHash = command.NewPassword.ComputeHash();
+                context.User.Entity.PasswordHash = command.NewPassword.ComputeHash();
 
-                await context.Storage.PersistentStorage.SaveUserAsync(context.User, context.StoppingToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(context.User.Entity, context.StoppingToken);
             }
             catch
             {
-                context.User.PasswordHash = oldPasswordHash;
+                context.User.Entity.PasswordHash = oldPasswordHash;
 
                 throw;
             }

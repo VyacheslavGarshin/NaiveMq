@@ -12,15 +12,15 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin(context);
             
-            if (context.Storage.Users.TryGetValue(command.Username, out var userEntity) || command.Try)
+            if (context.Storage.Users.TryGetValue(command.Username, out var user) || command.Try)
             {
                 return Task.FromResult(GetUserResponse.Ok(command, (response) =>
                 {
-                    response.User = userEntity != null
+                    response.User = user != null
                         ? new User
                         {
-                            Username = userEntity.Username,
-                            Administrator = userEntity.Administrator
+                            Username = user.Entity.Username,
+                            Administrator = user.Entity.Administrator
                         }
                         : null;
                 }));

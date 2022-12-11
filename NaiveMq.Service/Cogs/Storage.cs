@@ -13,15 +13,7 @@ namespace NaiveMq.Service.Cogs
 
         public bool MemoryLimitExceeded { get; private set; }
 
-        public readonly ConcurrentDictionary<string, UserEntity> Users = new(StringComparer.InvariantCultureIgnoreCase);
-
-        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, QueueCog>> UserQueues = new(StringComparer.InvariantCultureIgnoreCase);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <remarks>Keys are: user, from queue, to queue.</remarks>
-        public readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>>> UserBindings = new(StringComparer.InvariantCultureIgnoreCase);
+        public readonly ConcurrentDictionary<string, UserCog> Users = new(StringComparer.InvariantCultureIgnoreCase);
 
         public readonly ConcurrentDictionary<int, ConcurrentDictionary<QueueCog, SubscriptionCog>> Subscriptions = new();
 
@@ -44,26 +36,6 @@ namespace NaiveMq.Service.Cogs
             PersistentStorage = persistentStorage;
 
             _timer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
-        }
-
-        public ConcurrentDictionary<string, QueueCog> GetUserQueues(ClientContext context)
-        {
-            if (!UserQueues.TryGetValue(context.User.Username, out var userQueues))
-            {
-                throw new ServerException(ErrorCode.UserQueuesNotFound, string.Format(ErrorCode.UserQueuesNotFound.GetDescription(), context.User.Username));
-            }
-
-            return userQueues;
-        }
-
-        public ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> GetUserBindings(ClientContext context)
-        {
-            if (!UserBindings.TryGetValue(context.User.Username, out var userBindings))
-            {
-                throw new ServerException(ErrorCode.UserBindingsNotFound, string.Format(ErrorCode.UserBindingsNotFound.GetDescription(), context.User.Username));
-            }
-
-            return userBindings;
         }
 
         public void DeleteSubscriptions(int clientId)
@@ -90,17 +62,10 @@ namespace NaiveMq.Service.Cogs
 
             Subscriptions.Clear();
 
-            foreach (var userQueues in UserQueues)
+            foreach (var user in Users.Values)
             {
-                foreach (var queue in userQueues.Value)
-                {
-                    queue.Value.Dispose();
-                }
-
-                userQueues.Value.Clear();
+                user.Dispose();
             }
-
-            UserQueues.Clear();
 
             foreach (var context in _clientContexts.Values)
             {
