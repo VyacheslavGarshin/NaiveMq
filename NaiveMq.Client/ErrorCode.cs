@@ -22,8 +22,14 @@ namespace NaiveMq.Client
         [Description("Connection parameters are empty.")]
         ConnectionParametersAreEmpty = 6,
 
-        [Description("Command length cannot exceed 1000. Current length id '{0}'.")]
+        [Description("Command name length cannot exceed {0}. Current length id '{1}'.")]
         CommandNameLengthLong = 7,
+
+        [Description("Command length cannot exceed {0}. Current length id '{1}'.")]
+        CommandLengthLong = 8,
+
+        [Description("Data length cannot exceed {0}. Current length id '{1}'.")]
+        DataLengthLong = 9,
 
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
