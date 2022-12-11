@@ -394,8 +394,6 @@ namespace NaiveMq.Client
         {
             while (!_stoppingToken.IsCancellationRequested && _started)
             {
-                byte[] buffer = null;
-
                 try
                 {
                     var stream = _tcpClient?.GetStream();
@@ -414,15 +412,9 @@ namespace NaiveMq.Client
 
                     CheckLengths(commandNameLength, commandLength, dataLength);
 
-                    buffer = ArrayPool<byte>.Shared.Rent(allLength);
-                    await ReadAllLength(stream, buffer, allLength);
-
-                    var index = 0;
-                    var commandNameBytes = new ReadOnlyMemory<byte>(buffer, index, commandNameLength).ToArray();
-                    index += commandNameLength;
-                    var commandBytes = new ReadOnlyMemory<byte>(buffer, index, commandLength).ToArray();
-                    index += commandLength;
-                    var dataBytes = dataLength > 0 ? new ReadOnlyMemory<byte>(buffer, index, dataLength).ToArray() : Array.Empty<byte>();
+                    var commandNameBytes = await ReadContentAsync(stream, commandNameLength);
+                    var commandBytes = await ReadContentAsync(stream, commandLength);
+                    var dataBytes = dataLength > 0 ? await ReadContentAsync(stream, dataLength) : Array.Empty<byte>();
 
                     await _readSemaphore.WaitAsync(_stoppingToken);
 
@@ -432,13 +424,6 @@ namespace NaiveMq.Client
                 {
                     await HandleReceiveErrorAsync(ex);
                     throw;
-                }
-                finally
-                {
-                    if (buffer != null)
-                    {
-                        ArrayPool<byte>.Shared.Return(buffer);
-                    }
                 }
             };
         }
