@@ -6,9 +6,9 @@ namespace NaiveMq.Client.Commands
     public class Confirmation : AbstractResponse<Confirmation>, IDataCommand
     {
         [JsonIgnore]
-        public byte[] Data { get; set; }
+        public ReadOnlyMemory<byte> Data { get; set; }
 
-        public static Confirmation Ok(Guid requestId, byte[] data = null)
+        public static Confirmation Ok(Guid requestId, ReadOnlyMemory<byte> data)
         {
             return new Confirmation
             {

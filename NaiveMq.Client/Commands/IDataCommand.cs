@@ -1,7 +1,9 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System;
+
+namespace NaiveMq.Client.Commands
 {
     public interface IDataCommand : ICommand
     {
-        public byte[] Data { get; set; }
+        public ReadOnlyMemory<byte> Data { get; set; }
     }
 }

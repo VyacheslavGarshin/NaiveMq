@@ -108,6 +108,11 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             c.OnReceiveMessageAsync += async (client, message) =>
                             {
+                                if (_options.Value.ReadBody)
+                                {
+                                    var body = message.Data.ToArray();
+                                }
+
                                 if (message.Confirm || message.Request)
                                 {
                                     try

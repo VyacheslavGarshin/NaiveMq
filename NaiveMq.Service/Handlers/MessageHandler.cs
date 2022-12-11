@@ -162,6 +162,11 @@ namespace NaiveMq.Service.Handlers
                 {
                     message.Data = null;
                 }
+                else
+                {
+                    // materialize data from buffer
+                    message.Data = message.Data.ToArray();
+                }
             }
 
             foreach (var queue in queues)

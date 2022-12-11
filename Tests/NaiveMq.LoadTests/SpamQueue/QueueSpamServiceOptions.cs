@@ -91,5 +91,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public LimitBy LimitBy { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
+
+        public bool ReadBody { get; set; }
     }
 }

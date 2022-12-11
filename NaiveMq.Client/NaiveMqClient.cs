@@ -308,9 +308,9 @@ namespace NaiveMq.Client
                 var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
                 var commandBytes = _converter.Serialize(command);
                 var dataLength = 0;
-                var data = Array.Empty<byte>();
+                var data = new ReadOnlyMemory<byte>();
 
-                if (command is IDataCommand dataCommand && dataCommand.Data != null)
+                if (command is IDataCommand dataCommand)
                 {
                     dataLength = dataCommand.Data.Length;
                     data = dataCommand.Data;
@@ -493,7 +493,7 @@ namespace NaiveMq.Client
 
                 if (command is IDataCommand dataCommand)
                 {
-                    dataCommand.Data = dataBytes.ToArray();
+                    dataCommand.Data = dataBytes;
                 }
 
                 TraceCommand("<<", command);
@@ -507,7 +507,7 @@ namespace NaiveMq.Client
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(buffer, true);
+                ArrayPool<byte>.Shared.Return(buffer);
 
                 _readSemaphore.Release();
             }
@@ -563,6 +563,12 @@ namespace NaiveMq.Client
         {
             if (_responses.TryGetValue(response.RequestId, out var responseItem))
             {
+                if (response is IDataCommand dataCommand)
+                {
+                    // materialize data from buffer
+                    dataCommand.Data = dataCommand.Data.ToArray();
+                }
+
                 responseItem.Response = response;
                 responseItem.SemaphoreSlim.Release();
             }
