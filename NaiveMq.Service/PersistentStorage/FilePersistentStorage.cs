@@ -132,8 +132,9 @@ namespace NaiveMq.Service.PersistentStorage
 
                     result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));
 
-                    result.Data = new byte[result.DataLength];
-                    await file.ReadAsync(result.Data, cancellationToken);
+                    var memory = new Memory<byte>();
+                    await file.ReadAsync(memory, cancellationToken);
+                    result.Data = memory;
                 }
             }
 
@@ -270,7 +271,7 @@ namespace NaiveMq.Service.PersistentStorage
             }
         }
 
-        private static async Task WriteFileAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
+        private static async Task WriteFileAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
         {
             if (!File.Exists(path))
             {
@@ -291,7 +292,7 @@ namespace NaiveMq.Service.PersistentStorage
             await File.WriteAllTextAsync(path, text, Encoding.UTF8, cancellationToken);
         }
 
-        static async Task WriteAllBytesAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
+        static async Task WriteAllBytesAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
         {
             using var file = File.OpenWrite(path);
 

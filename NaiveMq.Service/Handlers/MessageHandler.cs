@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
                 Persistent = command.Persistent,
                 RoutingKey = command.RoutingKey,
                 Data = command.Data,
-                DataLength = command.Data?.Length ?? 0,
+                DataLength = command.Data.Length,
             };
 
             return await ExecuteEntityAsync(context, message, command);

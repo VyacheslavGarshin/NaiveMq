@@ -308,9 +308,9 @@ namespace NaiveMq.Client
                 var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
                 var commandBytes = _converter.Serialize(command);
                 var dataLength = 0;
-                var data = Array.Empty<byte>();
+                var data = new ReadOnlyMemory<byte>();
 
-                if (command is IDataCommand dataCommand && dataCommand.Data != null)
+                if (command is IDataCommand dataCommand)
                 {
                     dataLength = dataCommand.Data.Length;
                     data = dataCommand.Data;
@@ -408,9 +408,8 @@ namespace NaiveMq.Client
                     var commandNameLength = BitConverter.ToInt32(lengthsBytes, 0);
                     var commandLength = BitConverter.ToInt32(lengthsBytes, 4);
                     var dataLength = BitConverter.ToInt32(lengthsBytes, 8);
-                    var allLength = commandNameLength + commandLength + dataLength;
 
-                    CheckLengths(commandNameLength, commandLength, dataLength);
+                    CheckCommandLengths(commandNameLength, commandLength, dataLength);
 
                     var commandNameBytes = await ReadContentAsync(stream, commandNameLength);
                     var commandBytes = await ReadContentAsync(stream, commandLength);
@@ -428,7 +427,7 @@ namespace NaiveMq.Client
             };
         }
 
-        private void CheckLengths(int commandNameLength, int commandLength, int dataLength)
+        private void CheckCommandLengths(int commandNameLength, int commandLength, int dataLength)
         {
             if (commandNameLength == 0)
             {

@@ -1,5 +1,6 @@
 ﻿using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
+using System;
 
 namespace NaiveMq.Client.Commands
 {
@@ -14,7 +15,7 @@ namespace NaiveMq.Client.Commands
         public string RoutingKey { get; set; }
 
         [JsonIgnore]
-        public byte[] Data { get; set; }
+        public ReadOnlyMemory<byte> Data { get; set; }
 
         public override void Validate()
         {
