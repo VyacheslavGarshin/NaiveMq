@@ -18,7 +18,7 @@ namespace NaiveMq.Service.Entities
         public string RoutingKey { get; set; }
 
         [JsonIgnore]
-        public ReadOnlyMemory<byte> Data { get; set; }
+        public byte[] Data { get; set; }
 
         public int DataLength { get; set; }
     }

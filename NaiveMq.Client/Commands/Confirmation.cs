@@ -1,18 +1,20 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace NaiveMq.Client.Commands
 {
-    public class Confirmation : AbstractResponse<Confirmation>
+    public class Confirmation : AbstractResponse<Confirmation>, IDataCommand
     {
-        public string Text { get; set; }
+        [JsonIgnore]
+        public byte[] Data { get; set; }
 
-        public static Confirmation Ok(Guid requestId, string text = null)
+        public static Confirmation Ok(Guid requestId, byte[] data = null)
         {
             return new Confirmation
             {
                 RequestId = requestId,
                 Success = true,
-                Text = text,
+                Data = data,
             };
         }
     }

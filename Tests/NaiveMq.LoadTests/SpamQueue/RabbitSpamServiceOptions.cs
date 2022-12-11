@@ -21,5 +21,7 @@
         public bool AutoAck { get; set; } = true;
 
         public int MessageLength { get; set; } = 100;
+
+        public bool ReadBody { get; set; }
     }
 }

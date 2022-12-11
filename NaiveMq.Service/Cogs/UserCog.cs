@@ -1,5 +1,4 @@
-﻿using NaiveMq.Client;
-using NaiveMq.Service.Entities;
+﻿using NaiveMq.Service.Entities;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
@@ -27,10 +26,6 @@ namespace NaiveMq.Service.Cogs
             {
                 queue.Dispose();
             }
-
-            Queues = null;
-
-            Bindings = null;
         }
     }
 }

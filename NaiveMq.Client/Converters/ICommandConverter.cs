@@ -7,6 +7,6 @@ namespace NaiveMq.Client.Converters
     {
         byte[] Serialize(ICommand command);
 
-        ICommand Deserialize(byte[] bytes, Type type);
+        ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type);
     }
 }

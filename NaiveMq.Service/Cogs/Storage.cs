@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
-using NaiveMq.Client.Common;
-using NaiveMq.Service.Entities;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
 

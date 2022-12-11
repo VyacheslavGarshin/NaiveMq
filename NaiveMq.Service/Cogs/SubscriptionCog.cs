@@ -134,7 +134,7 @@ namespace NaiveMq.Service.Cogs
                     Success = result.Success,
                     ErrorCode = result.ErrorCode,
                     ErrorMessage = result.ErrorMessage,
-                    Text = result.Text
+                    Data = result.Data
                 };
 
                 await receiverContext.Client.SendAsync(confirmation, cancellationToken);

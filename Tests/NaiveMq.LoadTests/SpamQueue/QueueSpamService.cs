@@ -112,7 +112,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 {
                                     try
                                     {
-                                        await client.SendAsync(Confirmation.Ok(message.Id, "Answer"), _stoppingToken);
+                                        await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
                                     }
                                     catch (ClientException)
                                     {

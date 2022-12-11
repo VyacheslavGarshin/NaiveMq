@@ -4,8 +4,6 @@ using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Text;
-using System.Buffers;
-using NaiveMq.Client.Common;
 
 namespace NaiveMq.Service.PersistentStorage
 {
@@ -53,8 +51,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         public Task<IEnumerable<string>> LoadUserKeysAsync(CancellationToken cancellationToken)
         {
-            var path = Path.GetDirectoryName(GetUserPath("tmp"));
-            var result = LoadKeys(path);
+            var result = LoadKeys(GetUsersPath());
             return Task.FromResult(result);
         }
 
@@ -123,18 +120,29 @@ namespace NaiveMq.Service.PersistentStorage
             {
                 if (file.Length > 4)
                 {
-                    var messageLengthBytes = new byte[4];
-                    await file.ReadAsync(messageLengthBytes, cancellationToken);
-                    var messageLength = BitConverter.ToInt32(messageLengthBytes);
+                    try
+                    {
+                        var messageLengthBytes = new byte[4];
+                        await file.ReadAsync(messageLengthBytes, cancellationToken);
+                        var messageLength = BitConverter.ToInt32(messageLengthBytes);
 
-                    var messageBytes = new byte[messageLength];
-                    await file.ReadAsync(messageBytes, cancellationToken);
+                        var messageBytes = new byte[messageLength];
+                        await file.ReadAsync(messageBytes, cancellationToken);
 
-                    result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));
+                        result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));
 
-                    var memory = new Memory<byte>();
-                    await file.ReadAsync(memory, cancellationToken);
-                    result.Data = memory;
+                        result.Data = new byte[result.DataLength];
+                        await file.ReadAsync(result.Data, cancellationToken);
+
+                        if (result.Data.Length != result.DataLength)
+                        {
+                            throw new IOException("Message data length is not equeal to DataLength property of the message.");
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        result = null;
+                    }
                 }
             }
 
@@ -243,18 +251,6 @@ namespace NaiveMq.Service.PersistentStorage
             }
         }
 
-        private static async Task<byte[]> LoadBytesAsync(string path, CancellationToken cancellationToken)
-        {
-            try
-            {
-                return await File.ReadAllBytesAsync(path, cancellationToken);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
         private static async Task WriteFileAsync(string path, string text, bool overwrite, CancellationToken cancellationToken)
         {
             if (overwrite || !File.Exists(path))
@@ -271,7 +267,7 @@ namespace NaiveMq.Service.PersistentStorage
             }
         }
 
-        private static async Task WriteFileAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
+        private static async Task WriteFileAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
         {
             if (!File.Exists(path))
             {
@@ -292,7 +288,7 @@ namespace NaiveMq.Service.PersistentStorage
             await File.WriteAllTextAsync(path, text, Encoding.UTF8, cancellationToken);
         }
 
-        static async Task WriteAllBytesAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
+        static async Task WriteAllBytesAsync(string path, IEnumerable<byte[]> data, CancellationToken cancellationToken)
         {
             using var file = File.OpenWrite(path);
 
@@ -300,6 +296,11 @@ namespace NaiveMq.Service.PersistentStorage
             {
                 await file.WriteAsync(chunk, cancellationToken);
             }
+        }
+
+        private string GetUsersPath()
+        {
+            return Path.Combine(_basePath, UsersDirecotory);
         }
 
         private string GetUserPath(string user)

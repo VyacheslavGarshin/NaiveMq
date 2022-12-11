@@ -78,8 +78,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                             var consumer = new EventingBasicConsumer(channel);
                             consumer.Received += (model, ea) =>
                             {
-                                //var body = ea.Body.ToArray();
-                                //var message = Encoding.UTF8.GetString(body);
+                                if (_options.Value.ReadBody)
+                                {
+                                    var body = ea.Body.ToArray();
+                                }
+
                                 if (!_options.Value.AutoAck)
                                 {
                                     channel.BasicAck(ea.DeliveryTag, false);

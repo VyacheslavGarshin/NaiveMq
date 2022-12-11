@@ -7,9 +7,9 @@ namespace NaiveMq.Client.Converters
 {
     public class JsonCommandConverter : ICommandConverter
     {
-        public ICommand Deserialize(byte[] bytes, Type type)
+        public ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type)
         {
-            return (ICommand)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(bytes), type);
+            return (ICommand)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(bytes.Span), type);
         }
 
         public byte[] Serialize(ICommand command)
