@@ -39,9 +39,9 @@ namespace NaiveMq.Service.PersistentStorage
         public async Task DeleteUserAsync(string user, CancellationToken cancellationToken)
         {
             await DeleteFileAsync(GetUserPath(user), true, cancellationToken);
-            await DeleteDirectoryAsync(GetUserQueuesPath(user), cancellationToken);
-            await DeleteDirectoryAsync(GetUserBindingsPath(user), cancellationToken);
-            await DeleteDirectoryAsync(GetUserMessagesPath(user), cancellationToken);
+            await DeleteDirectoryAsync(GetUserQueuesPath(user), false, cancellationToken);
+            await DeleteDirectoryAsync(GetUserBindingsPath(user), false, cancellationToken);
+            await DeleteDirectoryAsync(GetUserMessagesPath(user), false, cancellationToken);
         }
 
         public async Task<UserEntity> LoadUserAsync(string user, CancellationToken cancellationToken)
@@ -63,7 +63,7 @@ namespace NaiveMq.Service.PersistentStorage
         public async Task DeleteQueueAsync(string user, string queue, CancellationToken cancellationToken)
         {
             await DeleteFileAsync(GetQueuePath(user, queue), true, cancellationToken);
-            await DeleteDirectoryAsync(GetQueueMessagesPath(user, queue), cancellationToken);
+            await DeleteDirectoryAsync(GetQueueMessagesPath(user, queue), false, cancellationToken);
         }
 
         public async Task<QueueEntity> LoadQueueAsync(string user, string queue, CancellationToken cancellationToken)
@@ -173,12 +173,12 @@ namespace NaiveMq.Service.PersistentStorage
                 }
                 else
                 {
-                    return waitExists ? false : true;
+                    return !waitExists;
                 }
             }, cancellationToken);
         }
 
-        private async Task DeleteDirectoryAsync(string path, CancellationToken cancellationToken)
+        private async Task DeleteDirectoryAsync(string path, bool waitExists, CancellationToken cancellationToken)
         {
             await DeleteAsync(path, () =>
             {
@@ -190,7 +190,7 @@ namespace NaiveMq.Service.PersistentStorage
                 }
                 else
                 {
-                    return false;
+                    return !waitExists;
                 }
             }, cancellationToken);
         }

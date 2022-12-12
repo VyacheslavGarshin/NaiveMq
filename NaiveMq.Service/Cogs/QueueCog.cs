@@ -93,6 +93,7 @@ namespace NaiveMq.Service.Cogs
         public void Dispose()
         {
             _dequeueSemaphore.Dispose();
+            _limitSemaphore.Dispose();
             _messages.Clear();
             _volume = 0;
             _volumeInMemory = 0;

@@ -11,6 +11,8 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
+            await DeleteBindings(context, command);
+
             if (context.User.Queues.TryRemove(command.Name, out var queue))
             {
                 try
@@ -19,7 +21,7 @@ namespace NaiveMq.Service.Handlers
                     {
                         await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
                     }
-                    
+
                     queue.Dispose();
                 }
                 catch
@@ -34,6 +36,23 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Confirmation.Ok(command);
+        }
+
+        private static async Task DeleteBindings(ClientContext context, DeleteQueue command)
+        {
+            if (context.User.Bindings.TryGetValue(command.Name, out var bindings))
+            {
+                foreach (var binding in bindings.Values.ToList())
+                {
+                    var deleteBindingCommand = new DeleteBinding
+                    {
+                        Exchange = binding.Entity.Exchange,
+                        Queue = binding.Entity.Queue
+                    };
+
+                    await new DeleteBindingHandler().ExecuteAsync(context, deleteBindingCommand);
+                }
+            }
         }
 
         public void Dispose()

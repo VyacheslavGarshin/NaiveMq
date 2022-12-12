@@ -11,7 +11,6 @@ namespace NaiveMq.Client.Common
 
             foreach (var chunk in chunks)
             {
-                // todo remove toarray
                 var destination = value.AsMemory(index, chunk.Length);
                 chunk.CopyTo(destination);
                 index += chunk.Length;
