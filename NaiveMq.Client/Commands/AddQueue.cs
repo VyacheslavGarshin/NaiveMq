@@ -18,6 +18,8 @@ namespace NaiveMq.Client.Commands
 
         public override void Validate()
         {
+            base.Validate();
+
             if (Limit != null && Limit.Value < 1)
             {
                 throw new ClientException(ErrorCode.QueueLimitLessThanOne);

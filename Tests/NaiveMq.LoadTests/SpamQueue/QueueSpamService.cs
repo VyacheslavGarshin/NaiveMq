@@ -310,7 +310,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (_options.Value.AddQueue)
             {
-                if ((await c.SendAsync(new GetQueue { Name = queueName, Try = true }, _stoppingToken)).Queue != null)
+                if ((await c.SendAsync(new GetQueue { Name = queueName, Try = true }, _stoppingToken)).Entity != null)
                 {
                     if (_options.Value.RewriteQueue)
                     {

@@ -35,9 +35,10 @@ namespace NaiveMq.Client.Commands
         /// <param name="request"></param>
         /// <param name="action"></param>
         /// <returns></returns>
-        public static T Ok(IRequest request, Action<T> action = null)
+        public static TResult Ok<TResult>(IRequest<TResult> request, Action<TResult> action = null)
+            where TResult : IResponse, new()
         {
-            var result = (request?.Confirm ?? false) ? new T { RequestId = request.Id, Success = true } : default;
+            var result = (request?.Confirm ?? false) ? new TResult { RequestId = request.Id, Success = true } : default;
 
             if (result != null)
             {
@@ -60,6 +61,10 @@ namespace NaiveMq.Client.Commands
 
         public virtual void Validate()
         {
+            if (RequestId == Guid.Empty)
+            {
+                throw new ClientException(Client.ErrorCode.RequestIdNotSet);
+            }
         }
     }
 }

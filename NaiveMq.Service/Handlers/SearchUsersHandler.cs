@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Handlers
 
             return Task.FromResult(SearchUsersResponse.Ok(command, (response) =>
             {
-                response.Users = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username)).Select(x =>
+                response.Entities = context.Storage.Users.Values.Where(x => string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username)).Select(x =>
                     new User
                     {
                         Username = x.Entity.Username,

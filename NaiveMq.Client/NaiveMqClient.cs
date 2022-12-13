@@ -94,7 +94,7 @@ namespace NaiveMq.Client
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
         private readonly ICommandConverter _converter = new JsonCommandConverter();
-        
+
         private readonly object _startLocker = new();
 
         static NaiveMqClient()

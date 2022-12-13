@@ -16,7 +16,7 @@ namespace NaiveMq.Service.Handlers
             {
                 return Task.FromResult(GetQueueResponse.Ok(command, (response) =>
                 {
-                    response.Queue = queue != null
+                    response.Entity = queue != null
                         ? new Queue
                         {
                             User = queue.Entity.User,

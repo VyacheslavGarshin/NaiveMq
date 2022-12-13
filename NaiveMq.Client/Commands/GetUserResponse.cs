@@ -2,8 +2,7 @@
 
 namespace NaiveMq.Client.Commands
 {
-    public class GetUserResponse : AbstractResponse<GetUserResponse>
+    public class GetUserResponse : AbstractGetResponse<User>
     {
-        public User User { get; set; }
     }
 }

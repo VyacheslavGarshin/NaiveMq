@@ -16,7 +16,7 @@ namespace NaiveMq.Service.Handlers
 
             return Task.FromResult(SearchQueuesResponse.Ok(command, (response) =>
             {
-                response.Queues = userQueues.Where(x => string.IsNullOrEmpty(command.Name) || x.Entity.Name.Contains(command.Name, StringComparison.InvariantCultureIgnoreCase)).Select(x =>
+                response.Entities = userQueues.Where(x => string.IsNullOrEmpty(command.Name) || x.Entity.Name.Contains(command.Name, StringComparison.InvariantCultureIgnoreCase)).Select(x =>
                     new Queue
                     {
                         User = x.Entity.User,

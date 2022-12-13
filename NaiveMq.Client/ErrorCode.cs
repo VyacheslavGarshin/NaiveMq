@@ -31,6 +31,9 @@ namespace NaiveMq.Client
         [Description("Data length cannot exceed {0}. Current length id '{1}'.")]
         DataLengthLong = 9,
 
+        [Description("RequestId must be set for the response command.")]
+        RequestIdNotSet = 10,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 
