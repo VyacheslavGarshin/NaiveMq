@@ -19,7 +19,7 @@ var client = CreateClient(logger);
 
 Console.WriteLine(@"NaiveMq management console.
 type:
-'connect host:port' for connect to NaiveMq server or 'start' to connect to localhost:8506,
+'connect host:port' for connect to NaiveMq server or 'connect' to connect to localhost:8506,
 'close' to disconnect,
 'commands' for a list of commands,
 'q' for quit
