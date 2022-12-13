@@ -19,6 +19,7 @@ Implemented so far:
 
 Plans:
 + Message batching
++ Clustering
 + Better durable queues
 + Management UI
 + Unit tests
