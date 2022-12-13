@@ -8,15 +8,22 @@ namespace NaiveMq.Service.Handlers
     public class LoginHandler : IHandler<Login, Confirmation>
     {
         public Task<Confirmation> ExecuteAsync(ClientContext context, Login command)
-        {           
-            if (context.Storage.Users.TryGetValue(command.Username, out var user)
-                && user.Entity.PasswordHash == command.Password.ComputeHash())
+        {
+            if (context.User == null)
             {
-                context.User = user;
+                if (context.Storage.Users.TryGetValue(command.Username, out var user)
+                    && user.Entity.PasswordHash == command.Password.ComputeHash())
+                {
+                    context.User = user;
+                }
+                else
+                {
+                    throw new ServerException(ErrorCode.UserOrPasswordNotCorrect);
+                }
             }
             else
             {
-                throw new ServerException(ErrorCode.UserOrPasswordNotCorrect);
+                throw new ServerException(ErrorCode.AlreadyLoggedIn);
             }
 
             return Task.FromResult(Confirmation.Ok(command));

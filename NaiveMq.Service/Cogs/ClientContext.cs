@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Common;
+using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
 {
-    public class ClientContext
+    public class ClientContext : IDisposable
     {
         public Storage Storage { get; set; }
 
@@ -15,6 +16,8 @@ namespace NaiveMq.Service.Cogs
         public CancellationToken StoppingToken { get; set; }
 
         public UserCog User { get; set; }
+
+        public ConcurrentDictionary<QueueCog, SubscriptionCog> Subscriptions { get; } = new();
 
         /// <summary>
         /// True in case handler is called on reinstating persistent data.
@@ -47,6 +50,18 @@ namespace NaiveMq.Service.Cogs
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotAdmin);
             }
+        }
+
+        public void Dispose()
+        {
+            foreach (var subscription in Subscriptions.Values)
+            {
+                subscription.Dispose();
+            }
+
+            Subscriptions.Clear();
+
+            Client.Dispose();
         }
     }
 }

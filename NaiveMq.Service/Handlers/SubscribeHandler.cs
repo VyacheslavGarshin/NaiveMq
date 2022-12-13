@@ -16,10 +16,9 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!queue.Entity.Exchange)
                 {
-                    var subscriptions = context.Storage.Subscriptions.GetOrAdd(context.Client.Id, (key) => new ConcurrentDictionary<QueueCog, SubscriptionCog>());
                     var subscription = new SubscriptionCog(context, queue, command.ConfirmMessage, command.ConfirmMessageTimeout);
 
-                    if (subscriptions.TryAdd(queue, subscription))
+                    if (context.Subscriptions.TryAdd(queue, subscription))
                     {
                         subscription.Start();
                     }

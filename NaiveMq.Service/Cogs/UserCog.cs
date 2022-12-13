@@ -7,13 +7,13 @@ namespace NaiveMq.Service.Cogs
     {
         public UserEntity Entity { get; set; }
 
-        public ConcurrentDictionary<string, QueueCog> Queues { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
+        public ConcurrentDictionary<string, QueueCog> Queues { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         /// <summary>
         /// 
         /// </summary>
         /// <remarks>Keys are: from queue, to queue.</remarks>
-        public ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> Bindings { get; set; }  = new(StringComparer.InvariantCultureIgnoreCase);
+        public ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> Bindings { get; }  = new(StringComparer.InvariantCultureIgnoreCase);
 
         public UserCog(UserEntity entity)
         {

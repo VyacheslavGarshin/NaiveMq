@@ -170,7 +170,7 @@ namespace NaiveMq.Service
 
                 client.Start();
                 
-                _storage.AddClient(client);
+                _storage.TryAddClient(client);
             }
             catch (Exception ex)
             {
@@ -178,14 +178,14 @@ namespace NaiveMq.Service
 
                 if (client != null)
                 {
-                    _storage.DeleteClient(client);
+                    _storage.TryRemoveClient(client);
                 }
             }
         }
 
         private void OnClientStop(NaiveMqClient sender)
         {
-            _storage.DeleteClient(sender);
+            _storage.TryRemoveClient(sender);
         }
 
         private Task OnClientSendCommandAsync(NaiveMqClient sender, ICommand command)
@@ -262,11 +262,11 @@ namespace NaiveMq.Service
             }
             catch (ClientException)
             {
-                _storage.DeleteClient(client);
+                _storage.TryRemoveClient(client);
             }
             catch (Exception ex)
             {
-                _storage.DeleteClient(client);
+                _storage.TryRemoveClient(client);
                 _logger.LogError(ex, "Unexpected error on sending response.");
             }
         }

@@ -135,5 +135,8 @@ namespace NaiveMq.Client
 
         [Description("Request confirm timeout must be set when confirmation is requested.")]
         ConfirmTimeoutNotSet = 135,
+
+        [Description("You are already logged in. In case of changing user send Logout command first.")]
+        AlreadyLoggedIn = 136,
     }
 }

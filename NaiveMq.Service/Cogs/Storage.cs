@@ -11,9 +11,7 @@ namespace NaiveMq.Service.Cogs
 
         public bool MemoryLimitExceeded { get; private set; }
 
-        public readonly ConcurrentDictionary<string, UserCog> Users = new(StringComparer.InvariantCultureIgnoreCase);
-
-        public readonly ConcurrentDictionary<int, ConcurrentDictionary<QueueCog, SubscriptionCog>> Subscriptions = new();
+        public ConcurrentDictionary<string, UserCog> Users { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
@@ -36,38 +34,20 @@ namespace NaiveMq.Service.Cogs
             _timer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
 
-        public void DeleteSubscriptions(int clientId)
-        {
-            if (Subscriptions.TryRemove(clientId, out var clientSubscriptions))
-            {
-                foreach (var subscription in clientSubscriptions)
-                {
-                    subscription.Value.Dispose();
-                }
-
-                clientSubscriptions.Clear();
-            };
-        }
-
         public void Dispose()
         {
             _timer.Dispose();
-
-            foreach (var clientSubscriptions in Subscriptions)
-            {
-                DeleteSubscriptions(clientSubscriptions.Key);
-            }
-
-            Subscriptions.Clear();
 
             foreach (var user in Users.Values)
             {
                 user.Dispose();
             }
 
+            Users.Clear();
+
             foreach (var context in _clientContexts.Values)
             {
-                context.Client.Dispose();
+                context.Dispose();
             }
 
             _clientContexts.Clear();
@@ -84,29 +64,33 @@ namespace NaiveMq.Service.Cogs
             return _clientContexts.TryGetValue(id, out clientContext);
         }
 
-        public void AddClient(NaiveMqClient client)
+        public bool TryAddClient(NaiveMqClient client)
         {
-            _clientContexts.TryAdd(client.Id, new ClientContext
+            var result = _clientContexts.TryAdd(client.Id, new ClientContext
             {
                 Storage = this,
-                User = null,
                 Client = client,
                 StoppingToken = _stoppingToken,
                 Logger = _logger
             });
 
-
             _logger.LogInformation($"Client added {client.Id}.");
+
+            return result;
         }
 
-        public void DeleteClient(NaiveMqClient client)
+        public bool TryRemoveClient(NaiveMqClient client)
         {
-            DeleteSubscriptions(client.Id);
+            var result = _clientContexts.TryRemove(client.Id, out var clientContext);
 
-            _clientContexts.TryRemove(client.Id, out var _);
-            client.Dispose();
+            if (result)
+            {
+                clientContext.Dispose();
 
-            _logger.LogInformation($"Client deleted {client.Id}.");
+                _logger.LogInformation($"Client deleted {client.Id}.");
+            }
+
+            return result;
         }
 
         private void OnTimer(object state)
