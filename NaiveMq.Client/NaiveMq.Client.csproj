@@ -4,6 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
