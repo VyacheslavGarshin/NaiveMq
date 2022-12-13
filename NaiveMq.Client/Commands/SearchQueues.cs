@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class SearchQueues : AbstractRequest<SearchQueuesResponse>
+    public class SearchQueues : AbstractSearchRequest<SearchQueuesResponse>
     {
         /// <summary>
         /// Search by user.

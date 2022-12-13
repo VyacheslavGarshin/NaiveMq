@@ -10,13 +10,17 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var userQueues = (context.User.Entity.Administrator 
+            var queues = (context.User.Entity.Administrator 
                 ? context.Storage.Users.SelectMany(x => x.Value.Queues.Where(y => string.IsNullOrEmpty(command.User) || y.Value.Entity.User.Contains(command.User, StringComparison.InvariantCultureIgnoreCase)))
                 : context.User.Queues).Select(x => x.Value);
 
+            var expression = queues
+                .Where(x => string.IsNullOrEmpty(command.Name) || x.Entity.Name.Contains(command.Name, StringComparison.InvariantCultureIgnoreCase))
+                .OrderBy(x => x.Entity.User).ThenBy(x => x.Entity.Name);
+
             return Task.FromResult(SearchQueuesResponse.Ok(command, (response) =>
             {
-                response.Entities = userQueues.Where(x => string.IsNullOrEmpty(command.Name) || x.Entity.Name.Contains(command.Name, StringComparison.InvariantCultureIgnoreCase)).Select(x =>
+                response.Entities = expression.Skip(command.Skip).Take(command.Take).Select(x =>
                     new Queue
                     {
                         User = x.Entity.User,
@@ -26,7 +30,9 @@ namespace NaiveMq.Service.Handlers
                         Limit = x.Entity.Limit,
                         LimitBy = x.Entity.LimitBy,
                         LimitStrategy = x.Entity.LimitStrategy,
-                    }).OrderBy(x => x.User).ThenBy(x => x.Name).ToList();
+                    }).ToList();
+
+                response.Count = command.Count ? expression.Count() : null;
             }));
         }
 
