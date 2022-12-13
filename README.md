@@ -51,4 +51,4 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 Requirements
 --------------
 + .NET Standard for Client and Service
-+ .NET 6 for Tests and Server, Management Console
++ .NET 6 for Tests, Server and Management Console
