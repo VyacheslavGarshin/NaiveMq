@@ -15,6 +15,7 @@ Implemented so far:
 + Disk only messages for long queues with big message data
 + Queue limits by length or volume with server behaviour delay, reject or discard the message
 + Server memory limits manual/automatic
++ Management Console applicaton
 
 Plans:
 + Message batching
