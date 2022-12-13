@@ -17,6 +17,7 @@ Implemented so far:
 + Server memory limits manual/automatic
 
 Plans:
++ Message batching
 + Better durable queues
 + Management UI
 + Unit tests
