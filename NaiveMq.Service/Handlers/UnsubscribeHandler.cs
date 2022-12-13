@@ -19,12 +19,12 @@ namespace NaiveMq.Service.Handlers
                 }
                 else
                 {
-                    throw new ServerException(ErrorCode.SubscriptionNotFound, string.Format(ErrorCode.SubscriptionNotFound.GetDescription(), command.Queue));
+                    throw new ServerException(ErrorCode.SubscriptionNotFound, new object[] { command.Queue });
                 }
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Queue });
             }          
 
             return Task.FromResult(Confirmation.Ok(command));

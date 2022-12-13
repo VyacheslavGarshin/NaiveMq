@@ -2,8 +2,8 @@
 {
     public enum LimitBy
     {
-        Length = 1,
+        Length = 0,
 
-        Volume = 2,
+        Volume = 1,
     }
 }

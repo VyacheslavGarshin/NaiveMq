@@ -10,7 +10,7 @@ namespace NaiveMq.Client.Commands
 
         public bool Request { get; set; }
 
-        public Persistent Persistent { get; set; }
+        public Persistent Persistent { get; set; } = Persistent.No;
 
         public string RoutingKey { get; set; }
 

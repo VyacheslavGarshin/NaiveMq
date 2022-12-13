@@ -27,7 +27,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), command.Username));
+                throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
             }
         }
 

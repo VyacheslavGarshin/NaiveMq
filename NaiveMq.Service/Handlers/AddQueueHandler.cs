@@ -36,7 +36,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.User.Queues.TryAdd(queueEntity.Name, queue))
                 {
-                    throw new ServerException(ErrorCode.QueueAlreadyExists, string.Format(ErrorCode.QueueAlreadyExists.GetDescription(), queueEntity.Name));
+                    throw new ServerException(ErrorCode.QueueAlreadyExists, new object[] { queueEntity.Name });
                 }
 
                 if (!context.Reinstate && queueEntity.Durable)

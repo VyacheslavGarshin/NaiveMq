@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Name));
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
             }
 
             return Confirmation.Ok(command);

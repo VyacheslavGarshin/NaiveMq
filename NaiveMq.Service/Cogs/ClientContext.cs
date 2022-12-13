@@ -43,7 +43,7 @@ namespace NaiveMq.Service.Cogs
 
             if (!Storage.Users.TryGetValue(context.User.Entity.Username, out var _))
             {
-                throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), context.User.Entity.Username));
+                throw new ServerException(ErrorCode.UserNotFound, new object[] { context.User.Entity.Username });
             }
 
             if (checkAdmin && !context.User.Entity.Administrator)

@@ -69,7 +69,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), messageEntity.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { messageEntity.Queue });
             }
         }
 
@@ -79,8 +79,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!queue.Entity.Durable && message.Persistent != Persistent.No)
                 {
-                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue,
-                        string.Format(ErrorCode.PersistentMessageInNotDurableQueue.GetDescription(), queue.Entity.Name));
+                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
                 }
             }
         }
@@ -112,11 +111,9 @@ namespace NaiveMq.Service.Handlers
                                 switch (queue.Entity.LimitBy)
                                 {
                                     case LimitBy.Length:
-                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded,
-                                            string.Format(ErrorCode.QueueLengthLimitExceeded.GetDescription(), queue.Entity.Limit));
+                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { queue.Entity.Limit });
                                     case LimitBy.Volume:
-                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded,
-                                            string.Format(ErrorCode.QueueVolumeLimitExceeded.GetDescription(), queue.Entity.Limit));
+                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { queue.Entity.Limit });
                                 }
 
                                 break;

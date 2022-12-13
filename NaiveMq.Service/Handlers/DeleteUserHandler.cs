@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Storage.Users.TryRemove(command.Username, out user))
                 {
-                    throw new ServerException(ErrorCode.UserNotFound, string.Format(ErrorCode.UserNotFound.GetDescription(), command.Username));
+                    throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
                 }
 
                 await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);

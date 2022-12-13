@@ -2,10 +2,10 @@
 {
     public enum LimitStrategy
     {
-        Delay = 1,
+        Delay = 0,
 
-        Reject = 2,        
+        Reject = 1,        
 
-        Discard = 3,
+        Discard = 2,
     }
 }

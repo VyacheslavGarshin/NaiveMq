@@ -23,7 +23,7 @@ namespace NaiveMq.Service.Handlers
                     }
                     else
                     {
-                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, string.Format(ErrorCode.SubscriptionAlreadyExists.GetDescription(), queue.Entity.Name));
+                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new object[] { queue.Entity.Name });
                     }
                 }
                 else
@@ -33,7 +33,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), command.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Queue });
             }
 
             return Task.FromResult(Confirmation.Ok(command));

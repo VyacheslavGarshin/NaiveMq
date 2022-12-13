@@ -11,6 +11,10 @@ namespace NaiveMq.Service
         {
         }
 
+        public ServerException(ErrorCode errorCode, object[] args) : this(errorCode, string.Format(errorCode.GetDescription(), args))
+        {
+        }
+
         public ServerException(ErrorCode errorCode, string message) : base(message)
         {
             ErrorCode = errorCode;

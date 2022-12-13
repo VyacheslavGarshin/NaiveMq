@@ -12,9 +12,9 @@ namespace NaiveMq.Client.Commands
 
         public long? Limit { get; set; }
 
-        public LimitBy LimitBy { get; set; }
+        public LimitBy LimitBy { get; set; } = LimitBy.Length;
 
-        public LimitStrategy LimitStrategy { get; set; }
+        public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
         public override void Validate()
         {

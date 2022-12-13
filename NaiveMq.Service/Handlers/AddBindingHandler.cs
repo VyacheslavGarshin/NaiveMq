@@ -61,12 +61,12 @@ namespace NaiveMq.Service.Handlers
         {
             if (!context.User.Queues.TryGetValue(binding.Entity.Exchange, out var exchange))
             {
-                throw new ServerException(ErrorCode.ExchangeNotFound, string.Format(ErrorCode.ExchangeNotFound.GetDescription(), binding.Entity.Exchange));
+                throw new ServerException(ErrorCode.ExchangeNotFound, new object[] { binding.Entity.Exchange });
             }
 
             if (!context.User.Queues.TryGetValue(binding.Entity.Queue, out var queue))
             {
-                throw new ServerException(ErrorCode.QueueNotFound, string.Format(ErrorCode.QueueNotFound.GetDescription(), binding.Entity.Queue));
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { binding.Entity.Queue });
             }
 
             if (queue.Entity.Exchange)
@@ -99,7 +99,7 @@ namespace NaiveMq.Service.Handlers
 
             if (!exchangeBindings.TryAdd(binding.Entity.Queue, binding))
             {
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Entity.Exchange, binding.Entity.Queue));
+                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
             }
 
             if (!context.User.Bindings.TryGetValue(binding.Entity.Queue, out queueBindings))
@@ -112,7 +112,7 @@ namespace NaiveMq.Service.Handlers
             {
                 exchangeBindings.TryRemove(binding.Entity.Queue, out var _);
 
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, string.Format(ErrorCode.ExchangeAlreadyBoundToQueue.GetDescription(), binding.Entity.Exchange, binding.Entity.Queue));
+                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
             }
         }
 
