@@ -11,7 +11,9 @@ namespace NaiveMq.Service.Handlers
             context.CheckUser(context);
 
             var queues = (context.User.Entity.Administrator 
-                ? context.Storage.Users.SelectMany(x => x.Value.Queues.Where(y => string.IsNullOrEmpty(command.User) || y.Value.Entity.User.Contains(command.User, StringComparison.InvariantCultureIgnoreCase)))
+                ? context.Storage.Users
+                    .Where(y => string.IsNullOrEmpty(command.User) || y.Value.Entity.Username.Contains(command.User, StringComparison.InvariantCultureIgnoreCase))
+                    .SelectMany(x => x.Value.Queues)
                 : context.User.Queues).Select(x => x.Value);
 
             var expression = queues

@@ -41,6 +41,8 @@ namespace NaiveMq.Client
 
         public NaiveMqClientOptions Options { get; set; }
 
+        public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+
         public delegate void OnStartHandler(NaiveMqClient sender);
 
         public event OnStartHandler OnStart;
@@ -77,8 +79,6 @@ namespace NaiveMq.Client
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
-        private static readonly Dictionary<string, Type> _commandTypes = new();
-
         private TcpClient _tcpClient { get; set; }
 
         private bool _started;
@@ -99,9 +99,12 @@ namespace NaiveMq.Client
 
         static NaiveMqClient()
         {
-            foreach (var type in typeof(ICommand).Assembly.GetTypes().Where(x => x.GetInterfaces().Any(y => y == typeof(ICommand))))
+            var types = typeof(ICommand).Assembly.GetTypes()
+                .Where(x => !x.IsAbstract && !x.IsInterface && x.GetInterfaces().Any(y => y == typeof(ICommand)));
+
+            foreach (var type in types)
             {
-                _commandTypes.Add(type.Name, type);
+                CommandTypes.Add(type.Name, type);
             }
         }
 
@@ -112,7 +115,10 @@ namespace NaiveMq.Client
             _logger = logger;
             _stoppingToken = stoppingToken;
 
-            Start();
+            if (options.Autostart)
+            {
+                Start();
+            }
         }
 
         public void Start()
@@ -157,6 +163,7 @@ namespace NaiveMq.Client
             {
                 if (_started)
                 {
+                    _tcpClient.Close();
                     _tcpClient.Dispose();
                     _tcpClient = null;
 
@@ -191,7 +198,6 @@ namespace NaiveMq.Client
 
             try
             {
-
                 if (confirm)
                 {
                     responseItem = new ResponseItem();
@@ -280,7 +286,7 @@ namespace NaiveMq.Client
             {
                 if (!responseItem.Response.Success)
                 {
-                    throw new ClientException(ErrorCode.ConfirmationError, $"{responseItem.Response.ErrorCode}: {responseItem.Response.ErrorMessage}");
+                    throw new ClientException(ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage);
                 }
                 else
                 {
@@ -444,21 +450,21 @@ namespace NaiveMq.Client
 
             if (commandNameLength > Options.MaxCommandNameLength)
             {
-                throw new ClientException(ErrorCode.CommandNameLengthLong, string.Format(ErrorCode.CommandNameLengthLong.GetDescription(), Options.MaxCommandNameLength, commandNameLength));
+                throw new ClientException(ErrorCode.CommandNameLengthLong, new object[] { Options.MaxCommandNameLength, commandNameLength });
             }
 
             if (commandLength > Options.MaxCommandLength)
             {
-                throw new ClientException(ErrorCode.CommandLengthLong, string.Format(ErrorCode.CommandLengthLong.GetDescription(), Options.MaxCommandLength, commandNameLength));
+                throw new ClientException(ErrorCode.CommandLengthLong, new object[] { Options.MaxCommandLength, commandNameLength });
             }
 
             if (dataLength > Options.MaxDataLength)
             {
-                throw new ClientException(ErrorCode.DataLengthLong, string.Format(ErrorCode.DataLengthLong.GetDescription(), Options.MaxDataLength, commandNameLength));
+                throw new ClientException(ErrorCode.DataLengthLong, new object[] { Options.MaxDataLength, commandNameLength });
             }
         }
 
-        private async Task ReadStreamBytesAsync(NetworkStream stream, byte[] buffer, int length)
+        private async Task<bool> ReadStreamBytesAsync(NetworkStream stream, byte[] buffer, int length)
         {
             var readLength = 0;
             var offset = 0;
@@ -467,11 +473,18 @@ namespace NaiveMq.Client
             do
             {
                 var read = await stream.ReadAsync(buffer, offset, size, _stoppingToken);
-                
+
+                if (read == 0)
+                {
+                    throw new IOException("Read 0 bytes.");
+                }
+
                 readLength += read;
                 offset += read;
                 size -= read;
             } while (readLength != length);
+
+            return true;
         }
 
         private async Task HandleReceivedDataAsync(byte[] buffer, int commandNameLength, int commandLength, int dataLength)
@@ -576,13 +589,13 @@ namespace NaiveMq.Client
 
         private Type GetCommandType(string commandName)
         {
-            if (_commandTypes.TryGetValue(commandName, out Type commandType))
+            if (CommandTypes.TryGetValue(commandName, out Type commandType))
             {
                 return commandType;
             }
             else
             {
-                throw new ClientException(ErrorCode.CommandNotFound, string.Format(ErrorCode.CommandNotFound.GetDescription(), commandName));
+                throw new ClientException(ErrorCode.CommandNotFound, new object[] { commandName });
             }
         }
 

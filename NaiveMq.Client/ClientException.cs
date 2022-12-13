@@ -15,6 +15,10 @@ namespace NaiveMq.Client
         {
         }
 
+        public ClientException(ErrorCode errorCode, object[] args) : this(errorCode, string.Format(errorCode.GetDescription(), args), null)
+        {
+        }
+
         public ClientException(ErrorCode errorCode, Exception innerException) : this(errorCode, errorCode.GetDescription(), innerException)
         {
         }

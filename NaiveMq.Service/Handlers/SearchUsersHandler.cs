@@ -10,9 +10,9 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin(context);
 
-            var expression = context.Storage.Users.Values.Where(x => 
-                string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username))
-                    .OrderBy(x => x.Entity.Username);
+            var expression = context.Storage.Users.Values
+                .Where(x => string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username))
+                .OrderBy(x => x.Entity.Username);
 
             return Task.FromResult(SearchUsersResponse.Ok(command, (response) =>
             {

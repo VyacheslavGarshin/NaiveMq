@@ -2,7 +2,7 @@
 
 namespace NaiveMq.Client.Commands
 {
-    public class AbstractSearchResponse<T> : AbstractResponse<AbstractSearchResponse<T>>
+    public abstract class AbstractSearchResponse<T> : AbstractResponse<AbstractSearchResponse<T>>
     {
         public List<T> Entities { get; set; }
 

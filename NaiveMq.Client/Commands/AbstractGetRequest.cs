@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class AbstractGetRequest<TResponse> : AbstractRequest<TResponse>
+    public abstract class AbstractGetRequest<TResponse> : AbstractRequest<TResponse>
         where TResponse : IResponse
     {
         /// <summary>

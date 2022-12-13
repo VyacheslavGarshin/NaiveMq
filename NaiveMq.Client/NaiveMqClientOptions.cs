@@ -7,13 +7,15 @@ namespace NaiveMq.Client
     {
         public TcpClient TcpClient { get; set; }
 
-        public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
-
-        public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
-
         public string Host { get; set; } = "localhost";
 
         public int Port { get; set; } = 8506;
+
+        public bool Autostart { get; set; } = true;
+
+        public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
+
+        public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         public int Parallelism { get; set; } = 8;
 
@@ -22,5 +24,6 @@ namespace NaiveMq.Client
         public int MaxCommandLength { get; set; } = 1024 * 1024;
 
         public int MaxDataLength { get; set; } = 100 * 1024 * 1024;
+
     }
 }

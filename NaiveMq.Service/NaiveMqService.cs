@@ -292,6 +292,10 @@ namespace NaiveMq.Service
 
                     return result;
                 }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException;
+                }
                 catch
                 {
                     throw;

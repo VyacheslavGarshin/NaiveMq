@@ -3,7 +3,7 @@
 namespace NaiveMq.Client.Commands
 {
     public abstract class AbstractResponse<T> : IResponse
-        where T : IResponse, new()
+        where T : IResponse
     {
         public Guid Id { get; set; }
 
@@ -22,11 +22,12 @@ namespace NaiveMq.Client.Commands
         /// <returns></returns>
         public static T Ok(Guid requestId)
         {
-            return new T
-            {
-                RequestId = requestId,
-                Success = true,
-            };
+            var result = Activator.CreateInstance<T>();
+
+            result.RequestId = requestId;
+            result.Success = true;
+
+            return result;
         }
 
         /// <summary>
@@ -50,13 +51,14 @@ namespace NaiveMq.Client.Commands
 
         public static T Error(Guid requestId, string errorCode, string errorMessage)
         {
-            return new T
-            {
-                RequestId = requestId,
-                Success = false,
-                ErrorCode = errorCode,
-                ErrorMessage = errorMessage,
-            };
+            var result = Activator.CreateInstance<T>();
+
+            result.RequestId = requestId;
+            result.Success = false;
+            result.ErrorCode = errorCode;
+            result.ErrorMessage = errorMessage;
+
+            return result;
         }
 
         public virtual void Validate()

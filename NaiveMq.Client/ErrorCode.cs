@@ -34,6 +34,9 @@ namespace NaiveMq.Client
         [Description("RequestId must be set for the response command.")]
         RequestIdNotSet = 10,
 
+        [Description("Parameter '{0}' must be set.")]
+        ParameterNotSet = 11,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 
