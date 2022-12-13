@@ -18,7 +18,6 @@ Implemented so far:
 
 Plans:
 + Better durable queues
-+ Command console
 + Management UI
 + Unit tests
 + Integration tests
@@ -52,4 +51,4 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 Requirements
 --------------
 + .NET Standard for Client and Service
-+ .NET 6 for tests and Server
++ .NET 6 for Tests and Server, Management Console
