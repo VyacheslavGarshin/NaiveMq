@@ -16,9 +16,9 @@ Implemented so far:
 + Queue limits by length or volume with server behaviour delay, reject or discard the message
 + Server memory limits manual/automatic
 + Management console applicaton
++ Message batching
 
 Plans:
-+ Message batching
 + Clustering
 + Better durable queues
 + Management UI
