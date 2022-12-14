@@ -14,7 +14,7 @@ namespace NaiveMq.Client.Dto
 
         public bool Request { get; set; }
 
-        public Persistent Persistent { get; set; }
+        public Persistence Persistent { get; set; }
 
         public string RoutingKey { get; set; }
 

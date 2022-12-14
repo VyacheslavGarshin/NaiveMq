@@ -35,7 +35,8 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 28.000    | 31.000*   |              |              |                 |                 |
 | In memory message with confirmation      |  8.100    |  6.600    |  8.000       |  6.000       |  700            |  550            |
-| - 10 queues, 1 client per queue in/out   |           |           |              |              |                 |                 |
+| - 10 queues, 1 client per queue in/out   |  7.700    |           |              |              |                 |                 |
+| - batch by 100 messages                  | 13.500    |           |              |              |                 |                 |
 | In memory request-response message       |  7.600    |      -    |  7.300       |      -       |  690            |    -            |
 | Persistent message without confirmation  |  2.000    | 28.000**  |              |              |                 |                 |
 | Persistent message with confirmation     |  1.900    |  1.000    |  1.600       |    500       |  510            |  130            |

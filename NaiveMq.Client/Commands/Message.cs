@@ -10,7 +10,7 @@ namespace NaiveMq.Client.Commands
 
         public bool Request { get; set; }
 
-        public Persistent Persistent { get; set; } = Persistent.No;
+        public Persistence Persistent { get; set; } = Persistence.No;
 
         public string RoutingKey { get; set; }
 
@@ -25,7 +25,7 @@ namespace NaiveMq.Client.Commands
         {
             base.Validate();
 
-            if (Request && Persistent != Persistent.No)
+            if (Request && Persistent != Persistence.No)
             {
                 throw new ClientException(ErrorCode.PersistentRequest);
             }

@@ -39,7 +39,7 @@ namespace NaiveMq.Service.Cogs
             {
                 Interlocked.Add(ref _volume, -message.DataLength);
 
-                if (message.Persistent != Persistent.DiskOnly)
+                if (message.Persistent != Persistence.DiskOnly)
                 {
                     Interlocked.Add(ref _volumeInMemory, -message.DataLength);
                 }
@@ -68,7 +68,7 @@ namespace NaiveMq.Service.Cogs
 
             Interlocked.Add(ref _volume, message.DataLength);
 
-            if (message.Persistent != Persistent.DiskOnly)
+            if (message.Persistent != Persistence.DiskOnly)
             {
                 Interlocked.Add(ref _volumeInMemory, message.DataLength);
             }

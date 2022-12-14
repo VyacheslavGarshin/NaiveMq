@@ -77,7 +77,7 @@ namespace NaiveMq.Service.Handlers
         {
             foreach (var queue in queues)
             {
-                if (!initialQueue.Entity.Exchange && !queue.Entity.Durable && message.Persistent != Persistent.No)
+                if (!initialQueue.Entity.Exchange && !queue.Entity.Durable && message.Persistent != Persistence.No)
                 {
                     throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
                 }
@@ -154,14 +154,14 @@ namespace NaiveMq.Service.Handlers
 
                 foreach (var queue in queues)
                 {
-                    if (message.Persistent != Persistent.No && queue.Entity.Durable)
+                    if (message.Persistent != Persistence.No && queue.Entity.Durable)
                     {
                         await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, message, context.StoppingToken);
                         saved = true;
                     }
                 }
 
-                if (message.Persistent == Persistent.DiskOnly && saved)
+                if (message.Persistent == Persistence.DiskOnly && saved)
                 {
                     message.Data = null;
                 }

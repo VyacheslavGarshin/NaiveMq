@@ -185,28 +185,18 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             try
             {
-                var message = new Message
-                {
-                    Queue = queueName,
-                    Persistent = _options.Value.PersistentMessage,
-                    Request = _options.Value.Request,
-                    Data = bytes,
-                    Confirm = _options.Value.Confirm,
-                    ConfirmTimeout = _options.Value.ConfirmTimeout,
-                };
-
                 if (_options.Value.Batch)
                 {
                     var batch = new Batch
                     {
-                        Messages = Enumerable.Range(0, _options.Value.BatchSize).Select(x => message).ToList()                         
+                        Messages = Enumerable.Range(0, _options.Value.BatchSize).Select(x => CreateMessage(bytes, queueName)).ToList()
                     };
 
                     var response = await c.SendAsync(batch, _stoppingToken);
                 }
                 else
                 {
-                    var response = await c.SendAsync(message, _stoppingToken);
+                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _stoppingToken);
                 }
 
                 if (_options.Value.SendDelay != null)
@@ -231,6 +221,19 @@ namespace NaiveMq.LoadTests.SpamQueue
                 _logger.LogError(ex, "Spam send error");
                 throw;
             }
+        }
+
+        private Message CreateMessage(byte[] bytes, string queueName)
+        {
+            return new Message
+            {
+                Queue = queueName,
+                Persistent = _options.Value.PersistentMessage,
+                Request = _options.Value.Request,
+                Data = bytes,
+                Confirm = _options.Value.Confirm,
+                ConfirmTimeout = _options.Value.ConfirmTimeout,
+            };
         }
 
         private void CheckClientActivity(NaiveMqClient c, SemaphoreSlim exitSp, ref DateTime lastActivity, ref TimeSpan delta)
@@ -312,7 +315,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistent.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistence.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)

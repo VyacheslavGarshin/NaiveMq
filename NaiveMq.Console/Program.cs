@@ -183,7 +183,7 @@ static bool Commands(string input)
         Console.WriteLine("---------");
         Console.WriteLine("Enumerables are:");
 
-        foreach (var enumType in new[] { typeof(LimitBy), typeof(LimitStrategy), typeof(Persistent) })
+        foreach (var enumType in new[] { typeof(LimitBy), typeof(LimitStrategy), typeof(Persistence) })
         {
             var values = string.Join(", ", Enum.GetNames(enumType));
             Console.WriteLine($"{enumType.Name}: {values}");

@@ -137,7 +137,7 @@ namespace NaiveMq.Service.PersistentStorage
                             throw new IOException("Actual message length on disk is not equeal to stored message length.");
                         }
 
-                        if (loadDiskOnly || result.Persistent != Persistent.DiskOnly)
+                        if (loadDiskOnly || result.Persistent != Persistence.DiskOnly)
                         {
                             var memory = new Memory<byte>(new byte[result.DataLength]);
                             await file.ReadAsync(memory, cancellationToken);
