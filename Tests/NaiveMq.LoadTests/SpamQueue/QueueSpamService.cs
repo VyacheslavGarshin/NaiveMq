@@ -264,11 +264,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                     var body = message.Data.ToArray();
                 }
 
-                if (message.Confirm || message.Request)
+                if (message.Confirm)
                 {
                     try
                     {
-                        await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
+                        await client.SendAsync(Confirmation.Ok(message.Id, message.Request ? Encoding.UTF8.GetBytes("Answer") : null), _stoppingToken);
                     }
                     catch (ClientException)
                     {

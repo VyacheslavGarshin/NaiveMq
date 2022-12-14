@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;
@@ -111,7 +112,7 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetMessagePath(user, queue, messageId), true, cancellationToken);
         }
 
-        public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
+        public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, bool loadDiskOnly, CancellationToken cancellationToken)
         {
             MessageEntity result = null;
             var path = GetMessagePath(user, queue, messageId);
@@ -129,15 +130,18 @@ namespace NaiveMq.Service.PersistentStorage
                         var messageBytes = new byte[messageLength];
                         await file.ReadAsync(messageBytes, cancellationToken);
 
-                        result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));
-                        
-                        var memory = new Memory<byte>(new byte[result.DataLength]);
-                        await file.ReadAsync(memory, cancellationToken);
-                        result.Data = memory;
+                        result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));                        
 
-                        if (result.Data.Length != result.DataLength)
+                        if (4 + messageLength + result.DataLength != file.Length)
                         {
-                            throw new IOException("Message data length is not equeal to DataLength property of the message.");
+                            throw new IOException("Actual message length on disk is not equeal to stored message length.");
+                        }
+
+                        if (loadDiskOnly || result.Persistent != Persistent.DiskOnly)
+                        {
+                            var memory = new Memory<byte>(new byte[result.DataLength]);
+                            await file.ReadAsync(memory, cancellationToken);
+                            result.Data = memory;
                         }
                     }
                     catch (Exception)

@@ -75,7 +75,7 @@ namespace NaiveMq.Service.Cogs
                             if (messageEntity.Persistent == Persistent.DiskOnly)
                             {
                                 var diskMessageEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Entity.Username,
-                                    messageEntity.Queue, messageEntity.Id, cancellationToken);
+                                    messageEntity.Queue, messageEntity.Id, true, cancellationToken);
                                 
                                 messageEntity.Data = diskMessageEntity.Data;
                             }
@@ -145,7 +145,6 @@ namespace NaiveMq.Service.Cogs
         {
             var message = new Message
             {
-                Id = messageEntity.Id,
                 Confirm = _confirm,
                 ConfirmTimeout = _confirmTimeout,
                 Queue = messageEntity.Queue,
@@ -155,7 +154,14 @@ namespace NaiveMq.Service.Cogs
                 Data = messageEntity.Data
             };
 
-            return await _context.Client.SendAsync(message, cancellationToken);
+            var result = await _context.Client.SendAsync(message, cancellationToken);
+
+            if (result != null && result.Data.Length != 0)
+            {
+                result.RequestId = messageEntity.Id;
+            }
+
+            return result;
         }
     }
 }
