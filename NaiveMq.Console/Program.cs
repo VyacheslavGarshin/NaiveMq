@@ -3,6 +3,7 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System.Data;
 
 using var loggerFactory = LoggerFactory.Create(builder =>
@@ -15,7 +16,9 @@ using var loggerFactory = LoggerFactory.Create(builder =>
 });
 var logger = loggerFactory.CreateLogger<NaiveMqClient>();
 
-var client = CreateClient(logger);
+var enumConverter = new StringEnumConverter();
+
+var client = CreateClient();
 
 Console.WriteLine(@"NaiveMq management console.
 type:
@@ -49,10 +52,10 @@ do
             quit = true;
         }
 
-        var found = Connect(client, input);
-        found = found || Close(client, input);
+        var found = Connect(input);
+        found = found || Close(input);
         found = found || Commands(input);
-        found = found || await SendAsync(client, input);
+        found = found || await SendAsync(input);
 
         if (!found)
         {
@@ -68,7 +71,7 @@ do
     }
 } while (!quit);
 
-static NaiveMqClient CreateClient(ILogger<NaiveMqClient> logger)
+NaiveMqClient CreateClient()
 {
     var client = new NaiveMqClient(new NaiveMqClientOptions { Autostart = false }, logger, CancellationToken.None);
 
@@ -87,13 +90,13 @@ static NaiveMqClient CreateClient(ILogger<NaiveMqClient> logger)
     client.OnReceiveCommandAsync += (sender, command) =>
     {
         using var сс = new ConsoleContext(responseColor);
-        Console.WriteLine($"In {command.GetType().Name} {JsonConvert.SerializeObject(command)}");
+        Console.WriteLine($"In {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}");
         return Task.CompletedTask;
     };
 
     client.OnSendCommandAsync += (sender, command) =>
     {
-        Console.WriteLine($"Out {command.GetType().Name} {JsonConvert.SerializeObject(command)}");
+        Console.WriteLine($"Out {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}");
         return Task.CompletedTask;
     };
 
@@ -105,19 +108,19 @@ static bool Equals(string input, string other)
     return input.Equals(other, StringComparison.InvariantCultureIgnoreCase);
 }
 
-static string FriendlyName(Type type)
+static string FriendlyTypeName(Type type)
 {
     if (type.IsGenericType)
     {
         var namePrefix = type.Name.Split(new[] { '`' }, StringSplitOptions.RemoveEmptyEntries)[0];
-        var genericParameters = type.GetGenericArguments().Select(FriendlyName);
+        var genericParameters = type.GetGenericArguments().Select(FriendlyTypeName);
         return namePrefix + "<" + string.Join(",", genericParameters) + ">";
     }
 
     return type.Name;
 }
 
-static bool Connect(NaiveMqClient client, string input)
+bool Connect(string input)
 {
     if (input.StartsWith("connect", StringComparison.InvariantCultureIgnoreCase))
     {
@@ -139,7 +142,7 @@ static bool Connect(NaiveMqClient client, string input)
     return false;
 }
 
-static bool Close(NaiveMqClient client, string input)
+bool Close(string input)
 {
     if (Equals(input, "close"))
     {
@@ -163,7 +166,7 @@ static bool Commands(string input)
 
             if (command != null)
             {
-                var props = string.Join(", ", command.GetType().GetProperties().OrderBy(x => x.Name).Select(x => $"{x.Name}:\"{FriendlyName(x.PropertyType)}\""));
+                var props = string.Join(", ", command.GetType().GetProperties().OrderBy(x => x.Name).Select(x => $"{x.Name}:\"{FriendlyTypeName(x.PropertyType)}\""));
                 Console.WriteLine($"{commandType.Name} {props}");
             }
         }
@@ -185,7 +188,7 @@ static bool Commands(string input)
     return false;
 }
 
-static async Task<bool> SendAsync(NaiveMqClient client, string input)
+async Task<bool> SendAsync(string input)
 {
     var split = input.Split(' ', 2);
 

@@ -3,6 +3,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -96,6 +97,8 @@ namespace NaiveMq.Client
         private readonly ICommandConverter _converter = new JsonCommandConverter();
 
         private readonly object _startLocker = new();
+
+        private readonly StringEnumConverter _stringEnumConverter = new();
 
         static NaiveMqClient()
         {
@@ -615,7 +618,7 @@ namespace NaiveMq.Client
         {
             if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command)}");
+                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}");
             }
         }
     }
