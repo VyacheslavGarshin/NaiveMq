@@ -48,7 +48,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | Persistent message without confirmation  |  2.700    | 10.000**  |              |              |                 |                 |
 | Persistent message with confirmation     |  1.900    |  1.000    |              |              |                 |                 |
 
-\* RabbitMq .NET Client eats up memory and crashes, so the test is stable for about a minute.
+\* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute.
 
 \*\* Same as * but disk I/O is low, not sure it's durable after all.
 
