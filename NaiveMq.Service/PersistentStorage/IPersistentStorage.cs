@@ -32,7 +32,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         public Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken);
 
-        public Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken);
+        public Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, bool loadDiskOnly, CancellationToken cancellationToken);
 
         public Task<IEnumerable<Guid>> LoadMessageKeysAsync(string user, string queue, CancellationToken cancellationToken);
     }

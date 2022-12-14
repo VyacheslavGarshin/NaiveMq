@@ -78,7 +78,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
-        public Persistent PersistentMessage { get; set; } = Persistent.No;
+        public Persistence PersistentMessage { get; set; } = Persistence.No;
 
         public int Parallelism { get; set; } = 8;
 
@@ -95,5 +95,9 @@ namespace NaiveMq.LoadTests.SpamQueue
         public LimitStrategy LimitStrategy { get; set; }
 
         public bool ReadBody { get; set; }
+
+        public bool Batch { get; set; }
+
+        public int BatchSize { get; set; } = 10;
     }
 }

@@ -3,6 +3,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
@@ -97,6 +98,8 @@ namespace NaiveMq.Client
 
         private readonly object _startLocker = new();
 
+        private readonly StringEnumConverter _stringEnumConverter = new();
+
         static NaiveMqClient()
         {
             var types = typeof(ICommand).Assembly.GetTypes()
@@ -189,7 +192,7 @@ namespace NaiveMq.Client
         public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
-            PrepareCommand(request);
+            await PrepareCommandAsync(request, cancellationToken);
             request.Validate();
 
             IResponse response = null;
@@ -236,7 +239,7 @@ namespace NaiveMq.Client
         /// <returns></returns>
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
-            PrepareCommand(response);
+            await PrepareCommandAsync(response, cancellationToken);
             response.Validate();
             await WriteCommandAsync(response, cancellationToken);
         }
@@ -258,17 +261,14 @@ namespace NaiveMq.Client
             WriteCounter.Dispose();
         }
 
-        private void PrepareCommand(ICommand command)
+        private async Task PrepareCommandAsync(ICommand command, CancellationToken cancellationToken)
         {
-            if (command.Id == Guid.Empty)
-            {
-                command.Id = Guid.NewGuid();
-            }
-
             if (command is IRequest request && request.Confirm && request.ConfirmTimeout == null)
             {
                 request.ConfirmTimeout = Options.ConfirmTimeout;
             }
+
+            await command.Prepare(cancellationToken);
         }
 
         private async Task<IResponse> WaitForConfirmation<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
@@ -448,19 +448,19 @@ namespace NaiveMq.Client
                 throw new IOException("Incoming command length is 0. Looks like the other side dropped the connection.");
             }
 
-            if (commandNameLength > Options.MaxCommandNameLength)
+            if (commandNameLength > Options.MaxCommandNameSize)
             {
-                throw new ClientException(ErrorCode.CommandNameLengthLong, new object[] { Options.MaxCommandNameLength, commandNameLength });
+                throw new ClientException(ErrorCode.CommandNameLengthLong, new object[] { Options.MaxCommandNameSize, commandNameLength });
             }
 
-            if (commandLength > Options.MaxCommandLength)
+            if (commandLength > Options.MaxCommandSize)
             {
-                throw new ClientException(ErrorCode.CommandLengthLong, new object[] { Options.MaxCommandLength, commandNameLength });
+                throw new ClientException(ErrorCode.CommandLengthLong, new object[] { Options.MaxCommandSize, commandNameLength });
             }
 
-            if (dataLength > Options.MaxDataLength)
+            if (dataLength > Options.MaxDataSize)
             {
-                throw new ClientException(ErrorCode.DataLengthLong, new object[] { Options.MaxDataLength, commandNameLength });
+                throw new ClientException(ErrorCode.DataLengthLong, new object[] { Options.MaxDataSize, commandNameLength });
             }
         }
 
@@ -510,6 +510,9 @@ namespace NaiveMq.Client
                 }
 
                 TraceCommand("<<", command);
+
+                await command.Restore(_stoppingToken);
+                command.Validate();
 
                 await HandleReceiveCommandAsync(command);
             }
@@ -615,7 +618,8 @@ namespace NaiveMq.Client
         {
             if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command)}");
+                var dataCommand = command as IDataCommand;
+                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
             }
         }
     }

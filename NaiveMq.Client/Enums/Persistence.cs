@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Enums
 {
-    public enum Persistent
+    public enum Persistence
     {
         /// <summary>
         /// Message is stored only in memory.

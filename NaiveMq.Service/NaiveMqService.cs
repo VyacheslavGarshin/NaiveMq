@@ -15,19 +15,13 @@ namespace NaiveMq.Service
 {
     public sealed class NaiveMqService : BackgroundService
     {
-        public SpeedCounter WriteCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
-
-        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
-
         public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(1);
 
         public bool Loaded => _loaded;
 
         public bool Started => _started;
+
+        public Storage Storage { get; private set; }
 
         private CancellationToken _stoppingToken;
         
@@ -36,8 +30,6 @@ namespace NaiveMq.Service
         private bool _started;
 
         private TcpListener _listener;
-
-        private Storage _storage;
 
         private readonly ILogger<NaiveMqService> _logger;
         
@@ -80,9 +72,9 @@ namespace NaiveMq.Service
         {
             _stoppingToken = stoppingToken;
 
-            _storage = new Storage(_options.Value, _persistentStorage, _logger, _stoppingToken);
+            Storage = new Storage(_options.Value, _persistentStorage, _logger, _stoppingToken);
 
-            await new PersistentStorageLoader(_storage, _logger, _stoppingToken).LoadAsync();
+            await new PersistentStorageLoader(Storage, _logger, _stoppingToken).LoadAsync();
 
             _loaded = true;
 
@@ -106,11 +98,7 @@ namespace NaiveMq.Service
             base.Dispose();
 
             Stop();
-            _storage.Dispose();
-            ReadCounter.Dispose();
-            WriteCounter.Dispose();
-            ReadMessageCounter.Dispose();
-            WriteMessageCounter.Dispose();
+            Storage.Dispose();
         }
 
         private async Task StartAsync()
@@ -170,7 +158,7 @@ namespace NaiveMq.Service
 
                 client.Start();
                 
-                _storage.TryAddClient(client);
+                Storage.TryAddClient(client);
             }
             catch (Exception ex)
             {
@@ -178,37 +166,37 @@ namespace NaiveMq.Service
 
                 if (client != null)
                 {
-                    _storage.TryRemoveClient(client);
+                    Storage.TryRemoveClient(client);
                 }
             }
         }
 
         private void OnClientStop(NaiveMqClient sender)
         {
-            _storage.TryRemoveClient(sender);
+            Storage.TryRemoveClient(sender);
         }
 
         private Task OnClientSendCommandAsync(NaiveMqClient sender, ICommand command)
         {
-            WriteCounter.Add();
+            Storage.WriteCounter.Add();
             return Task.CompletedTask;
         }
 
         private Task OnClientSendMessageAsync(NaiveMqClient sender, Message command)
         {
-            WriteMessageCounter.Add();
+            Storage.WriteMessageCounter.Add();
             return Task.CompletedTask;
         }
 
         private Task OnClientReceiveCommandAsync(NaiveMqClient sender, ICommand command)
         {
-            ReadCounter.Add();
+            Storage.ReadCounter.Add();
             return Task.CompletedTask;
         }
 
         private Task OnClientReceiveMessageAsync(NaiveMqClient sender, Message command)
         {
-            ReadMessageCounter.Add();
+            Storage.ReadMessageCounter.Add();
             return Task.CompletedTask;
         }
 
@@ -224,8 +212,6 @@ namespace NaiveMq.Service
 
             try
             {
-                request.Validate();
-            
                 response = await HandleRequestAsync(sender, request);
 
                 if (response != null)
@@ -262,11 +248,11 @@ namespace NaiveMq.Service
             }
             catch (ClientException)
             {
-                _storage.TryRemoveClient(client);
+                Storage.TryRemoveClient(client);
             }
             catch (Exception ex)
             {
-                _storage.TryRemoveClient(client);
+                Storage.TryRemoveClient(client);
                 _logger.LogError(ex, "Unexpected error on sending response.");
             }
         }
@@ -280,12 +266,12 @@ namespace NaiveMq.Service
 
                 try
                 {
-                    _storage.TryGetClient(sender.Id, out var clientContext);
+                    Storage.TryGetClient(sender.Id, out var clientContext);
 
                     instance = (IDisposable)Activator.CreateInstance(commandHandler);
                     var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
 
-                    await task.ConfigureAwait(false);
+                    await task;
 
                     var resultProperty = task.GetType().GetProperty("Result");
                     var result = (IResponse)resultProperty.GetValue(task);

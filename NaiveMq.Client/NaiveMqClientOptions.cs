@@ -17,13 +17,16 @@ namespace NaiveMq.Client
 
         public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
+        /// <summary>
+        /// Number of parallel tasks processing the incoming command.
+        /// </summary>
         public int Parallelism { get; set; } = 8;
 
-        public int MaxCommandNameLength { get; set; } = 1024;
+        public int MaxCommandNameSize { get; set; } = 1024;
 
-        public int MaxCommandLength { get; set; } = 1024 * 1024;
+        public int MaxCommandSize { get; set; } = 1024 * 1024;
 
-        public int MaxDataLength { get; set; } = 100 * 1024 * 1024;
+        public int MaxDataSize { get; set; } = 100 * 1024 * 1024;
 
     }
 }

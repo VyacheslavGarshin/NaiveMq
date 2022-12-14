@@ -48,7 +48,7 @@ namespace NaiveMq.Service.Handlers
                     queues.Add(queue);
                 }
 
-                CkeckMessage(messageEntity, queues);
+                CkeckMessage(messageEntity, queue, queues);
 
                 if (await CheckLimitsAndDiscardAsync(context, queues, messageEntity, command))
                 {
@@ -73,11 +73,11 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private static void CkeckMessage(MessageEntity message, List<QueueCog> queues)
+        private static void CkeckMessage(MessageEntity message, QueueCog initialQueue, List<QueueCog> queues)
         {
             foreach (var queue in queues)
             {
-                if (!queue.Entity.Durable && message.Persistent != Persistent.No)
+                if (!initialQueue.Entity.Exchange && !queue.Entity.Durable && message.Persistent != Persistence.No)
                 {
                     throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
                 }
@@ -148,14 +148,20 @@ namespace NaiveMq.Service.Handlers
 
         private static async Task Enqueue(ClientContext context, MessageEntity message, List<QueueCog> queues)
         {
-            foreach (var queue in queues)
+            if (!context.Reinstate)
             {
-                if (!context.Reinstate && message.Persistent != Persistent.No)
+                var saved = false;
+
+                foreach (var queue in queues)
                 {
-                    await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, message, context.StoppingToken);
+                    if (message.Persistent != Persistence.No && queue.Entity.Durable)
+                    {
+                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, message, context.StoppingToken);
+                        saved = true;
+                    }
                 }
 
-                if (message.Persistent == Persistent.DiskOnly)
+                if (message.Persistent == Persistence.DiskOnly && saved)
                 {
                     message.Data = null;
                 }

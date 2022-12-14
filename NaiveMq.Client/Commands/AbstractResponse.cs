@@ -2,11 +2,9 @@
 
 namespace NaiveMq.Client.Commands
 {
-    public abstract class AbstractResponse<T> : IResponse
+    public abstract class AbstractResponse<T> : AbstractCommand, IResponse
         where T : IResponse
     {
-        public Guid Id { get; set; }
-
         public Guid RequestId { get; set; }
 
         public bool Success { get; set; } = true;
@@ -61,7 +59,7 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
-        public virtual void Validate()
+        public override void Validate()
         {
             if (RequestId == Guid.Empty)
             {

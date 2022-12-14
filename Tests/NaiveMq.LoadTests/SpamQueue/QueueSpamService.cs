@@ -42,7 +42,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 using var timer = new Timer((s) =>
                 {
-                    _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.ReadMessageCounter.LastResult};Write message/s;{_queueService.WriteMessageCounter.LastResult};Read/s;{_queueService.ReadCounter.LastResult};Write/s;{_queueService.WriteCounter.LastResult};Total read;{_queueService.ReadCounter.Total};Total write;{_queueService.WriteCounter.Total}");
+                    _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Storage.ReadMessageCounter.LastResult};" +
+                        $"Write message/s;{_queueService.Storage.WriteMessageCounter.LastResult};" +
+                        $"Read/s;{_queueService.Storage.ReadCounter.LastResult};" +
+                        $"Write/s;{_queueService.Storage.WriteCounter.LastResult};" +
+                        $"Total read;{_queueService.Storage.ReadCounter.Total};" +
+                        $"Total write;{_queueService.Storage.WriteCounter.Total}");
                 }, null, 0, 1000);
 
                 await QueueSpam();
@@ -176,21 +181,23 @@ namespace NaiveMq.LoadTests.SpamQueue
             });
         }
 
-        private async Task Produce(byte[] message, string queueName, NaiveMqClient c)
+        private async Task Produce(byte[] bytes, string queueName, NaiveMqClient c)
         {
             try
             {
-                var response = await c.SendAsync(new Message
+                if (_options.Value.Batch)
+                {
+                    var batch = new Batch
                     {
-                        Queue = queueName,
-                        Persistent = _options.Value.PersistentMessage,
-                        Request = _options.Value.Request,
-                        Data = message,
-                        Confirm = _options.Value.Confirm,
-                        ConfirmTimeout = _options.Value.ConfirmTimeout,
-                    },
-                    _stoppingToken);
+                        Messages = Enumerable.Range(0, _options.Value.BatchSize).Select(x => CreateMessage(bytes, queueName)).ToList()
+                    };
 
+                    var response = await c.SendAsync(batch, _stoppingToken);
+                }
+                else
+                {
+                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _stoppingToken);
+                }
 
                 if (_options.Value.SendDelay != null)
                 {
@@ -214,6 +221,19 @@ namespace NaiveMq.LoadTests.SpamQueue
                 _logger.LogError(ex, "Spam send error");
                 throw;
             }
+        }
+
+        private Message CreateMessage(byte[] bytes, string queueName)
+        {
+            return new Message
+            {
+                Queue = queueName,
+                Persistent = _options.Value.PersistentMessage,
+                Request = _options.Value.Request,
+                Data = bytes,
+                Confirm = _options.Value.Confirm,
+                ConfirmTimeout = _options.Value.ConfirmTimeout,
+            };
         }
 
         private void CheckClientActivity(NaiveMqClient c, SemaphoreSlim exitSp, ref DateTime lastActivity, ref TimeSpan delta)
@@ -247,11 +267,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                     var body = message.Data.ToArray();
                 }
 
-                if (message.Confirm || message.Request)
+                if (message.Confirm)
                 {
                     try
                     {
-                        await client.SendAsync(Confirmation.Ok(message.Id, Encoding.UTF8.GetBytes("Answer")), _stoppingToken);
+                        await client.SendAsync(Confirmation.Ok(message.Id, message.Request ? Encoding.UTF8.GetBytes("Answer") : null), _stoppingToken);
                     }
                     catch (ClientException)
                     {
@@ -295,7 +315,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistent.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistence.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
             if (_options.Value.DeleteBinding)

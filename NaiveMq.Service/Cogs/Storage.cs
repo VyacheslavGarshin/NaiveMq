@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
+using NaiveMq.Client.Common;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
 
@@ -7,6 +8,14 @@ namespace NaiveMq.Service.Cogs
 {
     public class Storage : IDisposable
     {
+        public SpeedCounter WriteCounter { get; set; } = new(10);
+
+        public SpeedCounter ReadCounter { get; set; } = new(10);
+
+        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
+
+        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
+
         public IPersistentStorage PersistentStorage { get; set; }
 
         public bool MemoryLimitExceeded { get; private set; }
@@ -57,6 +66,11 @@ namespace NaiveMq.Service.Cogs
                 // we don't manage lifecycle of persistence storage
                 PersistentStorage = null;
             }
+
+            ReadCounter.Dispose();
+            WriteCounter.Dispose();
+            ReadMessageCounter.Dispose();
+            WriteMessageCounter.Dispose();
         }
 
         public bool TryGetClient(int id, out ClientContext clientContext)
