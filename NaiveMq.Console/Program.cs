@@ -71,6 +71,13 @@ do
     }
 } while (!quit);
 
+void WriteCommand(bool isOut, ICommand command)
+{
+    var dataCommand = command as IDataCommand;
+    Console.WriteLine($"{(isOut ? "Out" : "In")} {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}" +
+        $"{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
+}
+
 NaiveMqClient CreateClient()
 {
     var client = new NaiveMqClient(new NaiveMqClientOptions { Autostart = false }, logger, CancellationToken.None);
@@ -90,13 +97,13 @@ NaiveMqClient CreateClient()
     client.OnReceiveCommandAsync += (sender, command) =>
     {
         using var сс = new ConsoleContext(responseColor);
-        Console.WriteLine($"In {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}");
+        WriteCommand(false, command);
         return Task.CompletedTask;
     };
 
     client.OnSendCommandAsync += (sender, command) =>
     {
-        Console.WriteLine($"Out {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}");
+        WriteCommand(true, command);
         return Task.CompletedTask;
     };
 
