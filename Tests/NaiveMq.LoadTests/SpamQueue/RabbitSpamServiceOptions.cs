@@ -26,6 +26,8 @@
 
         public bool ReadBody { get; set; }
 
+        public bool Batch { get; set; }
+
         public int BatchSize { get; set; } = 1;
     }
 }

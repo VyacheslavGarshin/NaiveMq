@@ -132,7 +132,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                      basicProperties: props,
                                      body: body);
 
-                if (_options.Value.Confirm && number == _options.Value.BatchSize)
+                if (_options.Value.Confirm && (number == _options.Value.BatchSize || !_options.Value.Batch))
                     channel.WaitForConfirms();
             }
             catch (Exception ex)
