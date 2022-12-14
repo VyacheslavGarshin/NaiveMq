@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NaiveMq.Client.Commands
 {
@@ -9,6 +11,10 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         public Guid Id { get; set; }
 
+        public Task Prepare(CancellationToken cancellationToken);
+
         public void Validate();
+
+        public Task Restore(CancellationToken cancellationToken);
     }
 }
