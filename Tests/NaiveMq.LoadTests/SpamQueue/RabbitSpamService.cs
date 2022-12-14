@@ -72,9 +72,20 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             Consume(queueName, channel);
 
+                            var number = 1;
+
                             for (var j = 1; j <= _options.Value.MessageCount; j++)
                             {
-                                Publish(body, queueName, channel);
+                                Publish(body, queueName, channel, number);
+
+                                if (number < _options.Value.BatchSize)
+                                {
+                                    number++;
+                                }
+                                else
+                                {
+                                    number = 1;
+                                }
                             }
 
                             return Task.CompletedTask;
@@ -109,7 +120,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private void Publish(byte[] body, string queueName, IModel channel)
+        private void Publish(byte[] body, string queueName, IModel channel, int number)
         {
             var props = channel.CreateBasicProperties();
             props.Persistent = _options.Value.Durable; // or props.DeliveryMode = 2;
@@ -121,7 +132,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                      basicProperties: props,
                                      body: body);
 
-                if (_options.Value.Confirm)
+                if (_options.Value.Confirm && number == _options.Value.BatchSize)
                     channel.WaitForConfirms();
             }
             catch (Exception ex)

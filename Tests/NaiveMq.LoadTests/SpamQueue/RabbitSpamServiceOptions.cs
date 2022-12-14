@@ -25,5 +25,7 @@
         public int MessageLength { get; set; } = 100;
 
         public bool ReadBody { get; set; }
+
+        public int BatchSize { get; set; } = 1;
     }
 }
