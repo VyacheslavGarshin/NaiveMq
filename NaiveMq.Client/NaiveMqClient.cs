@@ -189,7 +189,7 @@ namespace NaiveMq.Client
         /// <exception cref="ConfirmationException<TResponse>"></exception>
         /// <exception cref="TimeoutException"></exception>
         /// <returns></returns>
-        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
+        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken, bool wait = true)
             where TResponse : IResponse
         {
             await PrepareCommandAsync(request, cancellationToken);
@@ -197,11 +197,11 @@ namespace NaiveMq.Client
 
             IResponse response = null;
             ResponseItem responseItem = null;
-            var confirm = request.Confirm;
+            var confirmAndWait = request.Confirm && wait;
 
             try
             {
-                if (confirm)
+                if (confirmAndWait)
                 {
                     responseItem = new ResponseItem();
                     _responses[request.Id] = responseItem;
@@ -214,14 +214,14 @@ namespace NaiveMq.Client
                     await OnSendMessageAsync.Invoke(this, message);
                 }
 
-                if (confirm)
+                if (confirmAndWait)
                 {
                     response = await WaitForConfirmation(request, responseItem, cancellationToken);
                 }
             }
             finally
             {
-                if (confirm)
+                if (confirmAndWait)
                 {
                     _responses.TryRemove(request.Id, out var _);
                     responseItem.Dispose();
