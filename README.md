@@ -45,7 +45,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | **Producers**                            |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 38.000    | 25.000*   |              |              |                 |                 |
 | In memory message with confirmation      | 15.000    |  8.000    |              |              |                 |                 |
-| - handle confirms in a separate handler  | 21.000    |  8.000    |              |              |                 |                 |
+| - handle confirms in a separate handler  | 21.000    |      -    |              |              |                 |                 |
 | Persistent message without confirmation  |  2.700    | 10.000**  |              |              |                 |                 |
 | Persistent message with confirmation     |  1.900    |  1.000    |              |              |                 |                 |
 
