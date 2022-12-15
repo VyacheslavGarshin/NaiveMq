@@ -237,7 +237,7 @@ namespace NaiveMq.Service
 
         private async Task SendError(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
         {
-            await SendAsync(sender, Confirmation.Error(request.Id, errorCode, errorMessage));
+            await SendAsync(sender, Confirmation.Error(request, errorCode, errorMessage));
         }
 
         private async Task SendAsync(NaiveMqClient client, IResponse response)

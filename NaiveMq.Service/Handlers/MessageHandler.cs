@@ -16,6 +16,7 @@ namespace NaiveMq.Service.Handlers
             var message = new MessageEntity
             {
                 Id = command.Id,
+                Tag = command.Tag,
                 ClientId = context.Client?.Id,
                 Queue = command.Queue,
                 Request = command.Request,

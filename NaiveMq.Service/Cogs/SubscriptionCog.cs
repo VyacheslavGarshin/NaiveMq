@@ -131,6 +131,7 @@ namespace NaiveMq.Service.Cogs
                 var confirmation = new Confirmation
                 {
                     RequestId = result.RequestId,
+                    RequestTag = result.RequestTag,
                     Success = result.Success,
                     ErrorCode = result.ErrorCode,
                     ErrorMessage = result.ErrorMessage,
@@ -149,6 +150,7 @@ namespace NaiveMq.Service.Cogs
                 ConfirmTimeout = _confirmTimeout,
                 Queue = messageEntity.Queue,
                 Request = messageEntity.Request,
+                Tag = messageEntity.Tag,
                 Persistent = messageEntity.Persistent,
                 RoutingKey = messageEntity.RoutingKey,
                 Data = messageEntity.Data
@@ -159,6 +161,7 @@ namespace NaiveMq.Service.Cogs
             if (result != null && result.Data.Length != 0)
             {
                 result.RequestId = messageEntity.Id;
+                result.RequestTag = messageEntity.Tag;
             }
 
             return result;

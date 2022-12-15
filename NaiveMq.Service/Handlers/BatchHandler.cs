@@ -24,7 +24,7 @@ namespace NaiveMq.Service.Handlers
                 catch (Exception ex)
                 {
                     confirmations.Add(Confirmation.Error(
-                        command.Id,
+                        command,
                         ex is ServerException serverException ? serverException.ErrorCode.ToString() : string.Empty,
                         ex.GetBaseException().Message));
                 }

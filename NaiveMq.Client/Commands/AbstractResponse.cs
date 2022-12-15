@@ -7,26 +7,13 @@ namespace NaiveMq.Client.Commands
     {
         public Guid RequestId { get; set; }
 
+        public string RequestTag { get; set; }
+
         public bool Success { get; set; } = true;
 
         public string ErrorCode { get; set; }
 
         public string ErrorMessage { get; set; }
-
-        /// <summary>
-        /// Returns new(T) with set <see cref="RequestId"/>.
-        /// </summary>
-        /// <param name="requestId"></param>
-        /// <returns></returns>
-        public static T Ok(Guid requestId)
-        {
-            var result = Activator.CreateInstance<T>();
-
-            result.RequestId = requestId;
-            result.Success = true;
-
-            return result;
-        }
 
         /// <summary>
         /// Returns new(T) with set <see cref="RequestId"/> if <see cref="request.Confirm"/>.
@@ -37,7 +24,9 @@ namespace NaiveMq.Client.Commands
         public static TResult Ok<TResult>(IRequest<TResult> request, Action<TResult> action = null)
             where TResult : IResponse, new()
         {
-            var result = (request?.Confirm ?? false) ? new TResult { RequestId = request.Id, Success = true } : default;
+            var result = (request?.Confirm ?? false) 
+                ? new TResult { RequestId = request.Id, RequestTag = request.Tag, Success = true } 
+                : default;
 
             if (result != null)
             {
@@ -47,11 +36,12 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
-        public static T Error(Guid requestId, string errorCode, string errorMessage)
+        public static T Error(IRequest request, string errorCode, string errorMessage)
         {
             var result = Activator.CreateInstance<T>();
 
-            result.RequestId = requestId;
+            result.RequestId = request.Id;
+            result.RequestTag = request.Tag;
             result.Success = false;
             result.ErrorCode = errorCode;
             result.ErrorMessage = errorMessage;

@@ -5,6 +5,8 @@ namespace NaiveMq.Client.Commands
     public abstract class AbstractRequest<TResponse> : AbstractCommand, IRequest<TResponse>
         where TResponse : IResponse
     {
+        public string Tag { get; set; }
+
         public bool Confirm { get; set; } = true;
 
         public TimeSpan? ConfirmTimeout { get; set; }

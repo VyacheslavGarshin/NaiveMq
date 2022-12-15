@@ -6,6 +6,8 @@ namespace NaiveMq.Client.Commands
     {
         public Guid RequestId { get; set; }
 
+        public string RequestTag { get; set; }
+
         public bool Success { get; set; }
 
         public string ErrorCode { get; set; }

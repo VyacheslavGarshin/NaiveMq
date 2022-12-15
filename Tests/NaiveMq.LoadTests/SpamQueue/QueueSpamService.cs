@@ -227,6 +227,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             return new Message
             {
+                Tag = $"Tag {DateTime.Now.ToShortTimeString()}",
                 Queue = queueName,
                 Persistent = _options.Value.PersistentMessage,
                 Request = _options.Value.Request,
@@ -271,7 +272,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     try
                     {
-                        await client.SendAsync(Confirmation.Ok(message.Id, message.Request ? Encoding.UTF8.GetBytes("Answer") : null), _stoppingToken);
+                        await client.SendAsync(Confirmation.Ok(message, message.Request ? Encoding.UTF8.GetBytes("Answer") : null), _stoppingToken);
                     }
                     catch (ClientException)
                     {
