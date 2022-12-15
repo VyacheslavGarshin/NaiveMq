@@ -180,16 +180,29 @@ namespace NaiveMq.Client
             }
         }
 
+        public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
+            where TResponse : IResponse
+        {
+            return SendAsync(request, true, CancellationToken.None);
+        }
+
+        public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
+            where TResponse : IResponse
+        { 
+            return SendAsync(request, true, cancellationToken);
+        }
+
         /// <summary>
         /// Send request.
         /// </summary>
         /// <param name="request"></param>
+        /// <param name="wait"></param>
         /// <param name="cancellationToken"></param>
         /// <exception cref="ConnectionException"></exception>
         /// <exception cref="ConfirmationException<TResponse>"></exception>
         /// <exception cref="TimeoutException"></exception>
         /// <returns></returns>
-        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken, bool wait = true)
+        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
             await PrepareCommandAsync(request, cancellationToken);
@@ -229,6 +242,11 @@ namespace NaiveMq.Client
             }
 
             return (TResponse)response;
+        }
+
+        public Task SendAsync(IResponse response)
+        {
+            return SendAsync(response, CancellationToken.None);
         }
 
         /// <summary>

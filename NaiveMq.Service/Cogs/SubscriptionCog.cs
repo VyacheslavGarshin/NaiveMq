@@ -156,7 +156,7 @@ namespace NaiveMq.Service.Cogs
                 Data = messageEntity.Data
             };
 
-            var result = await _context.Client.SendAsync(message, cancellationToken);
+            var result = await _context.Client.SendAsync(message, true, cancellationToken);
 
             if (result != null && result.Data.Length != 0)
             {

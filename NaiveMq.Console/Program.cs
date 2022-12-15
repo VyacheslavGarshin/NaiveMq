@@ -199,7 +199,7 @@ async Task<bool> SendAsync(string input)
 {
     var split = input.Split(' ', 2);
 
-    var func = client.GetType().GetMethods().First(x => x.Name == nameof(client.SendAsync));
+    var func = client.GetType().GetMethods().First(x => x.Name == nameof(client.SendAsync) && x.GetParameters().Length == 3);
 
     if (split.Length > 0 && NaiveMqClient.CommandTypes.TryGetValue(split[0], out var commandType))
     {
@@ -208,7 +208,7 @@ async Task<bool> SendAsync(string input)
         if (command != null && commandType.BaseType != null)
         {
             var method = func.MakeGenericMethod(commandType.BaseType.GetGenericArguments());
-            await (Task)method.Invoke(client, new object[] { command, CancellationToken.None });
+            await (Task)method.Invoke(client, new object[] { command, true, CancellationToken.None });
 
             return true;
         }
