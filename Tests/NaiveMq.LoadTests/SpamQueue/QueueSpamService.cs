@@ -99,78 +99,32 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 var message = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*")));
 
+                var consumers = new List<NaiveMqClient>();
+
+                if (_options.Value.Subscribe)
+                {
+                    CreateConsumers(clientLogger, taskCount, options, consumers);
+                }
+
                 for (var run = 0; run < _options.Value.Runs; run++)
                 {
                     _logger.LogInformation($"Run {run + 1} is started.");
-
-                    var tasks = new List<Task>();
-
-                    for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
-                    {
-                        var queueName = _options.Value.QueueName + queue;
-
-                        for (var i = 0; i < taskCount; i++)
-                        {
-                            var t = Task.Run(async () =>
-                            {
-                                using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
-
-                                if (!string.IsNullOrEmpty(_options.Value.Username))
-                                {
-                                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                                }
-
-                                if (_options.Value.Subscribe)
-                                {
-                                    await c.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
-                                }
-
-                                Consume(c);
-
-                                using var exitSp = new SemaphoreSlim(1, 1);
-
-                                var sw = Stopwatch.StartNew();
-                                await exitSp.WaitAsync();
-
-                                var lastActivity = DateTime.Now;
-                                TimeSpan delta = TimeSpan.Zero;
-
-                                using var timer = new Timer((s) =>
-                                {
-                                    CheckClientActivity(c, exitSp, ref lastActivity, ref delta);
-                                }, null, 0, 1000);
-
-                                for (var j = 1; j <= max; j++)
-                                {
-                                    await Produce(message, queueName, c);
-                                }
-
-                                await exitSp.WaitAsync();
-
-                                timer.Dispose();
-
-                                if (_options.Value.Subscribe)
-                                {
-                                    await c.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
-                                }
-
-                                _logger.LogInformation($"Client {c.Id} took {sw.Elapsed.Subtract(delta)} to finish. Read: {c.ReadCounter.Total}, write {c.WriteCounter.Total}");
-                            });
-
-                            tasks.Add(t);
-                        }                        
-                    }
-
-                    try
-                    {
-                        Task.WaitAll(tasks.ToArray());
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
-                    }
+                    
+                    RunProducers(clientLogger, taskCount, max, options, message);
 
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
+                }
+
+                if (_options.Value.Subscribe)
+                {
+                    foreach (var consumer in consumers)
+                    {
+                        for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                        {
+                            var queueName = _options.Value.QueueName + queue;
+                            await c.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
+                        }
+                    }
                 }
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
@@ -179,6 +133,72 @@ namespace NaiveMq.LoadTests.SpamQueue
                         await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName + queue }, _stoppingToken);
                 }
             });
+        }
+
+        private void RunProducers(ILogger<NaiveMqClient> clientLogger, int taskCount, int max, NaiveMqClientOptions options, byte[] message)
+        {
+            var tasks = new List<Task>();
+
+            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            {
+                var queueName = _options.Value.QueueName + queue;
+
+                for (var i = 0; i < taskCount; i++)
+                {
+                    var t = Task.Run(async () =>
+                    {
+                        using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
+
+                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        {
+                            await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                        }
+
+                        for (var j = 1; j <= max; j++)
+                        {
+                            await Produce(message, queueName, c);
+                        }
+                    });
+
+                    tasks.Add(t);
+                }
+            }
+
+            try
+            {
+                Task.WaitAll(tasks.ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+            }
+        }
+
+        private void CreateConsumers(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
+        {
+            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            {
+                var queueName = _options.Value.QueueName + queue;
+
+                for (var i = 0; i < taskCount; i++)
+                {
+                    Task.Run(async () =>
+                    {
+                        var client = new NaiveMqClient(options, clientLogger, _stoppingToken);
+
+                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        {
+                            await client.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                        }
+
+                        await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
+
+                        Consume(client);
+
+                        consumers.Add(client);
+                    });
+                }
+            }
         }
 
         private async Task Produce(byte[] bytes, string queueName, NaiveMqClient c)
