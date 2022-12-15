@@ -92,7 +92,14 @@ namespace NaiveMq.Service.Handlers
                 {
                     if (context.Storage.MemoryLimitExceeded && queue.LengthLimit == null && queue.Length > 1)
                     {
-                        queue.LengthLimit = (long)(queue.Length * 0.9);
+                        var limit = (long)(queue.Length * 0.9);
+
+                        if (limit == 0)
+                        {
+                            limit = 1;
+                        }
+
+                        queue.LengthLimit = limit;
                     }
 
                     if (queue.LimitExceeded(message))
