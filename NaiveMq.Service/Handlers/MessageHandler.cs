@@ -87,7 +87,7 @@ namespace NaiveMq.Service.Handlers
 
         private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, MessageEntity message, Message command)
         {
-            if (!context.Reinstate) {
+            if (!context.Reinstate && command != null) {
                 foreach (var queue in queues)
                 {
                     if (context.Storage.MemoryLimitExceeded && queue.LengthLimit == null && queue.Length > 1)

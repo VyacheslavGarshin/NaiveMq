@@ -304,7 +304,7 @@ namespace NaiveMq.Client
             {
                 if (!responseItem.Response.Success)
                 {
-                    throw new ClientException(ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage);
+                    throw new ClientException(ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage) { Response = responseItem.Response };
                 }
                 else
                 {

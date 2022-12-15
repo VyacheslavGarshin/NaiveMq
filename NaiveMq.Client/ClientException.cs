@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Common;
+﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Common;
 using System;
 
 namespace NaiveMq.Client
@@ -6,6 +7,8 @@ namespace NaiveMq.Client
     public class ClientException : Exception
     {
         public ErrorCode ErrorCode { get; set; }
+
+        public IResponse Response { get; set; }
 
         public ClientException(ErrorCode errorCode) : this(errorCode, errorCode.GetDescription(), null)
         {

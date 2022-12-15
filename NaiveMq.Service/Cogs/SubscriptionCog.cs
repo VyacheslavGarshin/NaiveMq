@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
@@ -70,6 +71,8 @@ namespace NaiveMq.Service.Cogs
 
                     if (messageEntity != null)
                     {
+                        Confirmation confirmation = null;
+
                         try
                         {
                             if (messageEntity.Persistent == Persistence.DiskOnly)
@@ -80,24 +83,31 @@ namespace NaiveMq.Service.Cogs
                                 messageEntity.Data = diskMessageEntity.Data;
                             }
 
-                            var result = await SendMessage(messageEntity, cancellationToken);
+                            confirmation = await SendMessage(messageEntity, cancellationToken);
 
                             if (messageEntity.Persistent != Persistence.No)
                             {
                                 await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username, 
                                     _queue.Entity.Name, messageEntity.Id, cancellationToken);
                             }
-
-                            if (messageEntity.Request)
-                            {
-                                await SendConfirmation(messageEntity, result, cancellationToken);
-                            }
                         }
-                        catch (Exception)
+                        catch (Exception ex)
                         {
+                            if (ex is ClientException clientException && clientException.Response != null)
+                            {
+                                confirmation = clientException.Response as Confirmation;
+                            }
+
                             if (!messageEntity.Request)
                             {
                                 await ReEnqueueMessage(messageEntity);
+                            }
+                        }
+                        finally
+                        {
+                            if (confirmation != null && messageEntity.Request)
+                            {
+                                await SendConfirmation(messageEntity, confirmation, cancellationToken);
                             }
                         }
                     }
@@ -109,7 +119,7 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                if (!_context.Client.Started)
+                if (_context.Client.Started)
                 {
                     _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
                 }

@@ -43,20 +43,20 @@ namespace NaiveMq.Service.Cogs
                 {
                     Interlocked.Add(ref _volumeInMemory, -message.DataLength);
                 }
-            }
 
-            try
-            {
-                if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message))
+                try
                 {
-                    LengthLimit = null;
+                    if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message))
+                    {
+                        LengthLimit = null;
 
-                    _limitSemaphore.Release();
+                        _limitSemaphore.Release();
+                    }
                 }
-            }
-            catch (SemaphoreFullException)
-            {
+                catch (SemaphoreFullException)
+                {
 
+                }
             }
 
             return message;
