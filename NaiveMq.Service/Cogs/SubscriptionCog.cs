@@ -148,9 +148,9 @@ namespace NaiveMq.Service.Cogs
             {
                 Confirm = _confirm,
                 ConfirmTimeout = _confirmTimeout,
+                Tag = messageEntity.Tag,
                 Queue = messageEntity.Queue,
                 Request = messageEntity.Request,
-                Tag = messageEntity.Tag,
                 Persistent = messageEntity.Persistent,
                 RoutingKey = messageEntity.RoutingKey,
                 Data = messageEntity.Data
