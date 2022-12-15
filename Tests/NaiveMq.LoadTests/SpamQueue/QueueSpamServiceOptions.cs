@@ -99,5 +99,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public bool Batch { get; set; }
 
         public int BatchSize { get; set; } = 10;
+
+        public bool Wait { get; set; } = true;
     }
 }
