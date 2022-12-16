@@ -16,6 +16,8 @@ namespace NaiveMq.Service.Cogs
 
         public SpeedCounter WriteMessageCounter { get; set; } = new(10);
 
+        public NaiveMqServiceOptions Options { get; }
+
         public IPersistentStorage PersistentStorage { get; set; }
 
         public bool MemoryLimitExceeded { get; private set; }
@@ -30,11 +32,10 @@ namespace NaiveMq.Service.Cogs
 
         private readonly Timer _timer;
 
-        private readonly NaiveMqServiceOptions _options;
 
         public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
         {
-            _options = options;
+            Options = options;
             _logger = logger;
             _stoppingToken = stoppingToken;
 
@@ -115,9 +116,9 @@ namespace NaiveMq.Service.Cogs
         private void UpdateMemoryLimitExceeded()
         {
             var memoryInfo = GC.GetGCMemoryInfo();
-            var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes;
-            MemoryLimitExceeded = ((double)freeMemory / memoryInfo.HighMemoryLoadThresholdBytes) < 0.1
-                || (_options.MemoryLimit != null && memoryInfo.HeapSizeBytes > _options.MemoryLimit);
+            var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes + memoryInfo.HeapSizeBytes;
+            MemoryLimitExceeded = freeMemory < 0.01 * (100 - Options.AutoMemoryLimitThreshold) * memoryInfo.HighMemoryLoadThresholdBytes
+                || (Options.MemoryLimit != null && memoryInfo.HeapSizeBytes > Options.MemoryLimit);
         }
     }
 }
