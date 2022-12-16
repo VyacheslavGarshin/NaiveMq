@@ -69,11 +69,11 @@ namespace NaiveMq.Service.Cogs
                 {
                     try
                     {
-                        var messageEntity = await _queue.TryDequeue(cancellationToken);
+                        var messageEntity = await _queue.TryDequeueAsync(cancellationToken);
 
                         if (messageEntity != null)
                         {
-                            await ProcessMessage(messageEntity, cancellationToken);
+                            await ProcessMessageAsync(messageEntity, cancellationToken);
                         }
                     }
                     catch (ServerException ex)
@@ -104,7 +104,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task ProcessMessage(MessageEntity messageEntity, CancellationToken cancellationToken)
+        private async Task ProcessMessageAsync(MessageEntity messageEntity, CancellationToken cancellationToken)
         {
             Confirmation confirmation = null;
 
@@ -118,7 +118,7 @@ namespace NaiveMq.Service.Cogs
                     messageEntity.Data = diskMessageEntity.Data;
                 }
 
-                confirmation = await SendMessage(messageEntity, cancellationToken);
+                confirmation = await SendMessageAsync(messageEntity, cancellationToken);
 
                 if (messageEntity.Persistent != Persistence.No)
                 {
@@ -135,25 +135,25 @@ namespace NaiveMq.Service.Cogs
 
                 if (!messageEntity.Request)
                 {
-                    await ReEnqueueMessage(messageEntity);
+                    await ReEnqueueMessageAsync(messageEntity);
                 }
             }
             finally
             {
                 if (confirmation != null && messageEntity.Request)
                 {
-                    await SendConfirmation(messageEntity, confirmation, cancellationToken);
+                    await SendConfirmationAsync(messageEntity, confirmation, cancellationToken);
                 }
             }
         }
 
-        private async Task ReEnqueueMessage(MessageEntity messageEntity)
+        private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)
         {
             using var handler = new MessageHandler();
             await handler.ExecuteEntityAsync(_context, messageEntity);
         }
 
-        private async Task<Confirmation> SendMessage(MessageEntity messageEntity, CancellationToken cancellationToken)
+        private async Task<Confirmation> SendMessageAsync(MessageEntity messageEntity, CancellationToken cancellationToken)
         {
             var message = new Message
             {
@@ -178,7 +178,7 @@ namespace NaiveMq.Service.Cogs
             return result;
         }
 
-        private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
+        private async Task SendConfirmationAsync(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
         {
             if (messageEntity.ClientId != null && _context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverContext))
             {

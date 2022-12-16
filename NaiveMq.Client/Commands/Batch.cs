@@ -18,9 +18,9 @@ namespace NaiveMq.Client.Commands
         [JsonIgnore]
         public ReadOnlyMemory<byte> Data { get; set; }
 
-        public override async Task Prepare(CancellationToken cancellationToken)
+        public override async Task PrepareAsync(CancellationToken cancellationToken)
         {
-            await base.Prepare(cancellationToken);
+            await base.PrepareAsync(cancellationToken);
 
             if (Messages != null && Messages.Count > 0)
             {
@@ -28,7 +28,7 @@ namespace NaiveMq.Client.Commands
 
                 foreach (var message in Messages)
                 {
-                    await message.Prepare(cancellationToken);
+                    await message.PrepareAsync(cancellationToken);
 
                     message.Confirm = Confirm;
                     message.ConfirmTimeout = ConfirmTimeout;
@@ -76,9 +76,9 @@ namespace NaiveMq.Client.Commands
             }
         }
 
-        public override async Task Restore(CancellationToken cancellationToken)
+        public override async Task RestoreAsync(CancellationToken cancellationToken)
         {
-            await base.Restore(cancellationToken);
+            await base.RestoreAsync(cancellationToken);
 
             // todo get rid of ToArray
             using var memoryStream = new MemoryStream(Data.ToArray());

@@ -229,7 +229,7 @@ namespace NaiveMq.Client
 
                 if (confirmAndWait)
                 {
-                    response = await WaitForConfirmation(request, responseItem, cancellationToken);
+                    response = await WaitForConfirmationAsync(request, responseItem, cancellationToken);
                 }
             }
             finally
@@ -286,10 +286,10 @@ namespace NaiveMq.Client
                 request.ConfirmTimeout = Options.ConfirmTimeout;
             }
 
-            await command.Prepare(cancellationToken);
+            await command.PrepareAsync(cancellationToken);
         }
 
-        private async Task<IResponse> WaitForConfirmation<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
+        private async Task<IResponse> WaitForConfirmationAsync<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
             IResponse response;
@@ -529,7 +529,7 @@ namespace NaiveMq.Client
 
                 TraceCommand("<<", command);
 
-                await command.Restore(_stoppingToken);
+                await command.RestoreAsync(_stoppingToken);
                 command.Validate();
 
                 await HandleReceiveCommandAsync(command);

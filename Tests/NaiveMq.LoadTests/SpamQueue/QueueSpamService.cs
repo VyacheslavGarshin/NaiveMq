@@ -50,7 +50,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                         $"Total write;{_queueService.Storage.WriteCounter.Total}");
                 }, null, 0, 1000);
 
-                await QueueSpam();
+                await QueueSpamAsync();
             }
 
             while (!stoppingToken.IsCancellationRequested)
@@ -64,7 +64,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             return Task.CompletedTask;
         }
 
-        private async Task QueueSpam()
+        private async Task QueueSpamAsync()
         {
             var clientLogger = _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>();
 
@@ -88,12 +88,12 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                 {
-                    await CheckQueueCommands(c, queue);
+                    await CheckQueueCommandsAsync(c, queue);
                 }
 
-                await CheckUserCommands(c);
+                await CheckUserCommandsAsync(c);
 
-                await CheckExchange(c);
+                await CheckExchangeAsync(c);
 
                 var swt = Stopwatch.StartNew();
 
@@ -101,7 +101,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 var consumers = new List<NaiveMqClient>();
 
-                await CreateConsumers(clientLogger, taskCount, options, consumers);
+                await CreateConsumersAsync(clientLogger, taskCount, options, consumers);
 
                 for (var run = 0; run < _options.Value.Runs; run++)
                 {
@@ -112,7 +112,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                 }
 
-                await Unsubscribe(c, consumers);
+                await UnsubscribeAsync(c, consumers);
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                 {
@@ -122,7 +122,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             });
         }
 
-        private async Task Unsubscribe(NaiveMqClient c, List<NaiveMqClient> consumers)
+        private async Task UnsubscribeAsync(NaiveMqClient c, List<NaiveMqClient> consumers)
         {
             if (_options.Value.Subscribe)
             {
@@ -176,7 +176,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private async Task CreateConsumers(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
+        private async Task CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
         {
             if (_options.Value.Subscribe)
             {
@@ -308,7 +308,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             };
         }
 
-        private async Task CheckExchange(NaiveMqClient c)
+        private async Task CheckExchangeAsync(NaiveMqClient c)
         {
             if (_options.Value.AddExchange)
             {
@@ -332,7 +332,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private async Task CheckQueueCommands(NaiveMqClient c, int queue)
+        private async Task CheckQueueCommandsAsync(NaiveMqClient c, int queue)
         {
             var queueName = _options.Value.QueueName + queue;
 
@@ -367,7 +367,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private async Task CheckUserCommands(NaiveMqClient c)
+        private async Task CheckUserCommandsAsync(NaiveMqClient c)
         {
             if (_options.Value.GetProfile)
             {

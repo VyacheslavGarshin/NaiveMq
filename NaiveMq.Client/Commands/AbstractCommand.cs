@@ -8,7 +8,7 @@ namespace NaiveMq.Client.Commands
     {
         public Guid Id { get; set; }
 
-        public virtual Task Prepare(CancellationToken cancellationToken)
+        public virtual Task PrepareAsync(CancellationToken cancellationToken)
         {
             if (Id == Guid.Empty)
             {
@@ -26,7 +26,7 @@ namespace NaiveMq.Client.Commands
             }
         }
 
-        public virtual Task Restore(CancellationToken cancellationToken)
+        public virtual Task RestoreAsync(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

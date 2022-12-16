@@ -56,7 +56,7 @@ namespace NaiveMq.Service.Handlers
                     return Confirmation.Ok(command);
                 }
 
-                await Enqueue(context, messageEntity, queues);
+                await EnqueueAsync(context, messageEntity, queues);
 
                 if (messageEntity.Request)
                 {
@@ -107,7 +107,7 @@ namespace NaiveMq.Service.Handlers
                         switch (queue.Entity.LimitStrategy)
                         {
                             case LimitStrategy.Delay:
-                                if (!await queue.WaitLimitSemaphore(command.ConfirmTimeout.Value, context.StoppingToken))
+                                if (!await queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, context.StoppingToken))
                                 {
                                     // Client side will fire it's own confirmation timeout and abandon request. 
                                     // We need to discard the message.
@@ -154,7 +154,7 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task Enqueue(ClientContext context, MessageEntity message, List<QueueCog> queues)
+        private static async Task EnqueueAsync(ClientContext context, MessageEntity message, List<QueueCog> queues)
         {
             if (!context.Reinstate)
             {

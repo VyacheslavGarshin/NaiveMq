@@ -35,7 +35,7 @@ namespace NaiveMq.Service.Cogs
             CreateSemaphores();
         }
 
-        public async Task<MessageEntity> TryDequeue(CancellationToken cancellationToken)
+        public async Task<MessageEntity> TryDequeueAsync(CancellationToken cancellationToken)
         {
             CheckStarted();
 
@@ -84,7 +84,7 @@ namespace NaiveMq.Service.Cogs
             _dequeueSemaphore.Release();
         }
 
-        public async Task<bool> WaitLimitSemaphore(TimeSpan timout, CancellationToken cancellationToken)
+        public async Task<bool> WaitLimitSemaphoreAsync(TimeSpan timout, CancellationToken cancellationToken)
         {
             return await _limitSemaphore.WaitAsync((int)timout.TotalMilliseconds, cancellationToken);
         }

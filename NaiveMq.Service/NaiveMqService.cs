@@ -221,21 +221,21 @@ namespace NaiveMq.Service
             }
             catch (ClientException ex)
             {
-                await SendError(sender, request, ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (ServerException ex)
             {
-                await SendError(sender, request, ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Client receive request error.");
 
-                await SendError(sender, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
+                await SendErrorAsync(sender, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
             }
         }
 
-        private async Task SendError(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
+        private async Task SendErrorAsync(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
         {
             await SendAsync(sender, Confirmation.Error(request, errorCode, errorMessage));
         }

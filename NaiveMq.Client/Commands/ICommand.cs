@@ -11,10 +11,10 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         public Guid Id { get; set; }
 
-        public Task Prepare(CancellationToken cancellationToken);
+        public Task PrepareAsync(CancellationToken cancellationToken);
 
         public void Validate();
 
-        public Task Restore(CancellationToken cancellationToken);
+        public Task RestoreAsync(CancellationToken cancellationToken);
     }
 }

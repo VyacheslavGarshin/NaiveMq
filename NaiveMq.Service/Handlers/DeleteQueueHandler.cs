@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
 
                 try
                 {
-                    await DeleteBindings(context, command);
+                    await DeleteBindingsAsync(context, command);
 
                     if (queue.Entity.Durable)
                     {
@@ -41,7 +41,7 @@ namespace NaiveMq.Service.Handlers
             return Confirmation.Ok(command);
         }
 
-        private static async Task DeleteBindings(ClientContext context, DeleteQueue command)
+        private static async Task DeleteBindingsAsync(ClientContext context, DeleteQueue command)
         {
             if (context.User.Bindings.TryGetValue(command.Name, out var bindings))
             {
