@@ -101,10 +101,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 var consumers = new List<NaiveMqClient>();
 
-                if (_options.Value.Subscribe)
-                {
-                    await CreateConsumers(clientLogger, taskCount, options, consumers);
-                }
+                await CreateConsumers(clientLogger, taskCount, options, consumers);
 
                 for (var run = 0; run < _options.Value.Runs; run++)
                 {
@@ -115,10 +112,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
                 }
 
-                if (_options.Value.Subscribe)
-                {
-                    await Unsubscribe(c, consumers);
-                }
+                await Unsubscribe(c, consumers);
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                 {
@@ -130,12 +124,15 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task Unsubscribe(NaiveMqClient c, List<NaiveMqClient> consumers)
         {
-            foreach (var consumer in consumers)
+            if (_options.Value.Subscribe)
             {
-                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                foreach (var consumer in consumers)
                 {
-                    var queueName = _options.Value.QueueName + queue;
-                    await consumer.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
+                    for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                    {
+                        var queueName = _options.Value.QueueName + queue;
+                        await consumer.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
+                    }
                 }
             }
         }
@@ -181,33 +178,36 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task CreateConsumers(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
         {
-            var tasks = new List<Task>();
-
-            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            if (_options.Value.Subscribe)
             {
-                var queueName = _options.Value.QueueName + queue;
+                var tasks = new List<Task>();
 
-                for (var i = 0; i < taskCount; i++)
+                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
                 {
-                    tasks.Add(Task.Run(async () =>
+                    var queueName = _options.Value.QueueName + queue;
+
+                    for (var i = 0; i < taskCount; i++)
                     {
-                        var client = new NaiveMqClient(options, clientLogger, _stoppingToken);
-
-                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        tasks.Add(Task.Run(async () =>
                         {
-                            await client.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
-                        }
+                            var client = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
-                        await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
+                            if (!string.IsNullOrEmpty(_options.Value.Username))
+                            {
+                                await client.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                            }
 
-                        Consume(client);
+                            await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
 
-                        consumers.Add(client);
-                    }));
+                            Consume(client);
+
+                            consumers.Add(client);
+                        }));
+                    }
                 }
-            }
 
-            await Task.WhenAll(tasks.ToArray());
+                await Task.WhenAll(tasks.ToArray());
+            }
         }
 
         private async Task Produce(byte[] bytes, string queueName, NaiveMqClient c)
