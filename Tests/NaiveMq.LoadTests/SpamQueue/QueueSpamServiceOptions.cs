@@ -101,5 +101,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public int BatchSize { get; set; } = 10;
 
         public bool Wait { get; set; } = true;
+
+        public bool ClearQueue { get; set; } = false;
     }
 }

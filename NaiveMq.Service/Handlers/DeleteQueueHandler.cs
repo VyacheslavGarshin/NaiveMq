@@ -11,12 +11,14 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            await DeleteBindings(context, command);
-
             if (context.User.Queues.TryRemove(command.Name, out var queue))
             {
+                queue.Started = false;
+
                 try
                 {
+                    await DeleteBindings(context, command);
+
                     if (queue.Entity.Durable)
                     {
                         await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
@@ -27,6 +29,7 @@ namespace NaiveMq.Service.Handlers
                 catch
                 {
                     context.User.Queues.TryAdd(command.Name, queue);
+                    queue.Started = true;
                     throw;
                 }
             }

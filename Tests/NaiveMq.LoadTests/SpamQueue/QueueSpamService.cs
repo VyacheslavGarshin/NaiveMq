@@ -103,7 +103,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 if (_options.Value.Subscribe)
                 {
-                    CreateConsumers(clientLogger, taskCount, options, consumers);
+                    await CreateConsumers(clientLogger, taskCount, options, consumers);
                 }
 
                 for (var run = 0; run < _options.Value.Runs; run++)
@@ -117,14 +117,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 if (_options.Value.Subscribe)
                 {
-                    foreach (var consumer in consumers)
-                    {
-                        for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
-                        {
-                            var queueName = _options.Value.QueueName + queue;
-                            await c.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
-                        }
-                    }
+                    await Unsubscribe(c, consumers);
                 }
 
                 for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
@@ -133,6 +126,18 @@ namespace NaiveMq.LoadTests.SpamQueue
                         await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName + queue }, _stoppingToken);
                 }
             });
+        }
+
+        private async Task Unsubscribe(NaiveMqClient c, List<NaiveMqClient> consumers)
+        {
+            foreach (var consumer in consumers)
+            {
+                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                {
+                    var queueName = _options.Value.QueueName + queue;
+                    await consumer.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
+                }
+            }
         }
 
         private void RunProducers(ILogger<NaiveMqClient> clientLogger, int taskCount, int max, NaiveMqClientOptions options, byte[] message)
@@ -174,15 +179,17 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private void CreateConsumers(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
+        private async Task CreateConsumers(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
         {
+            var tasks = new List<Task>();
+
             for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
             {
                 var queueName = _options.Value.QueueName + queue;
 
                 for (var i = 0; i < taskCount; i++)
                 {
-                    Task.Run(async () =>
+                    tasks.Add(Task.Run(async () =>
                     {
                         var client = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
@@ -196,9 +203,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                         Consume(client);
 
                         consumers.Add(client);
-                    });
+                    }));
                 }
             }
+
+            await Task.WhenAll(tasks.ToArray());
         }
 
         private async Task Produce(byte[] bytes, string queueName, NaiveMqClient c)
@@ -255,28 +264,6 @@ namespace NaiveMq.LoadTests.SpamQueue
                 Confirm = _options.Value.Confirm,
                 ConfirmTimeout = _options.Value.ConfirmTimeout,
             };
-        }
-
-        private void CheckClientActivity(NaiveMqClient c, SemaphoreSlim exitSp, ref DateTime lastActivity, ref TimeSpan delta)
-        {
-            if (_options.Value.LogClientCounters)
-            {
-                _logger.LogInformation($"Client {c.Id} speed: read {c.ReadCounter.LastResult}, write {c.WriteCounter.LastResult}");
-            }
-
-            if (c.ReadCounter.LastResult > 0 || c.WriteCounter.LastResult > 0)
-            {
-                lastActivity = DateTime.Now;
-            }
-            else
-            {
-                if (DateTime.Now.Subtract(lastActivity).TotalSeconds > 5)
-                {
-                    delta = DateTime.Now.Subtract(lastActivity);
-                    if (exitSp.CurrentCount == 0)
-                        exitSp.Release(1);
-                }
-            }
         }
 
         private void Consume(NaiveMqClient c)
@@ -372,6 +359,11 @@ namespace NaiveMq.LoadTests.SpamQueue
             if (!string.IsNullOrEmpty(_options.Value.SearchQueues))
             {
                 await c.SendAsync(new SearchQueues { Name = _options.Value.SearchQueues }, _stoppingToken);
+            }
+
+            if (_options.Value.ClearQueue)
+            {
+                await c.SendAsync(new ClearQueue { Name = queueName }, _stoppingToken);
             }
         }
 

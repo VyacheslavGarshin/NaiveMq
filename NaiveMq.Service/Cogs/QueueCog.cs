@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Enums;
+﻿using NaiveMq.Client;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using System.Collections.Concurrent;
 
@@ -8,6 +9,8 @@ namespace NaiveMq.Service.Cogs
     {
         public QueueEntity Entity { get; set; }
 
+        public bool Started { get; set; } = true;
+
         public long? LengthLimit { get; set; }
 
         public int Length => _messages.Count;
@@ -16,9 +19,9 @@ namespace NaiveMq.Service.Cogs
 
         public long VolumeInMemory => _volumeInMemory;
 
-        private SemaphoreSlim _dequeueSemaphore { get; set; } = new SemaphoreSlim(0, int.MaxValue);
+        private SemaphoreSlim _dequeueSemaphore { get; set; }
 
-        private SemaphoreSlim _limitSemaphore { get; set; } = new SemaphoreSlim(0, 1);
+        private SemaphoreSlim _limitSemaphore { get; set; }
 
         private long _volume;
 
@@ -29,10 +32,13 @@ namespace NaiveMq.Service.Cogs
         public QueueCog(QueueEntity entity)
         {
             Entity = entity;
+            CreateSemaphores();
         }
 
         public async Task<MessageEntity> TryDequeue(CancellationToken cancellationToken)
         {
+            CheckStarted();
+
             await _dequeueSemaphore.WaitAsync(cancellationToken);
 
             if (_messages.TryDequeue(out var message))
@@ -64,6 +70,8 @@ namespace NaiveMq.Service.Cogs
 
         public void Enqueue(MessageEntity message)
         {
+            CheckStarted();
+
             _messages.Enqueue(message);
 
             Interlocked.Add(ref _volume, message.DataLength);
@@ -90,13 +98,44 @@ namespace NaiveMq.Service.Cogs
                 (LengthLimit != null && Length >= LengthLimit);
         }
 
+        public void Clear()
+        {
+            DisposeSemaphores();
+            ClearData();
+            CreateSemaphores();
+        }
+
         public void Dispose()
         {
-            _dequeueSemaphore.Dispose();
-            _limitSemaphore.Dispose();
+            DisposeSemaphores();
+            ClearData();
+        }
+
+        private void ClearData()
+        {
             _messages.Clear();
             _volume = 0;
             _volumeInMemory = 0;
+        }
+
+        private void CheckStarted()
+        {
+            if (!Started)
+            {
+                throw new ServerException(ErrorCode.QueueStopped);
+            }
+        }
+
+        private void CreateSemaphores()
+        {
+            _dequeueSemaphore = new SemaphoreSlim(0, int.MaxValue);
+            _limitSemaphore = new SemaphoreSlim(0, 1);
+        }
+
+        private void DisposeSemaphores()
+        {
+            _dequeueSemaphore.Dispose();
+            _limitSemaphore.Dispose();
         }
     }
 }

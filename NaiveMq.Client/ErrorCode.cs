@@ -150,5 +150,8 @@ namespace NaiveMq.Client
 
         [Description("You are already logged in. In case of changing user send Logout command first.")]
         AlreadyLoggedIn = 136,
+
+        [Description("Queue is stopped.")]
+        QueueStopped = 137,
     }
 }

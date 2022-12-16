@@ -112,6 +112,11 @@ namespace NaiveMq.Service.PersistentStorage
             await DeleteFileAsync(GetMessagePath(user, queue, messageId), true, cancellationToken);
         }
 
+        public async Task DeleteMessagesAsync(string user, string queue, CancellationToken cancellationToken)
+        {
+            await DeleteDirectoryAsync(GetQueueMessagesPath(user, queue), false, cancellationToken);
+        }
+
         public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, bool loadDiskOnly, CancellationToken cancellationToken)
         {
             MessageEntity result = null;

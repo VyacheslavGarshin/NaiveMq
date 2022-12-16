@@ -67,48 +67,24 @@ namespace NaiveMq.Service.Cogs
             {
                 while (_isStarted && !_context.StoppingToken.IsCancellationRequested)
                 {
-                    var messageEntity = await _queue.TryDequeue(cancellationToken);
-
-                    if (messageEntity != null)
+                    try
                     {
-                        Confirmation confirmation = null;
+                        var messageEntity = await _queue.TryDequeue(cancellationToken);
 
-                        try
+                        if (messageEntity != null)
                         {
-                            if (messageEntity.Persistent == Persistence.DiskOnly)
-                            {
-                                var diskMessageEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Entity.Username,
-                                    messageEntity.Queue, messageEntity.Id, true, cancellationToken);
-                                
-                                messageEntity.Data = diskMessageEntity.Data;
-                            }
-
-                            confirmation = await SendMessage(messageEntity, cancellationToken);
-
-                            if (messageEntity.Persistent != Persistence.No)
-                            {
-                                await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username, 
-                                    _queue.Entity.Name, messageEntity.Id, cancellationToken);
-                            }
+                            await ProcessMessage(messageEntity, cancellationToken);
                         }
-                        catch (Exception ex)
+                    }
+                    catch (ServerException ex)
+                    {
+                        if (ex.ErrorCode == ErrorCode.QueueStopped)
                         {
-                            if (ex is ClientException clientException && clientException.Response != null)
-                            {
-                                confirmation = clientException.Response as Confirmation;
-                            }
-
-                            if (!messageEntity.Request)
-                            {
-                                await ReEnqueueMessage(messageEntity);
-                            }
+                            await Task.Delay(TimeSpan.FromSeconds(1));
                         }
-                        finally
+                        else
                         {
-                            if (confirmation != null && messageEntity.Request)
-                            {
-                                await SendConfirmation(messageEntity, confirmation, cancellationToken);
-                            }
+                            throw;
                         }
                     }
                 }
@@ -128,28 +104,53 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
+        private async Task ProcessMessage(MessageEntity messageEntity, CancellationToken cancellationToken)
+        {
+            Confirmation confirmation = null;
+
+            try
+            {
+                if (messageEntity.Persistent == Persistence.DiskOnly)
+                {
+                    var diskMessageEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Entity.Username,
+                        messageEntity.Queue, messageEntity.Id, true, cancellationToken);
+
+                    messageEntity.Data = diskMessageEntity.Data;
+                }
+
+                confirmation = await SendMessage(messageEntity, cancellationToken);
+
+                if (messageEntity.Persistent != Persistence.No)
+                {
+                    await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username,
+                        _queue.Entity.Name, messageEntity.Id, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is ClientException clientException && clientException.Response != null)
+                {
+                    confirmation = clientException.Response as Confirmation;
+                }
+
+                if (!messageEntity.Request)
+                {
+                    await ReEnqueueMessage(messageEntity);
+                }
+            }
+            finally
+            {
+                if (confirmation != null && messageEntity.Request)
+                {
+                    await SendConfirmation(messageEntity, confirmation, cancellationToken);
+                }
+            }
+        }
+
         private async Task ReEnqueueMessage(MessageEntity messageEntity)
         {
             using var handler = new MessageHandler();
             await handler.ExecuteEntityAsync(_context, messageEntity);
-        }
-
-        private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
-        {
-            if (messageEntity.ClientId != null && _context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverContext))
-            {
-                var confirmation = new Confirmation
-                {
-                    RequestId = result.RequestId,
-                    RequestTag = result.RequestTag,
-                    Success = result.Success,
-                    ErrorCode = result.ErrorCode,
-                    ErrorMessage = result.ErrorMessage,
-                    Data = result.Data
-                };
-
-                await receiverContext.Client.SendAsync(confirmation, cancellationToken);
-            }
         }
 
         private async Task<Confirmation> SendMessage(MessageEntity messageEntity, CancellationToken cancellationToken)
@@ -175,6 +176,24 @@ namespace NaiveMq.Service.Cogs
             }
 
             return result;
+        }
+
+        private async Task SendConfirmation(MessageEntity messageEntity, Confirmation result, CancellationToken cancellationToken)
+        {
+            if (messageEntity.ClientId != null && _context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverContext))
+            {
+                var confirmation = new Confirmation
+                {
+                    RequestId = result.RequestId,
+                    RequestTag = result.RequestTag,
+                    Success = result.Success,
+                    ErrorCode = result.ErrorCode,
+                    ErrorMessage = result.ErrorMessage,
+                    Data = result.Data
+                };
+
+                await receiverContext.Client.SendAsync(confirmation, cancellationToken);
+            }
         }
     }
 }
