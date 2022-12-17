@@ -10,6 +10,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service
 {
@@ -137,7 +138,16 @@ namespace NaiveMq.Service
 
         private void ClusterDiscovery(object state)
         {
-            _clusterDiscoveryTimer.
+            try
+            {
+                _clusterDiscoveryTimer.Change(0, Timeout.Infinite);
+
+                var uris = Address.Parse(_options.Value.ClusterHosts);
+            }
+            finally
+            {
+                _clusterDiscoveryTimer.Change(TimeSpan.Zero, _options.Value.ClusterDiscoveryInterval);
+            }
         }
 
         private void Stop()
@@ -194,7 +204,7 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task OnClientSendMessageAsync(NaiveMqClient sender, Message command)
+        private Task OnClientSendMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
         {
             Storage.WriteMessageCounter.Add();
             return Task.CompletedTask;
@@ -206,7 +216,7 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task OnClientReceiveMessageAsync(NaiveMqClient sender, Message command)
+        private Task OnClientReceiveMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
         {
             Storage.ReadMessageCounter.Add();
             return Task.CompletedTask;
