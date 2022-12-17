@@ -211,15 +211,8 @@ namespace NaiveMq.Service.Cogs
 
         private async Task DeleteMessageAssync(MessageEntity messageEntity, CancellationToken cancellationToken)
         {
-            try
-            {
-                await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username,
-                    _queue.Entity.Name, messageEntity.Id, cancellationToken);
-            }
-            catch
-            {
-                // seems it's ok. storage should cancel/delete message writing if message id delivered
-            }
+            await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username,
+                _queue.Entity.Name, messageEntity.Id, cancellationToken);
         }
 
         private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)

@@ -4,6 +4,7 @@ using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace NaiveMq.Service.PersistentStorage
@@ -116,7 +117,15 @@ namespace NaiveMq.Service.PersistentStorage
 
         public Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
-            DeleteFile(GetMessagePath(user, queue, messageId));
+            try
+            {
+                DeleteFile(GetMessagePath(user, queue, messageId));
+            }
+            catch
+            {
+                // must be file is deleting from some other place
+            }
+
             return Task.CompletedTask;
         }
 
@@ -289,7 +298,7 @@ namespace NaiveMq.Service.PersistentStorage
                 }
                 catch
                 {
-                    // must be subcribtion is deleting the file
+                    // must be file is deleting from some other place
                 }
             }
         }
