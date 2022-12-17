@@ -239,14 +239,16 @@ namespace NaiveMq.Service.PersistentStorage
         {
             if (overwrite || !File.Exists(path))
             {
+                var write = async () => { await WriteAllTextAsync(path, text, cancellationToken); };
+
                 try
                 {
-                    await WriteAllTextAsync(path, text, cancellationToken);
+                    await write();
                 }
                 catch (DirectoryNotFoundException)
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    await WriteAllTextAsync(path, text, cancellationToken);
+                    await write();
                 }
             }
         }
@@ -255,14 +257,16 @@ namespace NaiveMq.Service.PersistentStorage
         {
             if (!File.Exists(path))
             {
+                var write = async () => { await WriteAllBytesAsync(path, data, cancelFunc, cancellationToken); };
+
                 try
                 {
-                    await WriteAllBytesAsync(path, data, cancelFunc, cancellationToken);
+                    await write();
                 }
                 catch (DirectoryNotFoundException)
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    await WriteAllBytesAsync(path, data, cancelFunc, cancellationToken);
+                    await write();
                 }
             }
         }
