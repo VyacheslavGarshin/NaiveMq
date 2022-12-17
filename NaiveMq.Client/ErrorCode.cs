@@ -49,6 +49,12 @@ namespace NaiveMq.Client
         [Description("Hosts parameter is not set.")]
         HostsNotSet = 15,
 
+        [Description("Request cannot be persistent.")]
+        PersistentRequest = 16,
+
+        [Description("Message data must be set.")]
+        DataIsEmpty = 17,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 
@@ -141,9 +147,6 @@ namespace NaiveMq.Client
 
         [Description("Queue limit cannot be less than one. Leave it empty for limitless queue.")]
         QueueLimitLessThanOne = 131,
-
-        [Description("Request cannot be persistent.")]
-        PersistentRequest = 132,
 
         [Description("Queue length limit of '{0}' messages is exceeded.")]
         QueueLengthLimitExceeded = 133,

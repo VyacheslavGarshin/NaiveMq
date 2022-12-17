@@ -37,12 +37,13 @@ namespace NaiveMq.Service.PersistentStorage
             await WriteFileAsync(GetUserPath(user.Username), JsonConvert.SerializeObject(user), true, cancellationToken);
         }
 
-        public async Task DeleteUserAsync(string user, CancellationToken cancellationToken)
+        public Task DeleteUserAsync(string user, CancellationToken cancellationToken)
         {
-            await DeleteFileAsync(GetUserPath(user), true, cancellationToken);
-            await DeleteDirectoryAsync(GetUserQueuesPath(user), false, cancellationToken);
-            await DeleteDirectoryAsync(GetUserBindingsPath(user), false, cancellationToken);
-            await DeleteDirectoryAsync(GetUserMessagesPath(user), false, cancellationToken);
+            DeleteFile(GetUserPath(user));
+            DeleteDirectory(GetUserQueuesPath(user));
+            DeleteDirectory(GetUserBindingsPath(user));
+            DeleteDirectory(GetUserMessagesPath(user));
+            return Task.CompletedTask;
         }
 
         public async Task<UserEntity> LoadUserAsync(string user, CancellationToken cancellationToken)
@@ -61,10 +62,11 @@ namespace NaiveMq.Service.PersistentStorage
             await WriteFileAsync(GetQueuePath(user, queue.Name), JsonConvert.SerializeObject(queue), true, cancellationToken);
         }
 
-        public async Task DeleteQueueAsync(string user, string queue, CancellationToken cancellationToken)
+        public Task DeleteQueueAsync(string user, string queue, CancellationToken cancellationToken)
         {
-            await DeleteFileAsync(GetQueuePath(user, queue), true, cancellationToken);
-            await DeleteDirectoryAsync(GetQueueMessagesPath(user, queue), false, cancellationToken);
+            DeleteFile(GetQueuePath(user, queue));
+            DeleteDirectory(GetQueueMessagesPath(user, queue));
+            return Task.CompletedTask;
         }
 
         public async Task<QueueEntity> LoadQueueAsync(string user, string queue, CancellationToken cancellationToken)
@@ -83,9 +85,10 @@ namespace NaiveMq.Service.PersistentStorage
             await WriteFileAsync(GetBindingPath(user, binding.Exchange, binding.Queue), JsonConvert.SerializeObject(binding), true, cancellationToken);
         }
 
-        public async Task DeleteBindingAsync(string user, string exchange, string queue, CancellationToken cancellationToken)
+        public Task DeleteBindingAsync(string user, string exchange, string queue, CancellationToken cancellationToken)
         {
-            await DeleteFileAsync(GetBindingPath(user, exchange, queue), true, cancellationToken);
+            DeleteFile(GetBindingPath(user, exchange, queue));
+            return Task.CompletedTask;
         }
 
         public async Task<BindingEntity> LoadBindingAsync(string user, string binding, CancellationToken cancellationToken)
@@ -104,17 +107,23 @@ namespace NaiveMq.Service.PersistentStorage
             var messageBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
             var messageLengthBytes = BitConverter.GetBytes(messageBytes.Length);
 
-            await WriteFileAsync(GetMessagePath(user, queue, message.Id), new[] { messageLengthBytes, messageBytes, message.Data }, cancellationToken);
+            await WriteFileAsync(
+                GetMessagePath(user, queue, message.Id), 
+                new[] { messageLengthBytes, messageBytes, message.Data }, 
+                () => { return message.Delivered; },
+                cancellationToken);
         }
 
-        public async Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
+        public Task DeleteMessageAsync(string user, string queue, Guid messageId, CancellationToken cancellationToken)
         {
-            await DeleteFileAsync(GetMessagePath(user, queue, messageId), true, cancellationToken);
+            DeleteFile(GetMessagePath(user, queue, messageId));
+            return Task.CompletedTask;
         }
 
-        public async Task DeleteMessagesAsync(string user, string queue, CancellationToken cancellationToken)
+        public Task DeleteMessagesAsync(string user, string queue, CancellationToken cancellationToken)
         {
-            await DeleteDirectoryAsync(GetQueueMessagesPath(user, queue), false, cancellationToken);
+            DeleteDirectory(GetQueueMessagesPath(user, queue));
+            return Task.CompletedTask;
         }
 
         public async Task<MessageEntity> LoadMessageAsync(string user, string queue, Guid messageId, bool loadDiskOnly, CancellationToken cancellationToken)
@@ -158,7 +167,7 @@ namespace NaiveMq.Service.PersistentStorage
 
             if (result == null)
             {
-                await DeleteFileAsync(path, false, cancellationToken);
+                DeleteFile(path);
             }
 
             return result;
@@ -170,63 +179,19 @@ namespace NaiveMq.Service.PersistentStorage
             return Task.FromResult(result);
         }
 
-        private async Task DeleteFileAsync(string path, bool waitExists, CancellationToken cancellationToken)
+        static private void DeleteFile(string path)
         {
-            await DeleteAsync(path, () =>
+            if (File.Exists(path))
             {
-                // wait for file to appear. antivirus can meddle and subscription takes message earlier than it's written to disk.
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                    return true;
-                }
-                else
-                {
-                    return !waitExists;
-                }
-            }, cancellationToken);
+                File.Delete(path);
+            }
         }
 
-        private async Task DeleteDirectoryAsync(string path, bool waitExists, CancellationToken cancellationToken)
+        static private void DeleteDirectory(string path)
         {
-            await DeleteAsync(path, () =>
+            if (Directory.Exists(path))
             {
-                // wait for file to appear. antivirus can meddle and subscription takes message earlier than it's written to disk.
-                if (Directory.Exists(path))
-                {
-                    Directory.Delete(path, true);
-                    return true;
-                }
-                else
-                {
-                    return !waitExists;
-                }
-            }, cancellationToken);
-        }
-
-        private async Task DeleteAsync(string path, Func<bool> action, CancellationToken cancellationToken)
-        {
-            var sw = new Stopwatch();
-
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    if (action())
-                    {
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (sw.Elapsed > _options.Value.DeleteTimeout)
-                    {
-                        _logger.LogWarning(ex, $"FilePersistentStorage.DeleteMessageAsync message file deletion timeout '{path}'. Deletion skipped.");
-                        return;
-                    }
-                }
-
-                await Task.Delay(_options.Value.DeleteRetryInterval);
+                Directory.Delete(path, true);
             }
         }
 
@@ -277,18 +242,18 @@ namespace NaiveMq.Service.PersistentStorage
             }
         }
 
-        private static async Task WriteFileAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
+        private static async Task WriteFileAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, Func<bool> cancelFunc, CancellationToken cancellationToken)
         {
             if (!File.Exists(path))
             {
                 try
                 {
-                    await WriteAllBytesAsync(path, data, cancellationToken);
+                    await WriteAllBytesAsync(path, data, cancelFunc, cancellationToken);
                 }
                 catch (DirectoryNotFoundException)
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    await WriteAllBytesAsync(path, data, cancellationToken);
+                    await WriteAllBytesAsync(path, data, cancelFunc, cancellationToken);
                 }
             }
         }
@@ -298,13 +263,34 @@ namespace NaiveMq.Service.PersistentStorage
             await File.WriteAllTextAsync(path, text, Encoding.UTF8, cancellationToken);
         }
 
-        static async Task WriteAllBytesAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, CancellationToken cancellationToken)
+        static async Task WriteAllBytesAsync(string path, IEnumerable<ReadOnlyMemory<byte>> data, Func<bool> cancelFunc, CancellationToken cancellationToken)
         {
-            using var file = File.OpenWrite(path);
-
-            foreach (var chunk in data)
+            if (cancelFunc())
             {
-                await file.WriteAsync(chunk, cancellationToken);
+                return;
+            }
+
+            using (var file = File.OpenWrite(path))
+            {
+                foreach (var chunk in data)
+                {
+                    if (!cancelFunc())
+                    {
+                        await file.WriteAsync(chunk, cancellationToken);
+                    }
+                }
+            }
+
+            if (cancelFunc())
+            {
+                try
+                {
+                    DeleteFile(path);
+                }
+                catch
+                {
+                    // must be subcribtion is deleting the file
+                }
             }
         }
 

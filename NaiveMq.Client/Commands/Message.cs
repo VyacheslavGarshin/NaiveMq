@@ -29,6 +29,11 @@ namespace NaiveMq.Client.Commands
             {
                 throw new ClientException(ErrorCode.PersistentRequest);
             }
+
+            if (Data.Length == 0)
+            {
+                throw new ClientException(ErrorCode.DataIsEmpty);
+            }
         }
     }
 }

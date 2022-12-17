@@ -88,7 +88,7 @@ namespace NaiveMq.Service
                 }
                 else
                 {
-                    await StartAsync();
+                    await OnlineAsync();
                 }
             }
         }
@@ -97,11 +97,11 @@ namespace NaiveMq.Service
         {
             base.Dispose();
 
-            Stop();
+            Offline();
             Storage.Dispose();
         }
 
-        private async Task StartAsync()
+        private async Task OnlineAsync()
         {
             var lastError = string.Empty;
 
@@ -136,6 +136,21 @@ namespace NaiveMq.Service
             }
         }
 
+        private void Offline()
+        {
+            _listener.Stop();
+
+            if (_clusterDiscoveryTimer != null)
+            {
+                _clusterDiscoveryTimer.Dispose();
+                _clusterDiscoveryTimer = null;
+            }
+
+            _online = false;
+
+            _logger.LogWarning($"Server listenter stopped on port {_options.Value.Port}.");
+        }
+
         private void ClusterDiscovery(object state)
         {
             try
@@ -148,18 +163,6 @@ namespace NaiveMq.Service
             {
                 _clusterDiscoveryTimer.Change(TimeSpan.Zero, _options.Value.ClusterDiscoveryInterval);
             }
-        }
-
-        private void Stop()
-        {
-            _listener.Stop();
-
-            _clusterDiscoveryTimer.Dispose();
-            _clusterDiscoveryTimer = null;
-
-            _online = false;
-
-            _logger.LogWarning($"Server listenter stopped on port {_options.Value.Port}.");
         }
 
         private void AddClient(TcpClient tcpClient)

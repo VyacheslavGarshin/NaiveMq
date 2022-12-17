@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
                 Request = command.Request,
                 Persistent = command.Persistent,
                 RoutingKey = command.RoutingKey,
-                Data = command.Data,
+                Data = command.Data.ToArray(), // materialize data from buffer
                 DataLength = command.Data.Length,
             };
 
@@ -51,7 +51,7 @@ namespace NaiveMq.Service.Handlers
 
                 CkeckMessage(messageEntity, queue, queues);
 
-                if (await CheckLimitsAndDiscardAsync(context, queues, messageEntity, command))
+                if (await CheckLimitsAndDiscardAsync(context, queues, command))
                 {
                     return Confirmation.Ok(command);
                 }
@@ -85,7 +85,7 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, MessageEntity message, Message command)
+        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command)
         {
             if (!context.Reinstate && command != null) {
                 foreach (var queue in queues)
@@ -102,7 +102,7 @@ namespace NaiveMq.Service.Handlers
                         queue.LengthLimit = limit;
                     }
 
-                    if (queue.LimitExceeded(message))
+                    if (queue.LimitExceeded(command.Data.Length))
                     {
                         switch (queue.Entity.LimitStrategy)
                         {
@@ -154,35 +154,32 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task EnqueueAsync(ClientContext context, MessageEntity message, List<QueueCog> queues)
+        private static async Task EnqueueAsync(ClientContext context, MessageEntity messageEntity, List<QueueCog> queues)
         {
-            if (!context.Reinstate)
+            var entities = queues.Select(x => queues.Count == 1 ? messageEntity : messageEntity.Copy()).ToArray();
+
+            for (var i = 0; i < queues.Count; i++)
             {
-                var saved = false;
-
-                foreach (var queue in queues)
-                {
-                    if (message.Persistent != Persistence.No && queue.Entity.Durable)
-                    {
-                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, message, context.StoppingToken);
-                        saved = true;
-                    }
-                }
-
-                if (message.Persistent == Persistence.DiskOnly && saved)
-                {
-                    message.Data = null;
-                }
-                else
-                {
-                    // materialize data from buffer
-                    message.Data = message.Data.ToArray();
-                }
+                queues[i].Enqueue(entities[i]);
             }
 
-            foreach (var queue in queues)
+            if (!context.Reinstate && messageEntity.Persistent != Persistence.No)
             {
-                queue.Enqueue(message);
+                for (var i = 0; i < queues.Count; i++)
+                {
+                    var queue = queues[i];
+                    var entity = entities[i];
+
+                    if (queue.Entity.Durable)
+                    {
+                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, entity, context.StoppingToken);
+                    }
+                 
+                    if (entity.Persistent == Persistence.DiskOnly)
+                    {
+                        entity.Data = null;
+                    }
+                }
             }
         }
 

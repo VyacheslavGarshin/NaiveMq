@@ -52,7 +52,7 @@ namespace NaiveMq.Service.Cogs
 
                 try
                 {
-                    if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message))
+                    if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message.DataLength))
                     {
                         LengthLimit = null;
 
@@ -89,12 +89,12 @@ namespace NaiveMq.Service.Cogs
             return await _limitSemaphore.WaitAsync((int)timout.TotalMilliseconds, cancellationToken);
         }
 
-        public bool LimitExceeded(MessageEntity message)
+        public bool LimitExceeded(int dataLength)
         {
             return
                 Entity.Limit != null && (
                     Length >= Entity.Limit && Entity.LimitBy == LimitBy.Length ||
-                    Volume + message.DataLength >= Entity.Limit && Entity.LimitBy == LimitBy.Volume) ||
+                    Volume + dataLength >= Entity.Limit && Entity.LimitBy == LimitBy.Volume) ||
                 (LengthLimit != null && Length >= LengthLimit);
         }
 

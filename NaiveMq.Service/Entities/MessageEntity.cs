@@ -23,5 +23,24 @@ namespace NaiveMq.Service.Entities
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public int DataLength { get; set; }
+
+        [JsonIgnore]
+        public bool Delivered { get; set; }
+
+        public MessageEntity Copy()
+        {
+            return new MessageEntity
+            {
+                Id = Id,
+                Tag = Tag,
+                ClientId = ClientId,
+                Queue = Queue,
+                Request = Request,
+                Persistent = Persistent,
+                RoutingKey = RoutingKey,
+                Data = Data,
+                DataLength = Data.Length,
+            };
+        }
     }
 }
