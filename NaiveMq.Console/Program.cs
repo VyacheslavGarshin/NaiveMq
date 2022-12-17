@@ -135,10 +135,7 @@ bool Connect(string input)
 
         if (startSplit.Length > 1)
         {
-            var destination = startSplit[1].Split(':', 2, StringSplitOptions.RemoveEmptyEntries);
-
-            client.Options.Host = destination.First();
-            client.Options.Port = int.Parse(destination.Last());
+            client.Options.Hosts = startSplit[1];
         }
 
         client.Start();
@@ -179,7 +176,7 @@ static bool Commands(string input)
         }
 
         Console.WriteLine("---------");
-        Console.WriteLine("Parameters note: 'Id', 'Confirm', 'ConfirmTimeout' are optional.");
+        Console.WriteLine("Parameters note: 'Id', 'Confirm', 'ConfirmTimeout' are optional. Values are JSON formatted.");
         Console.WriteLine("---------");
         Console.WriteLine("Enumerables are:");
 

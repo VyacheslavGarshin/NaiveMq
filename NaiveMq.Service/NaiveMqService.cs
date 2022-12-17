@@ -15,11 +15,9 @@ namespace NaiveMq.Service
 {
     public sealed class NaiveMqService : BackgroundService
     {
-        public TimeSpan StartListenerErrorRetryInterval = TimeSpan.FromSeconds(1);
-
         public bool Loaded => _loaded;
 
-        public bool Started => _started;
+        public bool Online => _online;
 
         public Storage Storage { get; private set; }
 
@@ -27,7 +25,7 @@ namespace NaiveMq.Service
         
         private bool _loaded;
 
-        private bool _started;
+        private bool _online;
 
         private TcpListener _listener;
 
@@ -41,14 +39,15 @@ namespace NaiveMq.Service
 
         private readonly Dictionary<Type, Type> _commandHandlers = new();
 
+        private Timer _clusterDiscoveryTimer;
+
         public NaiveMqService(
-            ILogger<NaiveMqService> logger,
-            ILogger<NaiveMqClient> clientLogger,
+            ILoggerFactory loggerFactory,
             IOptions<NaiveMqServiceOptions> options,
             IPersistentStorage persistentStorage)
         {
-            _logger = logger;
-            _clientLogger = clientLogger;
+            _logger = loggerFactory.CreateLogger<NaiveMqService>();
+            _clientLogger = loggerFactory.CreateLogger<NaiveMqClient>();
             _options = options;
             _persistentStorage = persistentStorage;
 
@@ -111,7 +110,12 @@ namespace NaiveMq.Service
                 {
                     _listener.Start();
 
-                    _started = true;
+                    if (!string.IsNullOrWhiteSpace(_options.Value.ClusterHosts))
+                    {
+                        _clusterDiscoveryTimer = new Timer(ClusterDiscovery, null, TimeSpan.Zero, _options.Value.ClusterDiscoveryInterval);
+                    }
+
+                    _online = true;
 
                     _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
 
@@ -121,21 +125,29 @@ namespace NaiveMq.Service
                 {
                     if (lastError != ex.GetBaseException().Message)
                     {
-                        _logger.LogError(ex, $"Cannot start server listener on port {_options.Value.Port}. Retry in {StartListenerErrorRetryInterval}.");
+                        _logger.LogError(ex, $"Cannot start server listener on port {_options.Value.Port}. Retry in {_options.Value.ListenerRecoveryInterval}.");
 
                         lastError = ex.GetBaseException().Message;
                     }
                 }
 
-                await Task.Delay(StartListenerErrorRetryInterval, _stoppingToken);
+                await Task.Delay(_options.Value.ListenerRecoveryInterval, _stoppingToken);
             }
+        }
+
+        private void ClusterDiscovery(object state)
+        {
+            _clusterDiscoveryTimer.
         }
 
         private void Stop()
         {
             _listener.Stop();
 
-            _started = false;
+            _clusterDiscoveryTimer.Dispose();
+            _clusterDiscoveryTimer = null;
+
+            _online = false;
 
             _logger.LogWarning($"Server listenter stopped on port {_options.Value.Port}.");
         }

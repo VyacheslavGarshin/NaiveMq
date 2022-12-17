@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
+using NaiveMq.Client.Dto;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -12,6 +13,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +22,8 @@ namespace NaiveMq.Client
 {
     public class NaiveMqClient : IDisposable
     {
+        public const int DefaultPort = 8506;
+
         private class ResponseItem : IDisposable
         {
             public SemaphoreSlim SemaphoreSlim { get; set; } = new(0, 1);
@@ -64,7 +68,7 @@ namespace NaiveMq.Client
 
         public event OnReceiveRequestHandler OnReceiveRequestAsync;
 
-        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message message);
+        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Commands.Message message);
 
         public event OnReceiveMessageHandler OnReceiveMessageAsync;
 
@@ -76,7 +80,7 @@ namespace NaiveMq.Client
 
         public event OnSendCommandHandler OnSendCommandAsync;
 
-        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message message);
+        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Commands.Message message);
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
@@ -102,13 +106,7 @@ namespace NaiveMq.Client
 
         static NaiveMqClient()
         {
-            var types = typeof(ICommand).Assembly.GetTypes()
-                .Where(x => !x.IsAbstract && !x.IsInterface && x.GetInterfaces().Any(y => y == typeof(ICommand)));
-
-            foreach (var type in types)
-            {
-                CommandTypes.Add(type.Name, type);
-            }
+            RegisterCommands(typeof(ICommand).Assembly);
         }
 
         public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
@@ -124,6 +122,24 @@ namespace NaiveMq.Client
             }
         }
 
+        public static void RegisterCommands(Assembly assembly)
+        {
+            var types = assembly.GetTypes()
+               .Where(x => !x.IsAbstract && !x.IsInterface && x.GetInterfaces().Any(y => y == typeof(ICommand)));
+
+            foreach (var type in types)
+            {
+                if (CommandTypes.ContainsKey(type.Name))
+                {
+                    throw new ClientException(ErrorCode.CommandAlreadyRegistered, new object[] { type.Name });
+                }
+                else
+                {
+                    CommandTypes.Add(type.Name, type);
+                }
+            }
+        }
+
         public void Start()
         {
             lock (_startLocker)
@@ -136,10 +152,7 @@ namespace NaiveMq.Client
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(Options.Host) && Options.Port > 0)
-                        {
-                            _tcpClient = new TcpClient(Options.Host, Options.Port);
-                        }
+                        CreateTcpClient();
                     }
 
                     if (_tcpClient != null)
@@ -222,7 +235,7 @@ namespace NaiveMq.Client
 
                 await WriteCommandAsync(request, cancellationToken);
 
-                if (request is Message message && OnSendMessageAsync != null)
+                if (request is Commands.Message message && OnSendMessageAsync != null)
                 {
                     await OnSendMessageAsync.Invoke(this, message);
                 }
@@ -277,6 +290,33 @@ namespace NaiveMq.Client
 
             ReadCounter.Dispose();
             WriteCounter.Dispose();
+        }
+
+        private void CreateTcpClient()
+        {
+            var uris = Address.Parse(Options.Hosts).ToList();
+
+            if (!uris.Any())
+            {
+                throw new ClientException(ErrorCode.HostsNotSet);
+            }
+
+            var random = new Random();
+            
+            {
+                var randomHostIndex = random.Next(0, uris.Count - 1);
+                var uri = uris[randomHostIndex];
+
+                try
+                {
+                    _tcpClient = new TcpClient(uri.Host, uri.Port ?? DefaultPort);
+                    return;
+                }
+                catch (SocketException)
+                {
+                    uris.RemoveAt(randomHostIndex);
+                }
+            } while (uris.Any()) ;
         }
 
         private async Task PrepareCommandAsync(ICommand command, CancellationToken cancellationToken)
@@ -587,7 +627,7 @@ namespace NaiveMq.Client
                 }
             }
 
-            if (command is Message message && OnReceiveMessageAsync != null)
+            if (command is Commands.Message message && OnReceiveMessageAsync != null)
             {
                 await OnReceiveMessageAsync.Invoke(this, message);
             }

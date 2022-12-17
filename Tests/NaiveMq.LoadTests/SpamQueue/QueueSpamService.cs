@@ -32,7 +32,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    if (_queueService.Loaded)
+                    if (_queueService.Online)
                     {
                         break;
                     }
@@ -75,7 +75,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 var taskCount = _options.Value.ThreadsCount;
                 var max = _options.Value.MessageCount;
 
-                var options = new NaiveMqClientOptions { Host = _options.Value.Host, Port = _options.Value.Port, Parallelism = _options.Value.Parallelism };
+                var options = new NaiveMqClientOptions { Hosts = _options.Value.Hosts, Parallelism = _options.Value.Parallelism };
 
                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 

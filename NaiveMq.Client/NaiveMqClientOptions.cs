@@ -7,9 +7,10 @@ namespace NaiveMq.Client
     {
         public TcpClient TcpClient { get; set; }
 
-        public string Host { get; set; } = "localhost";
-
-        public int Port { get; set; } = 8506;
+        /// <summary>
+        /// Comma/semicolon separated list of host:port values.
+        /// </summary>
+        public string Hosts { get; set; } = "localhost";
 
         public bool Autostart { get; set; } = true;
 

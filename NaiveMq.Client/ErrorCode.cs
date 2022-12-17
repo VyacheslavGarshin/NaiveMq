@@ -43,6 +43,12 @@ namespace NaiveMq.Client
         [Description("Batch cannot contain message with Request parameter set to true.")]
         BatchContainsRequestMessage = 13,
 
+        [Description("Command with name '{0}' already registered.")]
+        CommandAlreadyRegistered = 14,
+
+        [Description("Hosts parameter is not set.")]
+        HostsNotSet = 15,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 

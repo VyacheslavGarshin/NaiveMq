@@ -10,9 +10,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         public string Password { get; set; }
 
-        public string Host { get; set; }
-
-        public int Port { get; set; }
+        public string Hosts { get; set; }
 
         public bool Durable { get; set; }
 

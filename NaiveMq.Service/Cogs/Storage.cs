@@ -30,7 +30,7 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ILogger _logger;
 
-        private readonly Timer _timer;
+        private readonly Timer _oneSecondTimer;
 
 
         public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
@@ -41,12 +41,12 @@ namespace NaiveMq.Service.Cogs
 
             PersistentStorage = persistentStorage;
 
-            _timer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
+            _oneSecondTimer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
 
         public void Dispose()
         {
-            _timer.Dispose();
+            _oneSecondTimer.Dispose();
 
             foreach (var user in Users.Values)
             {
