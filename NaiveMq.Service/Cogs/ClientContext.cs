@@ -25,16 +25,6 @@ namespace NaiveMq.Service.Cogs
         
         public void CheckUser(ClientContext context)
         {
-            CheckUser(context, false);
-        }
-
-        public void CheckAdmin(ClientContext context)
-        {
-            CheckUser(context, true);
-        }
-
-        private void CheckUser(ClientContext context, bool checkAdmin)
-        {
             if (context.User == null || string.IsNullOrWhiteSpace(context.User.Entity.Username))
             {
                 throw new ServerException(ErrorCode.UserNotAuthenticated);
@@ -44,10 +34,25 @@ namespace NaiveMq.Service.Cogs
             {
                 throw new ServerException(ErrorCode.UserNotFound, new object[] { context.User.Entity.Username });
             }
+        }
 
-            if (checkAdmin && !context.User.Entity.Administrator)
+        public void CheckAdmin(ClientContext context)
+        {
+            CheckUser(context);
+
+            if (!context.User.Entity.Administrator)
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotAdmin);
+            }
+        }
+
+        public void CheckClusterAdmin(ClientContext context)
+        {
+            CheckAdmin(context);
+
+            if (!context.User.Entity.Username.Equals(Storage.Service.Options.ClusterAdmin, StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new ServerException(ErrorCode.AccessDeniedNotClusterAdmin);
             }
         }
 

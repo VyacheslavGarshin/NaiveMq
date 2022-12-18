@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace NaiveMq.Client.Commands
 {
+    // todo redo on any command by making Messages IRequest and JsonIgnore
     public class Batch : AbstractRequest<BatchResponse>, IDataCommand
     {
         public List<Message> Messages { get; set; }
@@ -50,15 +51,8 @@ namespace NaiveMq.Client.Commands
 
                 foreach (var message in Messages)
                 {
-                    if (message is IDataCommand dataCommand)
-                    {
-                        await memoryStream.WriteAsync(BitConverter.GetBytes(dataCommand.Data.Length));
-                        await memoryStream.WriteAsync(dataCommand.Data);
-                    }
-                    else
-                    {
-                        await memoryStream.WriteAsync(BitConverter.GetBytes(0));
-                    }
+                    await memoryStream.WriteAsync(BitConverter.GetBytes(message.Data.Length));
+                    await memoryStream.WriteAsync(message.Data);
                 }
 
                 Data = data;
@@ -95,13 +89,12 @@ namespace NaiveMq.Client.Commands
             foreach (var message in Messages)
             {
                 var lengthBytes = new byte[4];
-                // todo pass ct
-                await memoryStream.ReadAsync(lengthBytes, 0, 4, CancellationToken.None);
+                await memoryStream.ReadAsync(lengthBytes, 0, 4, cancellationToken);
                 var length = BitConverter.ToInt32(lengthBytes, 0);
 
                 // todo use arraypool
                 var bytes = new byte[length];
-                await memoryStream.ReadAsync(bytes, 0, length, CancellationToken.None);
+                await memoryStream.ReadAsync(bytes, 0, length, cancellationToken);
 
                 message.Data = bytes;
             }

@@ -37,13 +37,13 @@ namespace NaiveMq.Service.Cogs
         public void Start()
         {
             if (!Started && !string.IsNullOrWhiteSpace(_options.ClusterHosts) 
-                && !string.IsNullOrWhiteSpace(_options.ClusterUser) 
-                && !string.IsNullOrWhiteSpace(_options.ClusterUserPassword))
+                && !string.IsNullOrWhiteSpace(_options.ClusterAdmin) 
+                && !string.IsNullOrWhiteSpace(_options.ClusterAdminPassword))
             {
                 _discoveryTimer = new Timer((state) => { Task.Run(async () => { await ClusterDiscovery(); }); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
 
                 Started = true;
-                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and user '{ClusterUser}'.", _options.ClusterHosts, _options.ClusterUser);
+                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and user '{ClusterUser}'.", _options.ClusterHosts, _options.ClusterAdmin);
             }
         }
 
@@ -104,6 +104,7 @@ namespace NaiveMq.Service.Cogs
             try
             {
                 client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), Autostart = false }, _clientLogger, _stoppingToken);
+                client.OnStop += Client_OnStop;
                 client.Start();
 
                 var getServerResponse = await client.SendAsync(new GetServer());
@@ -118,7 +119,7 @@ namespace NaiveMq.Service.Cogs
 
                 if (!server.Self)
                 {
-                    await client.SendAsync(new Login { Username = _options.ClusterUser, Password = _options.ClusterUserPassword });
+                    await client.SendAsync(new Login { Username = _options.ClusterAdmin, Password = _options.ClusterAdminPassword });
 
                     server.Client = client;
                     client = null;
@@ -150,10 +151,9 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private void RemoveClient(NaiveMqClient client)
+        private void Client_OnStop(NaiveMqClient sender)
         {
-
-            var server = _servers.FirstOrDefault(x => x.Value?.Client.Id == client.Id);
+            var server = _servers.FirstOrDefault(x => x.Value?.Client.Id == sender.Id);
 
             if (server.Key != null)
             {
@@ -163,19 +163,6 @@ namespace NaiveMq.Service.Cogs
 
                 _logger.LogInformation("Removed cluster server '{Host}', name '{Name}'.", server.Key, server.Value.Name);
             }
-        }
-
-        private ClientContext CreateClientContext(NaiveMqClient client)
-        {
-            return new ClientContext
-            {
-                Client = client,
-                Logger = _logger,
-                Reinstate = true,
-                StoppingToken = _stoppingToken,
-                Storage = _storage,
-                User = _storage.Users[_options.ClusterUser]
-            };
         }
     }
 }

@@ -29,8 +29,8 @@
 
         public TimeSpan ClusterDiscoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
 
-        public string ClusterUser { get; set; }
+        public string ClusterAdmin { get; set; }
 
-        public string ClusterUserPassword { get; set; }
+        public string ClusterAdminPassword { get; set; }
     }
 }

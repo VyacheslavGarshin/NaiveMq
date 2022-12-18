@@ -145,14 +145,13 @@ namespace NaiveMq.Service
             try
             {
                 client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient, Autostart = false }, _clientLogger, _stoppingToken);
-
-                client.OnStop += OnClientStop;
-                client.OnReceiveErrorAsync += OnClientReceiveErrorAsync;
-                client.OnReceiveRequestAsync += OnClientReceiveRequestAsync;
-                client.OnReceiveCommandAsync += OnClientReceiveCommandAsync;
-                client.OnSendCommandAsync += OnClientSendCommandAsync;
-                client.OnSendMessageAsync += OnClientSendMessageAsync;
-                client.OnReceiveMessageAsync += OnClientReceiveMessageAsync;
+                client.OnStop += Client_OnStop;
+                client.OnReceiveErrorAsync += Client_OnReceiveErrorAsync;
+                client.OnReceiveRequestAsync += Client_OnReceiveRequestAsync;
+                client.OnReceiveCommandAsync += Client_OnReceiveCommandAsync;
+                client.OnSendCommandAsync += Client_OnSendCommandAsync;
+                client.OnSendMessageAsync += Client_OnSendMessageAsync;
+                client.OnReceiveMessageAsync += Client_OnReceiveMessageAsync;
                 client.Start();
                 
                 Storage.TryAddClient(client);
@@ -168,42 +167,42 @@ namespace NaiveMq.Service
             }
         }
 
-        private void OnClientStop(NaiveMqClient sender)
+        private void Client_OnStop(NaiveMqClient sender)
         {
             Storage.TryRemoveClient(sender);
         }
 
-        private Task OnClientSendCommandAsync(NaiveMqClient sender, ICommand command)
+        private Task Client_OnSendCommandAsync(NaiveMqClient sender, ICommand command)
         {
             Storage.WriteCounter.Add();
             return Task.CompletedTask;
         }
 
-        private Task OnClientSendMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
+        private Task Client_OnSendMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
         {
             Storage.WriteMessageCounter.Add();
             return Task.CompletedTask;
         }
 
-        private Task OnClientReceiveCommandAsync(NaiveMqClient sender, ICommand command)
+        private Task Client_OnReceiveCommandAsync(NaiveMqClient sender, ICommand command)
         {
             Storage.ReadCounter.Add();
             return Task.CompletedTask;
         }
 
-        private Task OnClientReceiveMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
+        private Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
         {
             Storage.ReadMessageCounter.Add();
             return Task.CompletedTask;
         }
 
-        private Task OnClientReceiveErrorAsync(NaiveMqClient sender, Exception ex)
+        private Task Client_OnReceiveErrorAsync(NaiveMqClient sender, Exception ex)
         {
             _logger.LogError(ex, "Client receive error.");
             return Task.CompletedTask;
         }
 
-        private async Task OnClientReceiveRequestAsync(NaiveMqClient sender, IRequest request)
+        private async Task Client_OnReceiveRequestAsync(NaiveMqClient sender, IRequest request)
         {
             IResponse response;
 

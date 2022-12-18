@@ -88,7 +88,7 @@ namespace NaiveMq.Client
         [Description("User '{0}' already exists.")]
         UserAlreadyExists = 109,
 
-        [Description("You must have admin rights to perform this operation.")]
+        [Description("You must have administrator rights to perform this operation.")]
         AccessDeniedNotAdmin = 110,
 
         [Description("User '{0}' queues are not found.")]
@@ -177,5 +177,8 @@ namespace NaiveMq.Client
 
         [Description("Cluster client for host '{0}' and name '{1}' already added.")]
         ClusterClientAlreadyAdded = 140,
+
+        [Description("You must have cluster administrator rights to perform this operation.")]
+        AccessDeniedNotClusterAdmin = 141,
     }
 }
