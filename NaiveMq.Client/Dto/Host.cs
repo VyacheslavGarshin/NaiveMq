@@ -28,13 +28,13 @@ namespace NaiveMq.Client.Dto
 
             if (split.Length > 1)
             {
-                try
+                if (int.TryParse(split[1], out var port))
                 {
-                    Port = int.Parse(split[1]);
+                    Port = port;
                 }
-                catch (Exception ex)
+                else
                 {
-                    throw new ArgumentException($"Cannot parse '{split[1]}' into Port", nameof(value), ex);
+                    throw new ArgumentException($"Cannot parse '{split[1]}' into Port", nameof(value));
                 }
             }
         }
