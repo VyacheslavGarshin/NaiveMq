@@ -23,8 +23,8 @@ namespace NaiveMq.Service.Handlers
                             Name = queue.Entity.Name,
                             Durable = queue.Entity.Durable,
                             Exchange = queue.Entity.Exchange,
-                            Limit = queue.Entity.Limit,
-                            LimitBy = queue.Entity.LimitBy,
+                            LengthLimit = queue.Entity.LengthLimit,
+                            VolumeLimit = queue.Entity.VolumeLimit,
                             LimitStrategy = queue.Entity.LimitStrategy,
                         }
                         : null;

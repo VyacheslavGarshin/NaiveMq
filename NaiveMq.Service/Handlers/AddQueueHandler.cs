@@ -18,8 +18,8 @@ namespace NaiveMq.Service.Handlers
                 Name = command.Name,
                 Durable = command.Durable,
                 Exchange = command.Exchange,
-                Limit = command.Limit,
-                LimitBy = command.LimitBy,
+                LengthLimit = command.LengthLimit,
+                VolumeLimit = command.VolumeLimit,
                 LimitStrategy = command.LimitStrategy,
             };
             

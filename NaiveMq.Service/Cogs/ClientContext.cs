@@ -23,7 +23,7 @@ namespace NaiveMq.Service.Cogs
         /// True in case handler is called on reinstating persistent data.
         /// </summary>
         public bool Reinstate { get; set; }
-
+        
         public void CheckUser(ClientContext context)
         {
             CheckUser(context, false);

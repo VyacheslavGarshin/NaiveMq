@@ -4,6 +4,7 @@ using NaiveMq.Client.Common;
 using NaiveMq.Client;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -92,7 +93,7 @@ namespace NaiveMq.Service.Handlers
                 {
                     if (context.Storage.MemoryLimitExceeded && queue.LengthLimit == null && queue.Length > 1)
                     {
-                        var limit = (long)(queue.Length * (0.01 * context.Storage.Options.AutoQueueLimitThreshold));
+                        var limit = (long)(queue.Length * (0.01 * context.Storage.Options.AutoQueueLimitPercent));
 
                         if (limit == 0)
                         {
@@ -102,7 +103,8 @@ namespace NaiveMq.Service.Handlers
                         queue.LengthLimit = limit;
                     }
 
-                    if (queue.LimitExceeded(command.Data.Length))
+                    var limitType = queue.LimitExceeded(command.Data.Length);
+                    if (limitType != LimitType.None)
                     {
                         switch (queue.Entity.LimitStrategy)
                         {
@@ -116,12 +118,12 @@ namespace NaiveMq.Service.Handlers
 
                                 break;
                             case LimitStrategy.Reject:
-                                switch (queue.Entity.LimitBy)
+                                switch (limitType)
                                 {
-                                    case LimitBy.Length:
-                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { queue.Entity.Limit });
-                                    case LimitBy.Volume:
-                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { queue.Entity.Limit });
+                                    case LimitType.Length:
+                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { queue.Entity.LengthLimit });
+                                    case LimitType.Volume:
+                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { queue.Entity.VolumeLimit });
                                 }
 
                                 break;

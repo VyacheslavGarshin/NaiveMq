@@ -38,6 +38,8 @@ namespace NaiveMq.Client
 
         public int Id => GetHashCode();
 
+        public TcpClient TcpClient { get; private set; }
+
         public bool Started => _started;
 
         public SpeedCounter WriteCounter { get; set; } = new(10);
@@ -83,8 +85,6 @@ namespace NaiveMq.Client
         public delegate Task OnSendMessageHandler(NaiveMqClient sender, Commands.Message message);
 
         public event OnSendMessageHandler OnSendMessageAsync;
-
-        private TcpClient _tcpClient { get; set; }
 
         private bool _started;
 
@@ -148,14 +148,14 @@ namespace NaiveMq.Client
                 {
                     if (Options.TcpClient != null)
                     {
-                        _tcpClient = Options.TcpClient;
+                        TcpClient = Options.TcpClient;
                     }
                     else
                     {
                         CreateTcpClient();
                     }
 
-                    if (_tcpClient != null)
+                    if (TcpClient != null)
                     {
                         _readSemaphore = new(Options.Parallelism, Options.Parallelism);
 
@@ -179,9 +179,9 @@ namespace NaiveMq.Client
             {
                 if (_started)
                 {
-                    _tcpClient.Close();
-                    _tcpClient.Dispose();
-                    _tcpClient = null;
+                    TcpClient.Close();
+                    TcpClient.Dispose();
+                    TcpClient = null;
 
                     _readSemaphore.Dispose();
                     _readSemaphore = null;
@@ -294,9 +294,9 @@ namespace NaiveMq.Client
 
         private void CreateTcpClient()
         {
-            var uris = Address.Parse(Options.Hosts).ToList();
+            var hosts = Host.Parse(Options.Hosts).ToList();
 
-            if (!uris.Any())
+            if (!hosts.Any())
             {
                 throw new ClientException(ErrorCode.HostsNotSet);
             }
@@ -304,19 +304,19 @@ namespace NaiveMq.Client
             var random = new Random();
             
             {
-                var randomHostIndex = random.Next(0, uris.Count - 1);
-                var uri = uris[randomHostIndex];
+                var randomHostIndex = random.Next(0, hosts.Count - 1);
+                var host = hosts[randomHostIndex];
 
                 try
                 {
-                    _tcpClient = new TcpClient(uri.Host, uri.Port ?? DefaultPort);
+                    TcpClient = new TcpClient(host.Name, host.Port ?? DefaultPort);
                     return;
                 }
                 catch (SocketException)
                 {
-                    uris.RemoveAt(randomHostIndex);
+                    hosts.RemoveAt(randomHostIndex);
                 }
-            } while (uris.Any()) ;
+            } while (hosts.Any()) ;
         }
 
         private async Task PrepareCommandAsync(ICommand command, CancellationToken cancellationToken)
@@ -429,7 +429,7 @@ namespace NaiveMq.Client
             {
                 semaphoreEntered = await _writeSemaphore.WaitAsync(Options.SendTimeout, cancellationToken);
 
-                var stream = _tcpClient?.GetStream();
+                var stream = TcpClient?.GetStream();
                 
                 if (!_started || stream == null)
                 {
@@ -456,7 +456,7 @@ namespace NaiveMq.Client
 
                 try
                 {
-                    var stream = _tcpClient?.GetStream();
+                    var stream = TcpClient?.GetStream();
 
                     if (stream == null)
                     {

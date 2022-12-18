@@ -4,18 +4,18 @@ using System.Linq;
 
 namespace NaiveMq.Client.Dto
 {
-    public class Address
+    public class Host
     {
-        public string Host { get; set; }
+        public string Name { get; set; }
 
         public int? Port { get; set; }
 
-        public Address()
+        public Host()
         {
 
         }
 
-        public Address(string value)
+        public Host(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
             {
@@ -24,7 +24,7 @@ namespace NaiveMq.Client.Dto
 
             var split = value.Split(':', StringSplitOptions.RemoveEmptyEntries);
 
-            Host = split[0];
+            Name = split[0];
 
             if (split.Length > 1)
             {
@@ -39,9 +39,14 @@ namespace NaiveMq.Client.Dto
             }
         }
 
-        public static IEnumerable<Address> Parse(string value)
+        public override string ToString()
         {
-            return (value ?? string.Empty).Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => new Address(x));
+            return $"{Name}{(Port != null ? $":{Port}" : string.Empty)}";
+        }
+
+        public static IEnumerable<Host> Parse(string value)
+        {
+            return (value ?? string.Empty).Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => new Host(x));
         }
     }
 }

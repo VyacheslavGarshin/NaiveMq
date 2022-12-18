@@ -71,7 +71,6 @@ namespace NaiveMq.Service.Cogs
                     try
                     {
                         var messageEntity = await _queue.TryDequeueAsync(cancellationToken);
-
                         if (messageEntity != null)
                         {
                             await ProcessMessageAsync(messageEntity, cancellationToken);
@@ -119,9 +118,7 @@ namespace NaiveMq.Service.Cogs
                 }
 
                 var message = CreateMessage(messageEntity, data);
-
                 confirmation = await SendMessageAsync(message, cancellationToken);
-
                 messageEntity.Delivered = true;
             }
             catch (Exception ex)
@@ -168,7 +165,6 @@ namespace NaiveMq.Service.Cogs
             {
                 var diskEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Entity.Username,
                     messageEntity.Queue, messageEntity.Id, true, cancellationToken);
-
                 data = diskEntity.Data;
             }
 
@@ -180,11 +176,9 @@ namespace NaiveMq.Service.Cogs
             Confirmation result = null;
 
             var clientException = ex as ClientException;
-
             if (clientException != null && clientException.Response != null)
             {
                 var response = clientException.Response as Confirmation;
-
                 if (response != null && response.Data.Length != 0)
                 {
                     result = response;

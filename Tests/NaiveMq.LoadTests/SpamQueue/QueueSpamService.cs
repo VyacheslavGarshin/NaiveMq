@@ -354,8 +354,8 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     Name = queueName,
                     Durable = _options.Value.Durable,
-                    Limit = _options.Value.Limit,
-                    LimitBy = _options.Value.LimitBy,
+                    LengthLimit = _options.Value.LengthLimit,
+                    VolumeLimit = _options.Value.VolumeLimit,
                     LimitStrategy = _options.Value.LimitStrategy,
                 }, _stoppingToken);
             }

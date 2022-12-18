@@ -34,13 +34,16 @@ namespace NaiveMq.Service
         
         private readonly ILogger<NaiveMqClient> _clientLogger;
         
-        private readonly IOptions<NaiveMqServiceOptions> _options;
+        private readonly NaiveMqServiceOptions _options;
 
         private readonly IPersistentStorage _persistentStorage;
 
         private readonly Dictionary<Type, Type> _commandHandlers = new();
 
-        private Timer _clusterDiscoveryTimer;
+        static NaiveMqService()
+        {
+            NaiveMqClient.RegisterCommands(typeof(NaiveMqService).Assembly);
+        }
 
         public NaiveMqService(
             ILoggerFactory loggerFactory,
@@ -49,7 +52,7 @@ namespace NaiveMq.Service
         {
             _logger = loggerFactory.CreateLogger<NaiveMqService>();
             _clientLogger = loggerFactory.CreateLogger<NaiveMqClient>();
-            _options = options;
+            _options = options.Value;
             _persistentStorage = persistentStorage;
 
             InitCommands();
@@ -72,14 +75,12 @@ namespace NaiveMq.Service
         {
             _stoppingToken = stoppingToken;
 
-            Storage = new Storage(_options.Value, _persistentStorage, _logger, _stoppingToken);
-
+            Storage = new Storage(_options, _persistentStorage, _logger, _clientLogger, _stoppingToken);
             await new PersistentStorageLoader(Storage, _logger, _stoppingToken).LoadAsync();
 
             _loaded = true;
 
-            _listener = new TcpListener(IPAddress.Any, _options.Value.Port);
-
+            _listener = new TcpListener(IPAddress.Any, _options.Port);
             while (!_stoppingToken.IsCancellationRequested)
             {
                 if (_listener.Server.IsBound)
@@ -110,59 +111,32 @@ namespace NaiveMq.Service
                 try
                 {
                     _listener.Start();
-
-                    if (!string.IsNullOrWhiteSpace(_options.Value.ClusterHosts))
-                    {
-                        _clusterDiscoveryTimer = new Timer(ClusterDiscovery, null, TimeSpan.Zero, _options.Value.ClusterDiscoveryInterval);
-                    }
+                    Storage.Cluster.Start();
 
                     _online = true;
-
-                    _logger.LogInformation($"Server listenter started on port {_options.Value.Port}.");
-
+                    _logger.LogInformation($"Server listenter started on port {_options.Port}.");
                     break;
                 }
                 catch (Exception ex)
                 {
                     if (lastError != ex.GetBaseException().Message)
                     {
-                        _logger.LogError(ex, $"Cannot start server listener on port {_options.Value.Port}. Retry in {_options.Value.ListenerRecoveryInterval}.");
-
+                        _logger.LogError(ex, $"Cannot start server listener on port {_options.Port}. Retry in {_options.ListenerRecoveryInterval}.");
                         lastError = ex.GetBaseException().Message;
                     }
                 }
 
-                await Task.Delay(_options.Value.ListenerRecoveryInterval, _stoppingToken);
+                await Task.Delay(_options.ListenerRecoveryInterval, _stoppingToken);
             }
         }
 
         private void Offline()
         {
             _listener.Stop();
-
-            if (_clusterDiscoveryTimer != null)
-            {
-                _clusterDiscoveryTimer.Dispose();
-                _clusterDiscoveryTimer = null;
-            }
+            Storage.Cluster.Stop();
 
             _online = false;
-
-            _logger.LogWarning($"Server listenter stopped on port {_options.Value.Port}.");
-        }
-
-        private void ClusterDiscovery(object state)
-        {
-            try
-            {
-                _clusterDiscoveryTimer.Change(0, Timeout.Infinite);
-
-                var uris = Address.Parse(_options.Value.ClusterHosts);
-            }
-            finally
-            {
-                _clusterDiscoveryTimer.Change(TimeSpan.Zero, _options.Value.ClusterDiscoveryInterval);
-            }
+            _logger.LogWarning($"Server listenter stopped on port {_options.Port}.");
         }
 
         private void AddClient(TcpClient tcpClient)
@@ -180,7 +154,6 @@ namespace NaiveMq.Service
                 client.OnSendCommandAsync += OnClientSendCommandAsync;
                 client.OnSendMessageAsync += OnClientSendMessageAsync;
                 client.OnReceiveMessageAsync += OnClientReceiveMessageAsync;
-
                 client.Start();
                 
                 Storage.TryAddClient(client);
@@ -295,7 +268,6 @@ namespace NaiveMq.Service
 
                     instance = (IDisposable)Activator.CreateInstance(commandHandler);
                     var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
-
                     await task;
 
                     var resultProperty = task.GetType().GetProperty("Result");

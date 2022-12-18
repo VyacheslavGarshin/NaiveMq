@@ -67,7 +67,6 @@ namespace NaiveMq.Service.Cogs
                 _logger.LogInformation($"There are no users in the persistent storage. Adding default user.");
 
                 context.Reinstate = false;
-
                 await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", Administrator = true });
 
                 _logger.LogInformation($"Added default 'guest' user with the same password.");

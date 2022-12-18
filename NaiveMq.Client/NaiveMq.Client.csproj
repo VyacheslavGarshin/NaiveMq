@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <Compile Include="Enums\LimitStrategy.cs" />
-    <Compile Include="Enums\LimitBy.cs" />
     <Compile Include="Enums\Persistence.cs" />
   </ItemGroup>
 

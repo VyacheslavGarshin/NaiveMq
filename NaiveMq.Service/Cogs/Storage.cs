@@ -22,24 +22,29 @@ namespace NaiveMq.Service.Cogs
 
         public bool MemoryLimitExceeded { get; private set; }
 
+        public Cluster Cluster { get; private set; }
+
         public ConcurrentDictionary<string, UserCog> Users { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
         private readonly CancellationToken _stoppingToken;
 
-        private readonly ILogger _logger;
+        private readonly ILogger<NaiveMqService> _logger;
+
+        private readonly ILogger<NaiveMqClient> _clientLogger;
 
         private readonly Timer _oneSecondTimer;
 
-
-        public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger logger, CancellationToken stoppingToken)
+        public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
             Options = options;
             _logger = logger;
+            _clientLogger = clientLogger;
             _stoppingToken = stoppingToken;
 
             PersistentStorage = persistentStorage;
+            Cluster = new Cluster(options, logger, clientLogger, stoppingToken);
 
             _oneSecondTimer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
@@ -47,6 +52,8 @@ namespace NaiveMq.Service.Cogs
         public void Dispose()
         {
             _oneSecondTimer.Dispose();
+
+            Cluster.Dispose();
 
             foreach (var user in Users.Values)
             {
@@ -89,7 +96,7 @@ namespace NaiveMq.Service.Cogs
                 Logger = _logger
             });
 
-            _logger.LogInformation($"Client added {client.Id}.");
+            _logger.LogInformation("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
 
             return result;
         }
@@ -98,11 +105,16 @@ namespace NaiveMq.Service.Cogs
         {
             var result = _clientContexts.TryRemove(client.Id, out var clientContext);
 
+            if (Cluster.Started)
+            {
+                Cluster.Remove(clientContext);
+            }
+
             if (result)
             {
                 clientContext.Dispose();
 
-                _logger.LogInformation($"Client deleted {client.Id}.");
+                _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);
             }
 
             return result;
@@ -117,7 +129,7 @@ namespace NaiveMq.Service.Cogs
         {
             var memoryInfo = GC.GetGCMemoryInfo();
             var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes + memoryInfo.HeapSizeBytes;
-            MemoryLimitExceeded = freeMemory < 0.01 * (100 - Options.AutoMemoryLimitThreshold) * memoryInfo.HighMemoryLoadThresholdBytes
+            MemoryLimitExceeded = freeMemory < 0.01 * (100 - Options.AutoMemoryLimitPercent) * memoryInfo.HighMemoryLoadThresholdBytes
                 || (Options.MemoryLimit != null && memoryInfo.HeapSizeBytes > Options.MemoryLimit);
         }
     }

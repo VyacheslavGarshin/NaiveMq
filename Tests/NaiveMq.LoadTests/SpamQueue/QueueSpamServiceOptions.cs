@@ -86,9 +86,9 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         public bool LogClientCounters { get; set; }
 
-        public long? Limit { get; set; }
+        public long? LengthLimit { get; set; }
 
-        public LimitBy LimitBy { get; set; }
+        public long? VolumeLimit { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
 

@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Client;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
+using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
@@ -12,6 +13,8 @@ namespace NaiveMq.Service.Cogs
         public bool Started { get; set; } = true;
 
         public long? LengthLimit { get; set; }
+
+        public long? VolumeLimit { get; set; }
 
         public int Length => _messages.Count;
 
@@ -52,10 +55,9 @@ namespace NaiveMq.Service.Cogs
 
                 try
                 {
-                    if (_limitSemaphore.CurrentCount == 0 && !LimitExceeded(message.DataLength))
+                    if (_limitSemaphore.CurrentCount == 0 && LimitExceeded(message.DataLength) != LimitType.None)
                     {
                         LengthLimit = null;
-
                         _limitSemaphore.Release();
                     }
                 }
@@ -89,13 +91,19 @@ namespace NaiveMq.Service.Cogs
             return await _limitSemaphore.WaitAsync((int)timout.TotalMilliseconds, cancellationToken);
         }
 
-        public bool LimitExceeded(int dataLength)
+        public LimitType LimitExceeded(int dataLength)
         {
-            return
-                Entity.Limit != null && (
-                    Length >= Entity.Limit && Entity.LimitBy == LimitBy.Length ||
-                    Volume + dataLength >= Entity.Limit && Entity.LimitBy == LimitBy.Volume) ||
-                (LengthLimit != null && Length >= LengthLimit);
+            if (Entity.LengthLimit != null && (Length >= Entity.LengthLimit) || (LengthLimit != null && Length >= LengthLimit))
+            {
+                return LimitType.Length;
+            }
+
+            if (Entity.VolumeLimit != null && (Volume + dataLength >= Entity.VolumeLimit))
+            {
+                return LimitType.Volume;
+            }
+
+            return LimitType.None;
         }
 
         public void Clear()

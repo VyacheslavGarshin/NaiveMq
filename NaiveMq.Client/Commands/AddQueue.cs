@@ -10,9 +10,9 @@ namespace NaiveMq.Client.Commands
         
         public bool Exchange { get; set; }
 
-        public long? Limit { get; set; }
+        public long? LengthLimit { get; set; }
 
-        public LimitBy LimitBy { get; set; } = LimitBy.Length;
+        public long? VolumeLimit { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
@@ -20,7 +20,7 @@ namespace NaiveMq.Client.Commands
         {
             base.Validate();
 
-            if (Limit != null && Limit.Value < 1)
+            if ((LengthLimit != null && LengthLimit.Value < 1) || (VolumeLimit != null && VolumeLimit.Value < 1))
             {
                 throw new ClientException(ErrorCode.QueueLimitLessThanOne);
             }
