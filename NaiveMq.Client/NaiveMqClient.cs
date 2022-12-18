@@ -446,10 +446,7 @@ namespace NaiveMq.Client
                         throw new IOException("TcpClient is closed.");
                     }
 
-                    var unpackResult = await _commandPacker.Unpack(stream, 
-                        (result) => { CheckCommandLengths(result.CommandNameLength, result.CommandLength, result.DataLength); }, 
-                        _stoppingToken,
-                        ArrayPool<byte>.Shared);
+                    var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, _stoppingToken, ArrayPool<byte>.Shared);
 
                     ReadCounter.Add();
 
