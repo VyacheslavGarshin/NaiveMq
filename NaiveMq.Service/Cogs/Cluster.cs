@@ -59,7 +59,10 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var server in _servers.Values)
                 {
-                    server.Client.Dispose();
+                    if (server.Client != null)
+                    {
+                        server.Client.Dispose();
+                    }
                 }
 
                 _servers.Clear();

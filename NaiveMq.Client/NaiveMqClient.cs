@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,6 +105,8 @@ namespace NaiveMq.Client
 
         private readonly StringEnumConverter _stringEnumConverter = new();
 
+        private readonly CommandPacker _commandPacker;
+
         static NaiveMqClient()
         {
             RegisterCommands(typeof(ICommand).Assembly);
@@ -115,6 +118,7 @@ namespace NaiveMq.Client
             
             _logger = logger;
             _stoppingToken = stoppingToken;
+            _commandPacker = new CommandPacker(_converter);
 
             if (options.Autostart)
             {
@@ -371,29 +375,9 @@ namespace NaiveMq.Client
 
             try
             {
-                var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
-                var commandBytes = _converter.Serialize(command);
-                var dataLength = 0;
-                var data = new ReadOnlyMemory<byte>();
+                var package = _commandPacker.Pack(command, ArrayPool<byte>.Shared);
 
-                if (command is IDataCommand dataCommand)
-                {
-                    dataLength = dataCommand.Data.Length;
-                    data = dataCommand.Data;
-                }
-
-                var allLength = 4 * 3 + commandNameBytes.Length + commandBytes.Length + dataLength;
-                buffer = ArrayPool<byte>.Shared.Rent(allLength);
-
-                buffer.CopyFrom(new[] {
-                    BitConverter.GetBytes(commandNameBytes.Length),
-                    BitConverter.GetBytes(commandBytes.Length),
-                    BitConverter.GetBytes(dataLength),
-                    commandNameBytes,
-                    commandBytes,
-                    data });
-
-                await WriteBytesAsync(buffer.AsMemory(0, allLength), cancellationToken);
+                await WriteBytesAsync(package.Buffer.AsMemory(0, package.Length), cancellationToken);
 
                 WriteCounter.Add();
 
@@ -416,7 +400,7 @@ namespace NaiveMq.Client
                     ArrayPool<byte>.Shared.Return(buffer);
                 }
             }
-        }
+        }        
 
         private async Task WriteBytesAsync(Memory<byte> bytes, CancellationToken cancellationToken)
         {
@@ -453,9 +437,6 @@ namespace NaiveMq.Client
         {
             while (!_stoppingToken.IsCancellationRequested && _started)
             {
-                byte[] lengthsBuffer = null;
-                byte[] dataBuffer = null;
-
                 try
                 {
                     var stream = TcpClient?.GetStream();
@@ -465,41 +446,24 @@ namespace NaiveMq.Client
                         throw new IOException("TcpClient is closed.");
                     }
 
-                    const int commandsBytesLength = 3 * 4;
-
-                    lengthsBuffer = ArrayPool<byte>.Shared.Rent(commandsBytesLength);
-                    await ReadStreamBytesAsync(stream, lengthsBuffer, commandsBytesLength);
-
-                    var commandNameLength = BitConverter.ToInt32(lengthsBuffer, 0);
-                    var commandLength = BitConverter.ToInt32(lengthsBuffer, 4);
-                    var dataLength = BitConverter.ToInt32(lengthsBuffer, 8);
-
-                    CheckCommandLengths(commandNameLength, commandLength, dataLength);
-
-                    var allLength = commandNameLength + commandLength + dataLength;
-                    dataBuffer = ArrayPool<byte>.Shared.Rent(allLength);
-                    await ReadStreamBytesAsync(stream, dataBuffer, allLength);
+                    var unpackResult = await _commandPacker.Unpack(stream, 
+                        (result) => { CheckCommandLengths(result.CommandNameLength, result.CommandLength, result.DataLength); }, 
+                        _stoppingToken,
+                        ArrayPool<byte>.Shared);
 
                     ReadCounter.Add();
 
                     await _readSemaphore.WaitAsync(_stoppingToken);
 
-                    _ = Task.Run(async () => await HandleReceivedDataAsync(dataBuffer, commandNameLength, commandLength, dataLength), _stoppingToken);
+                    _ = Task.Run(async () => await HandleReceivedDataAsync(unpackResult), _stoppingToken);
                 }
                 catch (Exception ex)
                 {
                     await HandleReceiveErrorAsync(ex);
                     throw;
                 }
-                finally
-                {
-                    if (lengthsBuffer != null)
-                    {
-                        ArrayPool<byte>.Shared.Return(lengthsBuffer);
-                    }
-                }
             };
-        }
+        }       
 
         private void CheckCommandLengths(int commandNameLength, int commandLength, int dataLength)
         {
@@ -524,40 +488,17 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task<bool> ReadStreamBytesAsync(NetworkStream stream, byte[] buffer, int length)
-        {
-            var readLength = 0;
-            var offset = 0;
-            var size = length;
-
-            do
-            {
-                var read = await stream.ReadAsync(buffer, offset, size, _stoppingToken);
-
-                if (read == 0)
-                {
-                    throw new IOException("Read 0 bytes.");
-                }
-
-                readLength += read;
-                offset += read;
-                size -= read;
-            } while (readLength != length);
-
-            return true;
-        }
-
-        private async Task HandleReceivedDataAsync(byte[] buffer, int commandNameLength, int commandLength, int dataLength)
+        private async Task HandleReceivedDataAsync(UnpackResult unpackResult)
         {
             ReadOnlyMemory<byte> commandNameBytes;
             try
             {
                 var index = 0;
-                commandNameBytes = new ReadOnlyMemory<byte>(buffer, index, commandNameLength);
-                index += commandNameLength;
-                var commandBytes = new ReadOnlyMemory<byte>(buffer, index, commandLength);
-                index += commandLength;
-                var dataBytes = dataLength > 0 ? new ReadOnlyMemory<byte>(buffer, index, dataLength) : new ReadOnlyMemory<byte>();
+                commandNameBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandNameLength);
+                index += unpackResult.CommandNameLength;
+                var commandBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandLength);
+                index += unpackResult.CommandLength;
+                var dataBytes = unpackResult.DataLength > 0 ? new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.DataLength) : new ReadOnlyMemory<byte>();
 
                 var commandName = Encoding.UTF8.GetString(commandNameBytes.Span);
                 var commandType = GetCommandType(commandName);
@@ -583,7 +524,7 @@ namespace NaiveMq.Client
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(buffer);
+                ArrayPool<byte>.Shared.Return(unpackResult.Buffer);
 
                 _readSemaphore.Release();
             }
