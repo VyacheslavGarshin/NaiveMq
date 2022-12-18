@@ -465,26 +465,26 @@ namespace NaiveMq.Client
             };
         }       
 
-        private void CheckCommandLengths(int commandNameLength, int commandLength, int dataLength)
+        private void CheckCommandLengths(UnpackResult unpackResult)
         {
-            if (commandNameLength == 0)
+            if (unpackResult.CommandNameLength == 0)
             {
                 throw new IOException("Incoming command length is 0. Looks like the other side dropped the connection.");
             }
 
-            if (commandNameLength > Options.MaxCommandNameSize)
+            if (unpackResult.CommandNameLength > Options.MaxCommandNameSize)
             {
-                throw new ClientException(ErrorCode.CommandNameLengthLong, new object[] { Options.MaxCommandNameSize, commandNameLength });
+                throw new ClientException(ErrorCode.CommandNameLengthLong, new object[] { Options.MaxCommandNameSize, unpackResult.CommandNameLength });
             }
 
-            if (commandLength > Options.MaxCommandSize)
+            if (unpackResult.CommandLength > Options.MaxCommandSize)
             {
-                throw new ClientException(ErrorCode.CommandLengthLong, new object[] { Options.MaxCommandSize, commandNameLength });
+                throw new ClientException(ErrorCode.CommandLengthLong, new object[] { Options.MaxCommandSize, unpackResult.CommandLength });
             }
 
-            if (dataLength > Options.MaxDataSize)
+            if (unpackResult.DataLength > Options.MaxDataSize)
             {
-                throw new ClientException(ErrorCode.DataLengthLong, new object[] { Options.MaxDataSize, commandNameLength });
+                throw new ClientException(ErrorCode.DataLengthLong, new object[] { Options.MaxDataSize, unpackResult.DataLength });
             }
         }
 
