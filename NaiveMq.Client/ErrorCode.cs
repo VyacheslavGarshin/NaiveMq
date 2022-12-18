@@ -58,6 +58,9 @@ namespace NaiveMq.Client
         [Description("Non of the hosts defined is reachable.")]
         HostsUnavailable = 18,
 
+        [Description("Request message should be confirmed.")]
+        RequestConfirmRequred = 19,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 

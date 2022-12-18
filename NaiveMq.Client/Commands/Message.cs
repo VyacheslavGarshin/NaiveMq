@@ -4,7 +4,7 @@ using System;
 
 namespace NaiveMq.Client.Commands
 {
-    public class Message : AbstractRequest<Confirmation>, IDataCommand
+    public class Message : AbstractRequest<MessageResponse>, IDataCommand
     {
         public string Queue { get; set; }
 
@@ -46,6 +46,11 @@ namespace NaiveMq.Client.Commands
             if (Request && Persistent != Persistence.No)
             {
                 throw new ClientException(ErrorCode.PersistentRequest);
+            }
+
+            if (Request && !Confirm)
+            {
+                throw new ClientException(ErrorCode.RequestConfirmRequred);
             }
 
             if (Data.Length == 0)

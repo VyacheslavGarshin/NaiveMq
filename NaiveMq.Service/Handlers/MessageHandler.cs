@@ -7,29 +7,19 @@ using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class MessageHandler : IHandler<Message, Confirmation>
+    public class MessageHandler : IHandler<Message, MessageResponse>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, Message command)
+        public async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command)
         {
             context.CheckUser(context);
 
-            var message = new MessageEntity
-            {
-                Id = command.Id,
-                Tag = command.Tag,
-                ClientId = context.Client?.Id,
-                Queue = command.Queue,
-                Request = command.Request,
-                Persistent = command.Persistent,
-                RoutingKey = command.RoutingKey,
-                Data = command.Data.ToArray(), // materialize data from buffer
-                DataLength = command.Data.Length,
-            };
+            var message = MessageEntity.FromCommand(command);
+            message.ClientId = context.Client?.Id;
 
             return await ExecuteEntityAsync(context, message, command);
         }
 
-        public async Task<Confirmation> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command = null)
+        public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command = null)
         {
             if (context.User.Queues.TryGetValue(messageEntity.Queue, out var queue))
             {
@@ -53,7 +43,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (await CheckLimitsAndDiscardAsync(context, queues, command))
                 {
-                    return Confirmation.Ok(command);
+                    return MessageResponse.Ok(command);
                 }
 
                 await EnqueueAsync(context, messageEntity, queues);
@@ -65,7 +55,7 @@ namespace NaiveMq.Service.Handlers
                 }
                 else
                 {
-                    return Confirmation.Ok(command);
+                    return MessageResponse.Ok(command);
                 }
             }
             else

@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Enums;
+﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 
 namespace NaiveMq.Service.Entities
@@ -27,6 +28,21 @@ namespace NaiveMq.Service.Entities
         [JsonIgnore]
         public bool Delivered { get; set; }
 
+        public static MessageEntity FromCommand(Message command)
+        {
+            return new MessageEntity
+            {
+                Id = command.Id,
+                Tag = command.Tag,
+                Queue = command.Queue,
+                Request = command.Request,
+                Persistent = command.Persistent,
+                RoutingKey = command.RoutingKey,
+                Data = command.Data.ToArray(), // materialize data from buffer
+                DataLength = command.Data.Length,
+            };
+        }
+
         public MessageEntity Copy()
         {
             return new MessageEntity
@@ -40,6 +56,19 @@ namespace NaiveMq.Service.Entities
                 RoutingKey = RoutingKey,
                 Data = Data,
                 DataLength = Data.Length,
+            };
+        }
+
+        public Message ToCommand()
+        {
+            return new Message
+            {
+                Tag = Tag,
+                Queue = Queue,
+                Request = Request,
+                Persistent = Persistent,
+                RoutingKey = RoutingKey,
+                Data = Data
             };
         }
     }

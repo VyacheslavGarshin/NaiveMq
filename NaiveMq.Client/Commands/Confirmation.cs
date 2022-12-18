@@ -1,31 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
-
-namespace NaiveMq.Client.Commands
+﻿namespace NaiveMq.Client.Commands
 {
-    public class Confirmation : AbstractResponse<Confirmation>, IDataCommand
+    public class Confirmation : AbstractResponse<Confirmation>
     {
-        [JsonIgnore]
-        public ReadOnlyMemory<byte> Data { get; set; }
-
-        public Confirmation()
-        {
-        }
-
-        public Confirmation(ReadOnlyMemory<byte> data)
-        {
-            Data = data;
-        }
-
-        public static Confirmation Ok(IRequest request, ReadOnlyMemory<byte> data)
-        {
-            return new Confirmation
-            {
-                RequestId = request.Id,
-                RequestTag = request.Tag,
-                Success = true,
-                Data = data,
-            };
-        }
     }
 }

@@ -12,13 +12,7 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var bindingEnity = new BindingEntity
-            {
-                Exchange = command.Exchange,
-                Queue = command.Queue,
-                Durable = command.Durable,
-                Pattern = command.Pattern
-            };
+            var bindingEnity = BindingEntity.FromCommand(command);
             
             await ExecuteEntityAsync(context, bindingEnity);
 

@@ -4,15 +4,15 @@ namespace NaiveMq.Client.Commands
 {
     public class BatchResponse : AbstractResponse<BatchResponse>
     {
-        public List<Confirmation> Confirmations { get; set; }
+        public List<MessageResponse> Responses { get; set; }
 
         public BatchResponse()
         {
         }
 
-        public BatchResponse(List<Confirmation> confirmations)
+        public BatchResponse(List<MessageResponse> responses)
         {
-            Confirmations = confirmations;
+            Responses = responses;
         }
     }
 }

@@ -283,7 +283,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     try
                     {
-                        await client.SendAsync(Confirmation.Ok(message, message.Request ? Encoding.UTF8.GetBytes("Answer") : null), _stoppingToken);
+                        await client.SendAsync(MessageResponse.Ok(message, message.Request ? Encoding.UTF8.GetBytes("Answer") : null, message.Request), _stoppingToken);
                     }
                     catch (ClientException)
                     {

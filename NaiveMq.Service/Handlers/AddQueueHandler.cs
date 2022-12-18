@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -11,17 +12,9 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var queueEnity = new QueueEntity
-            {
-                User = context.User.Entity.Username,
-                Name = command.Name,
-                Durable = command.Durable,
-                Exchange = command.Exchange,
-                LengthLimit = command.LengthLimit,
-                VolumeLimit = command.VolumeLimit,
-                LimitStrategy = command.LimitStrategy,
-            };
-            
+            var queueEnity = QueueEntity.FromCommand(command);
+            queueEnity.User = context.User.Entity.Username;
+
             await ExecuteEntityAsync(context, queueEnity);
 
             return Confirmation.Ok(command);

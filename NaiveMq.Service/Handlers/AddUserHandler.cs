@@ -1,6 +1,5 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 
@@ -20,12 +19,7 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.PasswordEmpty);
             }
 
-            var userEntity = new UserEntity
-            {
-                Username = command.Username,
-                PasswordHash = command.Password.ComputeHash(),
-                Administrator = command.Administrator
-            };
+            var userEntity = UserEntity.FromCommand(command);
             
             await ExecuteEntityAsync(context, userEntity);
 

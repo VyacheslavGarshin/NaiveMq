@@ -9,21 +9,21 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var confirmations = new List<Confirmation>();
+            var responses = new List<MessageResponse>();
 
             foreach (var message in command.Messages)
             {
                 try
                 {
                     using var handler = new MessageHandler();
-                    confirmations.Add(await handler.ExecuteAsync(context, message));
+                    responses.Add(await handler.ExecuteAsync(context, message));
 
                     // main server handler doesn't know contents of commands and cannot count batch messages
                     context.Storage.ReadMessageCounter.Add();
                 }
                 catch (Exception ex)
                 {
-                    confirmations.Add(Confirmation.Error(
+                    responses.Add(MessageResponse.Error(
                         command,
                         ex is ServerException serverException ? serverException.ErrorCode.ToString() : string.Empty,
                         ex.GetBaseException().Message));
@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Handlers
 
             return BatchResponse.Ok(command, (response) =>
             {
-                response.Confirmations = confirmations;
+                response.Responses = responses;
             });
         }
 

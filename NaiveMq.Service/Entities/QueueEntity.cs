@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Enums;
+﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Service.Entities
 {
@@ -17,5 +18,18 @@ namespace NaiveMq.Service.Entities
         public long? VolumeLimit { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
+
+        public static QueueEntity FromCommand(AddQueue command)
+        {
+            return new QueueEntity
+            {
+                Name = command.Name,
+                Durable = command.Durable,
+                Exchange = command.Exchange,
+                LengthLimit = command.LengthLimit,
+                VolumeLimit = command.VolumeLimit,
+                LimitStrategy = command.LimitStrategy,
+            };
+        }
     }
 }

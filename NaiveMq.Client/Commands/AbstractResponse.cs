@@ -49,6 +49,19 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
+        public virtual T Copy()
+        {
+            var result = Activator.CreateInstance<T>();
+
+            result.RequestId = RequestId;
+            result.RequestTag = RequestTag;
+            result.Success = Success;
+            result.ErrorCode = ErrorCode;
+            result.ErrorMessage = ErrorMessage;
+
+            return result;
+        }
+
         public override void Validate()
         {
             if (RequestId == Guid.Empty)
