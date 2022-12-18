@@ -12,6 +12,8 @@ namespace NaiveMq.Service.Cogs
 
         private Timer _discoveryTimer;
         
+        private readonly Storage _storage;
+        
         private readonly NaiveMqServiceOptions _options;
         
         private readonly ILogger<NaiveMqService> _logger;
@@ -20,12 +22,13 @@ namespace NaiveMq.Service.Cogs
 
         private readonly CancellationToken _stoppingToken;
 
-        private readonly ConcurrentDictionary<string, ClientContext> _clients = new(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<int, NaiveMqClient> _clients = new();
 
-        private readonly ConcurrentDictionary<string, string> _hostsMap = new(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<string, ClusterServer> _servers = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Cluster(NaiveMqServiceOptions options, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
+        public Cluster(Storage storage, NaiveMqServiceOptions options, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
+            _storage = storage;
             _options = options;
             _logger = logger;
             _clientLogger = clientLogger;
@@ -59,14 +62,22 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        public void Add(ClientContext clientContext)
+        public void AddClient(NaiveMqClient client)
         {
-
+            _clients.TryAdd(client.Id, client);
         }
 
-        public void Remove(ClientContext clientContext)
+        public void RemoveClient(NaiveMqClient client)
         {
+            if (_clients.TryRemove(client.Id, out var _))
+            {
+                var server = _servers.FirstOrDefault(x => x.Value?.ClientContext.Client.Id == client.Id);
 
+                if (server.Key != null)
+                {
+                    _servers.Remove(server.Key, out var _);
+                }
+            }
         }
 
         public void Dispose()
@@ -79,13 +90,13 @@ namespace NaiveMq.Service.Cogs
         {
             try
             {
-                _discoveryTimer.Change(0, Timeout.Infinite);
+                _discoveryTimer.Change(Timeout.Infinite, Timeout.Infinite);
                 
                 var tasks = new List<Task>();
 
                 foreach (var host in Host.Parse(_options.ClusterHosts))
                 {
-                    if (!_hostsMap.TryGetValue(host.ToString(), out var serverName) || string.IsNullOrEmpty(serverName))
+                    if (!_servers.TryGetValue(host.ToString(), out var server) || server == null)
                     {
                         tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
                     }
@@ -95,33 +106,75 @@ namespace NaiveMq.Service.Cogs
             }
             finally
             {
-                _discoveryTimer.Change(TimeSpan.Zero, _options.ClusterDiscoveryInterval);
+                _discoveryTimer.Change(_options.ClusterDiscoveryInterval, _options.ClusterDiscoveryInterval);
             }
         }
 
         private async Task DiscoverHost(Host host)
         {
+            NaiveMqClient client = null;
+
             try
             {
-                using var client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), Autostart = false }, _clientLogger, _stoppingToken);
-
+                client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), Autostart = false }, _clientLogger, _stoppingToken);
                 client.Start();
 
-                var server = await client.SendAsync(new GetServer());
+                var getServerResponse = await client.SendAsync(new GetServer());
 
-                if (server.Entity.Name == _options.Name)
+                if (getServerResponse.Entity.ClusterKey != _options.ClusterKey)
+                {
+                    throw new ServerException(ErrorCode.ClusterKeysDontMatch);
+                }
+
+                var server = new ClusterServer { Name = getServerResponse.Entity.Name, Self = getServerResponse.Entity.Name == _options.Name };
+                _servers.AddOrUpdate(host.ToString(), (key) => server, (key, value) => server);
+
+                if (!server.Self)
+                {
+                    await client.SendAsync(new Login { Username = _options.ClusterUser, Password = _options.ClusterUserPassword });
+
+                    server.ClientContext = CreateClientContext(client);
+                    _storage.TryAddClient(client);
+                    AddClient(client);
+
+                    client = null;
+                }
+            }
+            catch (ClientException ex)
+            {
+                if (ex.ErrorCode == ErrorCode.HostsUnavailable)
                 {
                     return;
                 }
 
-                _hostsMap.AddOrUpdate(host.ToString(), (key) => server.Entity.Name, (key, value) => server.Entity.Name);
-
-                await client.SendAsync(new Login { Username = _options.ClusterUser, Password = _options.ClusterUserPassword });
+                _logger.LogError(ex, "Error while discovering cluster server {Host}", host);
+                throw;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                _logger.LogError(ex, "Error while discovering cluster server {Host}", host);
+                throw;
             }
+            finally
+            {
+                if (client != null)
+                {
+                    client.Dispose();
+                }
+            }
+        }
+
+        private ClientContext CreateClientContext(NaiveMqClient client)
+        {
+            return new ClientContext
+            {
+                Client = client,
+                Logger = _logger,
+                Reinstate = true,
+                StoppingToken = _stoppingToken,
+                Storage = _storage,
+                User = _storage.Users[_options.ClusterUser]
+            };
         }
     }
 }

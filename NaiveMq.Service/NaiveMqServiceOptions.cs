@@ -20,6 +20,8 @@
         /// </summary>
         public int AutoQueueLimitPercent { get; set; } = 90;
 
+        public string ClusterKey { get; set; }
+
         /// <summary>
         /// Comma/semicolon separated list of host:port values.
         /// </summary>

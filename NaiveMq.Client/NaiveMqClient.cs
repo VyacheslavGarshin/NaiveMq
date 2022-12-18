@@ -302,7 +302,7 @@ namespace NaiveMq.Client
             }
 
             var random = new Random();
-            
+
             {
                 var randomHostIndex = random.Next(0, hosts.Count - 1);
                 var host = hosts[randomHostIndex];
@@ -317,6 +317,8 @@ namespace NaiveMq.Client
                     hosts.RemoveAt(randomHostIndex);
                 }
             } while (hosts.Any()) ;
+
+            throw new ClientException(ErrorCode.HostsUnavailable);
         }
 
         private async Task PrepareCommandAsync(ICommand command, CancellationToken cancellationToken)

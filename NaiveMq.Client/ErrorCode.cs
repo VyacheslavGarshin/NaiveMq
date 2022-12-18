@@ -55,6 +55,9 @@ namespace NaiveMq.Client
         [Description("Message data must be set.")]
         DataIsEmpty = 17,
 
+        [Description("Non of the hosts defined is reachable.")]
+        HostsUnavailable = 18,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 
@@ -162,5 +165,8 @@ namespace NaiveMq.Client
 
         [Description("Queue is stopped.")]
         QueueStopped = 137,
+
+        [Description("Discovering cluster server ClusterKey do not match with the current one.")]
+        ClusterKeysDontMatch = 138,
     }
 }

@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Cogs
             _stoppingToken = stoppingToken;
 
             PersistentStorage = persistentStorage;
-            Cluster = new Cluster(options, logger, clientLogger, stoppingToken);
+            Cluster = new Cluster(this, options, logger, clientLogger, stoppingToken);
 
             _oneSecondTimer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
@@ -105,13 +105,13 @@ namespace NaiveMq.Service.Cogs
         {
             var result = _clientContexts.TryRemove(client.Id, out var clientContext);
 
-            if (Cluster.Started)
-            {
-                Cluster.Remove(clientContext);
-            }
-
             if (result)
             {
+                if (Cluster.Started)
+                {
+                    Cluster.RemoveClient(client);
+                }
+
                 clientContext.Dispose();
 
                 _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);

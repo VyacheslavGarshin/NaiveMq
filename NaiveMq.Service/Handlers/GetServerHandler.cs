@@ -13,6 +13,7 @@ namespace NaiveMq.Service.Handlers
                 response.Entity = new Server
                 {
                     Name = context.Storage.Options.Name,
+                    ClusterKey = context.Storage.Options.ClusterKey,
                 };
             }));
         }
