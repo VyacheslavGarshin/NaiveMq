@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;
@@ -14,25 +15,23 @@ namespace NaiveMq.Service.Cogs
         
         private readonly Storage _storage;
         
-        private readonly NaiveMqServiceOptions _options;
-        
         private readonly ILogger<NaiveMqService> _logger;
         
         private readonly ILogger<NaiveMqClient> _clientLogger;
 
         private readonly CancellationToken _stoppingToken;
-
-        private readonly ConcurrentDictionary<int, NaiveMqClient> _clients = new();
-
+        
+        private readonly NaiveMqServiceOptions _options;
+        
         private readonly ConcurrentDictionary<string, ClusterServer> _servers = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public Cluster(Storage storage, NaiveMqServiceOptions options, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
+        public Cluster(Storage storage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
             _storage = storage;
-            _options = options;
             _logger = logger;
             _clientLogger = clientLogger;
             _stoppingToken = stoppingToken;
+            _options = _storage.Service.Options;
         }
 
         public void Start()
@@ -58,32 +57,20 @@ namespace NaiveMq.Service.Cogs
                     _discoveryTimer = null;
                 }
 
+                foreach (var server in _servers.Values)
+                {
+                    server.Client.Dispose();
+                }
+
+                _servers.Clear();
+
                 Started = false;
             }
         }
-
-        public void AddClient(NaiveMqClient client)
-        {
-            _clients.TryAdd(client.Id, client);
-        }
-
-        public void RemoveClient(NaiveMqClient client)
-        {
-            if (_clients.TryRemove(client.Id, out var _))
-            {
-                var server = _servers.FirstOrDefault(x => x.Value?.ClientContext.Client.Id == client.Id);
-
-                if (server.Key != null)
-                {
-                    _servers.Remove(server.Key, out var _);
-                }
-            }
-        }
-
+       
         public void Dispose()
         {
             Stop();
-            _clients.Clear();
         }
 
         private async Task ClusterDiscovery()
@@ -133,11 +120,10 @@ namespace NaiveMq.Service.Cogs
                 {
                     await client.SendAsync(new Login { Username = _options.ClusterUser, Password = _options.ClusterUserPassword });
 
-                    server.ClientContext = CreateClientContext(client);
-                    _storage.TryAddClient(client);
-                    AddClient(client);
-
+                    server.Client = client;
                     client = null;
+
+                    _logger.LogInformation("Discovered cluster server '{Host}', name '{Name}'.", host, server.Name);
                 }
             }
             catch (ClientException ex)
@@ -147,12 +133,12 @@ namespace NaiveMq.Service.Cogs
                     return;
                 }
 
-                _logger.LogError(ex, "Error while discovering cluster server {Host}", host);
+                _logger.LogError(ex, "Client error while discovering cluster server {Host}.", host);
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while discovering cluster server {Host}", host);
+                _logger.LogError(ex, "Unexpected error while discovering cluster server {Host}.", host);
                 throw;
             }
             finally
@@ -161,6 +147,21 @@ namespace NaiveMq.Service.Cogs
                 {
                     client.Dispose();
                 }
+            }
+        }
+
+        private void RemoveClient(NaiveMqClient client)
+        {
+
+            var server = _servers.FirstOrDefault(x => x.Value?.Client.Id == client.Id);
+
+            if (server.Key != null)
+            {
+                _servers.Remove(server.Key, out var _);
+                server.Value.Client.Dispose();
+                server.Value.Client = null;
+
+                _logger.LogInformation("Removed cluster server '{Host}', name '{Name}'.", server.Key, server.Value.Name);
             }
         }
 

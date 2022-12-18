@@ -8,15 +8,7 @@ namespace NaiveMq.Service.Cogs
 {
     public class Storage : IDisposable
     {
-        public SpeedCounter WriteCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
-
-        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
-
-        public NaiveMqServiceOptions Options { get; }
+        public NaiveMqService Service { get; }
 
         public IPersistentStorage PersistentStorage { get; set; }
 
@@ -26,6 +18,16 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<string, UserCog> Users { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
+        public SpeedCounter WriteCounter { get; set; } = new(10);
+
+        public SpeedCounter ReadCounter { get; set; } = new(10);
+
+        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
+
+        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
+
+        private readonly NaiveMqServiceOptions _options;
+        
         private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
 
         private readonly CancellationToken _stoppingToken;
@@ -36,15 +38,16 @@ namespace NaiveMq.Service.Cogs
 
         private readonly Timer _oneSecondTimer;
 
-        public Storage(NaiveMqServiceOptions options, IPersistentStorage persistentStorage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
+        public Storage(NaiveMqService service, IPersistentStorage persistentStorage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
-            Options = options;
+            Service = service;
+            _options = service.Options;
             _logger = logger;
             _clientLogger = clientLogger;
             _stoppingToken = stoppingToken;
 
             PersistentStorage = persistentStorage;
-            Cluster = new Cluster(this, options, logger, clientLogger, stoppingToken);
+            Cluster = new Cluster(this, logger, clientLogger, stoppingToken);
 
             _oneSecondTimer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
@@ -88,13 +91,15 @@ namespace NaiveMq.Service.Cogs
 
         public bool TryAddClient(NaiveMqClient client)
         {
-            var result = _clientContexts.TryAdd(client.Id, new ClientContext
+            var clientContex = new ClientContext
             {
                 Storage = this,
                 Client = client,
                 StoppingToken = _stoppingToken,
                 Logger = _logger
-            });
+            };
+
+            var result = _clientContexts.TryAdd(client.Id, clientContex);
 
             _logger.LogInformation("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
 
@@ -107,13 +112,7 @@ namespace NaiveMq.Service.Cogs
 
             if (result)
             {
-                if (Cluster.Started)
-                {
-                    Cluster.RemoveClient(client);
-                }
-
                 clientContext.Dispose();
-
                 _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);
             }
 
@@ -129,8 +128,8 @@ namespace NaiveMq.Service.Cogs
         {
             var memoryInfo = GC.GetGCMemoryInfo();
             var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes + memoryInfo.HeapSizeBytes;
-            MemoryLimitExceeded = freeMemory < 0.01 * (100 - Options.AutoMemoryLimitPercent) * memoryInfo.HighMemoryLoadThresholdBytes
-                || (Options.MemoryLimit != null && memoryInfo.HeapSizeBytes > Options.MemoryLimit);
+            MemoryLimitExceeded = freeMemory < 0.01 * (100 - _options.AutoMemoryLimitPercent) * memoryInfo.HighMemoryLoadThresholdBytes
+                || (_options.MemoryLimit != null && memoryInfo.HeapSizeBytes > _options.MemoryLimit);
         }
     }
 }

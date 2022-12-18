@@ -171,5 +171,11 @@ namespace NaiveMq.Client
 
         [Description("Discovering cluster server ClusterKey do not match with the current one.")]
         ClusterKeysDontMatch = 138,
+
+        [Description("Client id {0} and host '{1}' already added.")]
+        ClientAlreadyAdded = 139,
+
+        [Description("Cluster client for host '{0}' and name '{1}' already added.")]
+        ClusterClientAlreadyAdded = 140,
     }
 }
