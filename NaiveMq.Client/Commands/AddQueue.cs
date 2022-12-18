@@ -16,9 +16,28 @@ namespace NaiveMq.Client.Commands
 
         public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
+        public AddQueue()
+        {
+        }
+
+        public AddQueue(string name, bool durable = false, bool exchange = false, long? lengthLimit = null, long? volumeLimit = null, LimitStrategy limitStrategy = LimitStrategy.Delay)
+        {
+            Name = name;
+            Durable = durable;
+            Exchange = exchange;
+            LengthLimit = lengthLimit;
+            VolumeLimit = volumeLimit;
+            LimitStrategy = limitStrategy;
+        }
+
         public override void Validate()
         {
             base.Validate();
+
+            if (string.IsNullOrEmpty(Name))
+            {
+                throw new ClientException(ErrorCode.ParameterNotSet, new[] { nameof(Name) });
+            }
 
             if ((LengthLimit != null && LengthLimit.Value < 1) || (VolumeLimit != null && VolumeLimit.Value < 1))
             {

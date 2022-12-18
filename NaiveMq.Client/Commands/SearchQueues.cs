@@ -9,5 +9,15 @@
         public string User { get; set; }
 
         public string Name { get; set; }
+
+        public SearchQueues()
+        {
+        }
+
+        public SearchQueues(string user, string name)
+        {
+            User = user;
+            Name = name;
+        }
     }
 }

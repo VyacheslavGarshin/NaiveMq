@@ -85,7 +85,10 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var host in Host.Parse(_options.ClusterHosts))
                 {
-                    tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
+                    if (!_hostsMap.TryGetValue(host.ToString(), out var serverName) || string.IsNullOrEmpty(serverName))
+                    {
+                        tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
+                    }
                 }
 
                 await Task.WhenAll(tasks.ToArray());

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
-using NaiveMq.Client.Common;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs

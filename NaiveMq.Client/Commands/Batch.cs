@@ -18,6 +18,15 @@ namespace NaiveMq.Client.Commands
         [JsonIgnore]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        public Batch()
+        {
+        }
+
+        public Batch(List<Message> messages)
+        {
+            Messages = messages;
+        }
+
         public override async Task PrepareAsync(CancellationToken cancellationToken)
         {
             await base.PrepareAsync(cancellationToken);

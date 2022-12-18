@@ -16,5 +16,26 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         /// <remarks>If not set then server default will be used.</remarks>
         public TimeSpan? ConfirmMessageTimeout { get; set; }
+
+        public Subscribe()
+        {
+        }
+
+        public Subscribe(string queue, bool confirmMessage = true, TimeSpan? confirmMessageTimeout = null)
+        {
+            Queue = queue;
+            ConfirmMessage = confirmMessage;
+            ConfirmMessageTimeout = confirmMessageTimeout;
+        }
+
+        public override void Validate()
+        {
+            base.Validate();
+
+            if (string.IsNullOrEmpty(Queue))
+            {
+                throw new ClientException(ErrorCode.ParameterNotSet, new[] { nameof(Queue) });
+            }
+        }
     }
 }

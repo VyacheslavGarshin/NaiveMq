@@ -3,8 +3,6 @@ using Microsoft.Extensions.Options;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
-using System.Diagnostics;
-using System.IO;
 using System.Text;
 
 namespace NaiveMq.Service.PersistentStorage

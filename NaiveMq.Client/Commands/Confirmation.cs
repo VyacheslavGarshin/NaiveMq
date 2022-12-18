@@ -8,6 +8,15 @@ namespace NaiveMq.Client.Commands
         [JsonIgnore]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        public Confirmation()
+        {
+        }
+
+        public Confirmation(ReadOnlyMemory<byte> data)
+        {
+            Data = data;
+        }
+
         public static Confirmation Ok(IRequest request, ReadOnlyMemory<byte> data)
         {
             return new Confirmation
