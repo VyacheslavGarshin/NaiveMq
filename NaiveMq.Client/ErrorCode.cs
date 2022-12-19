@@ -37,8 +37,8 @@ namespace NaiveMq.Client
         [Description("Parameter '{0}' must be set.")]
         ParameterNotSet = 11,
 
-        [Description("Batch messages are empty.")]
-        BatchMessagesEmpty = 12,
+        [Description("Batch commands are empty.")]
+        BatchCommandsEmpty = 12,
 
         [Description("Batch cannot contain message with Request parameter set to true.")]
         BatchContainsRequestMessage = 13,

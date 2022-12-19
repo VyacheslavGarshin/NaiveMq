@@ -172,6 +172,8 @@ namespace NaiveMq.Service.Handlers
                     }
                 }
             }
+
+            context.Storage.ReadMessageCounter.Add();
         }
 
         public void Dispose()

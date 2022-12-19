@@ -222,7 +222,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     var batch = new Batch
                     {
-                        Messages = Enumerable.Range(0, _options.Value.BatchSize).Select(x => CreateMessage(bytes, queueName)).ToList()
+                        Requests = Enumerable.Range(0, _options.Value.BatchSize).Select(x => CreateMessage(bytes, queueName) as IRequest).ToList()
                     };
 
                     var response = await c.SendAsync(batch, _options.Value.Wait, _stoppingToken);

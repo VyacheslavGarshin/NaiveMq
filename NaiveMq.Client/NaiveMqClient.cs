@@ -487,25 +487,9 @@ namespace NaiveMq.Client
 
         private async Task HandleReceivedDataAsync(UnpackResult unpackResult)
         {
-            ReadOnlyMemory<byte> commandNameBytes;
             try
             {
-                var index = 0;
-                commandNameBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandNameLength);
-                index += unpackResult.CommandNameLength;
-                var commandBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandLength);
-                index += unpackResult.CommandLength;
-                var dataBytes = unpackResult.DataLength > 0 ? new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.DataLength) : new ReadOnlyMemory<byte>();
-
-                var commandName = Encoding.UTF8.GetString(commandNameBytes.Span);
-                var commandType = GetCommandType(commandName);
-
-                var command = ParseCommand(commandBytes, commandType);
-
-                if (command is IDataCommand dataCommand)
-                {
-                    dataCommand.Data = dataBytes;
-                }
+                var command = _commandPacker.CreateCommand(unpackResult);
 
                 TraceCommand("<<", command);
 
@@ -586,30 +570,6 @@ namespace NaiveMq.Client
                 responseItem.Response = response;
                 responseItem.SemaphoreSlim.Release();
             }
-        }
-
-        private Type GetCommandType(string commandName)
-        {
-            if (CommandTypes.TryGetValue(commandName, out Type commandType))
-            {
-                return commandType;
-            }
-            else
-            {
-                throw new ClientException(ErrorCode.CommandNotFound, new object[] { commandName });
-            }
-        }
-
-        private ICommand ParseCommand(ReadOnlyMemory<byte> commandBytes, Type commandType)
-        {
-            var result = _converter.Deserialize(commandBytes, commandType);
-
-            if (result.Id == Guid.Empty)
-            {
-                throw new ClientException(ErrorCode.EmptyCommandId);
-            }
-
-            return result;
         }
 
         private void TraceCommand(string prefix, ICommand command)

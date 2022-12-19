@@ -9,21 +9,18 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            var responses = new List<MessageResponse>();
+            var responses = new List<IResponse>();
 
-            foreach (var message in command.Messages)
+            foreach (var request in command.Requests)
             {
                 try
                 {
-                    using var handler = new MessageHandler();
-                    responses.Add(await handler.ExecuteAsync(context, message));
-
-                    // main server handler doesn't know contents of commands and cannot count batch messages
-                    context.Storage.ReadMessageCounter.Add();
+                    var response = await context.Storage.Service.ExecuteCommandAsync(request, context);
+                    responses.Add(response);
                 }
                 catch (Exception ex)
                 {
-                    responses.Add(MessageResponse.Error(
+                    responses.Add(Confirmation.Error(
                         command,
                         ex is ServerException serverException ? serverException.ErrorCode.ToString() : string.Empty,
                         ex.GetBaseException().Message));

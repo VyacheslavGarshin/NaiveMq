@@ -84,7 +84,7 @@ namespace NaiveMq.Service.Cogs
             WriteMessageCounter.Dispose();
         }
 
-        public bool TryGetClient(int id, out ClientContext clientContext)
+        public bool TryGetClientContext(int id, out ClientContext clientContext)
         {
             return _clientContexts.TryGetValue(id, out clientContext);
         }

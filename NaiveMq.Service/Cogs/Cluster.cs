@@ -156,7 +156,7 @@ namespace NaiveMq.Service.Cogs
 
         private void Client_OnStop(NaiveMqClient sender)
         {
-            var server = _servers.FirstOrDefault(x => x.Value?.Client.Id == sender.Id);
+            var server = _servers.FirstOrDefault(x => x.Value?.Client?.Id == sender.Id);
 
             if (server.Key != null)
             {

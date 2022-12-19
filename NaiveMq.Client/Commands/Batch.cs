@@ -1,7 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using NaiveMq.Client.Common;
+using NaiveMq.Client.Converters;
+using Newtonsoft.Json;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,10 +14,11 @@ namespace NaiveMq.Client.Commands
     // todo redo on any command by making Messages IRequest and JsonIgnore
     public class Batch : AbstractRequest<BatchResponse>, IDataCommand
     {
-        public List<Message> Messages { get; set; }
+        [JsonIgnore]
+        public List<IRequest> Requests { get; set; }
 
         /// <summary>
-        /// Combined data of all requests. Automatically generated from Requests on sending command.
+        /// Combined packed requests. Automatically generated from Requests on sending command.
         /// </summary>
         /// <remarks>When receive message data is available only during handling in event.</remarks>
         [JsonIgnore]
@@ -23,39 +28,23 @@ namespace NaiveMq.Client.Commands
         {
         }
 
-        public Batch(List<Message> messages)
+        public Batch(List<IRequest> requests)
         {
-            Messages = messages;
+            Requests = requests;
         }
 
         public override async Task PrepareAsync(CancellationToken cancellationToken)
         {
             await base.PrepareAsync(cancellationToken);
 
-            if (Messages != null && Messages.Count > 0)
+            if (Requests != null && Requests.Count > 0)
             {
-                var dataLength = 0;
-
-                foreach (var message in Messages)
+                foreach (var request in Requests)
                 {
-                    await message.PrepareAsync(cancellationToken);
-
-                    message.Confirm = Confirm;
-                    message.ConfirmTimeout = ConfirmTimeout;
-
-                    dataLength += message.Data.Length;
+                    await request.PrepareAsync(cancellationToken);
                 }
 
-                var data = new byte[dataLength + Messages.Count * 4];
-                using var memoryStream = new MemoryStream(data);
-
-                foreach (var message in Messages)
-                {
-                    await memoryStream.WriteAsync(BitConverter.GetBytes(message.Data.Length));
-                    await memoryStream.WriteAsync(message.Data);
-                }
-
-                Data = data;
+                Data = new CommandPacker(new JsonCommandConverter()).Pack(Requests);
             }
         }
 
@@ -63,16 +52,16 @@ namespace NaiveMq.Client.Commands
         {
             base.Validate();
 
-            if (Messages == null || Messages.Count == 0)
+            if (Requests == null || Requests.Count == 0)
             {
-                throw new ClientException(ErrorCode.BatchMessagesEmpty);
+                throw new ClientException(ErrorCode.BatchCommandsEmpty);
             }
 
-            foreach (var message in Messages)
+            foreach (var request in Requests)
             {
-                message.Validate();
+                request.Validate();
 
-                if (message.Request)
+                if (request is Message message && message.Request)
                 {
                     throw new ClientException(ErrorCode.BatchContainsRequestMessage);
                 }
@@ -83,21 +72,10 @@ namespace NaiveMq.Client.Commands
         {
             await base.RestoreAsync(cancellationToken);
 
-            // todo get rid of ToArray
-            using var memoryStream = new MemoryStream(Data.ToArray());
+            Requests = (await new CommandPacker(new JsonCommandConverter()).Unpack(Data.ToArray(), cancellationToken)).
+                Cast<IRequest>().ToList();
 
-            foreach (var message in Messages)
-            {
-                var lengthBytes = new byte[4];
-                await memoryStream.ReadAsync(lengthBytes, 0, 4, cancellationToken);
-                var length = BitConverter.ToInt32(lengthBytes, 0);
-
-                // todo use arraypool
-                var bytes = new byte[length];
-                await memoryStream.ReadAsync(bytes, 0, length, cancellationToken);
-
-                message.Data = bytes;
-            }
+            Data = new ReadOnlyMemory<byte>();
         }
     }
 }

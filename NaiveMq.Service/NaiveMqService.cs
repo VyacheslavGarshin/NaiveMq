@@ -19,9 +19,11 @@ namespace NaiveMq.Service
 
         public bool Online => _online;
 
-        public NaiveMqServiceOptions Options { get; private set; }
+        public NaiveMqServiceOptions Options { get; }
 
         public Storage Storage { get; private set; }
+
+        public Dictionary<Type, Type> CommandHandlers { get; } = new();
 
         private CancellationToken _stoppingToken;
         
@@ -36,8 +38,6 @@ namespace NaiveMq.Service
         private readonly ILogger<NaiveMqClient> _clientLogger;
         
         private readonly IPersistentStorage _persistentStorage;
-
-        private readonly Dictionary<Type, Type> _commandHandlers = new();
 
         static NaiveMqService()
         {
@@ -55,19 +55,6 @@ namespace NaiveMq.Service
             _persistentStorage = persistentStorage;
 
             InitCommands();
-        }
-
-        private void InitCommands()
-        {
-            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
-            {
-                var ihandler = type.GetInterfaces().FirstOrDefault(y => y.IsGenericType && typeof(IHandler<IRequest<IResponse>, IResponse>).Name == y.GetGenericTypeDefinition().Name);
-                if (ihandler != null)
-                {
-                    _commandHandlers.Add(ihandler.GenericTypeArguments.First(), type);
-                    continue;
-                }
-            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -99,6 +86,60 @@ namespace NaiveMq.Service
 
             Offline();
             Storage.Dispose();
+        }
+
+        public async Task<IResponse> ExecuteCommandAsync(IRequest command, ClientContext clientContext)
+        {
+            if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandler))
+            {
+                var method = commandHandler.GetMethod(nameof(IHandler<IRequest<IResponse>, IResponse>.ExecuteAsync));
+                IDisposable instance = null;
+
+                try
+                {
+                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
+                    var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
+                    await task;
+
+                    var resultProperty = task.GetType().GetProperty("Result");
+                    var result = (IResponse)resultProperty.GetValue(task);
+
+                    return result;
+                }
+                catch (TargetInvocationException ex)
+                {
+                    throw ex.InnerException;
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    if (instance != null)
+                    {
+                        instance.Dispose();
+                    }
+                }
+            }
+            else
+            {
+                throw new ServerException(ErrorCode.CommandHandlerNotFound,
+                    string.Format(ErrorCode.CommandHandlerNotFound.GetDescription(), command.GetType().Name));
+            }
+        }
+
+        private void InitCommands()
+        {
+            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+            {
+                var ihandler = type.GetInterfaces().FirstOrDefault(y => y.IsGenericType && typeof(IHandler<IRequest<IResponse>, IResponse>).Name == y.GetGenericTypeDefinition().Name);
+                if (ihandler != null)
+                {
+                    CommandHandlers.Add(ihandler.GenericTypeArguments.First(), type);
+                    continue;
+                }
+            }
         }
 
         private async Task OnlineAsync()
@@ -192,7 +233,6 @@ namespace NaiveMq.Service
 
         private Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
         {
-            Storage.ReadMessageCounter.Add();
             return Task.CompletedTask;
         }
 
@@ -255,45 +295,9 @@ namespace NaiveMq.Service
 
         private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, IRequest command)
         {
-            if (_commandHandlers.TryGetValue(command.GetType(), out var commandHandler))
-            {
-                var method = commandHandler.GetMethod(nameof(IHandler<IRequest<IResponse>, IResponse>.ExecuteAsync));
-                IDisposable instance = null;
-
-                try
-                {
-                    Storage.TryGetClient(sender.Id, out var clientContext);
-
-                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
-                    var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
-                    await task;
-
-                    var resultProperty = task.GetType().GetProperty("Result");
-                    var result = (IResponse)resultProperty.GetValue(task);
-
-                    return result;
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException;
-                }
-                catch
-                {
-                    throw;
-                }
-                finally
-                {
-                    if (instance != null)
-                    {
-                        instance.Dispose();
-                    }
-                }
-            }
-            else
-            {
-                throw new ServerException(ErrorCode.CommandHandlerNotFound,
-                    string.Format(ErrorCode.CommandHandlerNotFound.GetDescription(), command.GetType().Name));
-            }
+            Storage.TryGetClientContext(sender.Id, out var clientContext);
+            
+            return await ExecuteCommandAsync(command, clientContext);
         }
     }
 }
