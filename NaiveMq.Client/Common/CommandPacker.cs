@@ -110,17 +110,16 @@ namespace NaiveMq.Client.Common
             }
         }
 
-        public async Task<List<ICommand>> Unpack(byte[] bytes, CancellationToken cancellationToken)
+        public async Task<List<ICommand>> Unpack(Stream stream, CancellationToken cancellationToken)
         {
             var result = new List<ICommand>();
             var unpackResults = new List<UnpackResult>();
-            using var memoryStream = new MemoryStream(bytes);
 
             try
             {
-                while (memoryStream.Position < memoryStream.Length)
+                while (stream.Position < stream.Length)
                 {
-                    unpackResults.Add(await Unpack(memoryStream, null, cancellationToken, ArrayPool<byte>.Shared));
+                    unpackResults.Add(await Unpack(stream, null, cancellationToken, ArrayPool<byte>.Shared));
                 }
 
                 foreach (var unpackResult in unpackResults)

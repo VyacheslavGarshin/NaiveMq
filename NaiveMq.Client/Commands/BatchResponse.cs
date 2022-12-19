@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Common;
+﻿using CommunityToolkit.HighPerformance;
+using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
 using Newtonsoft.Json;
 using System;
@@ -17,7 +18,7 @@ namespace NaiveMq.Client.Commands
         /// <summary>
         /// Combined packed responses. Automatically generated from Responses on sending command.
         /// </summary>
-        /// <remarks>When receive message data is available only during handling in event.</remarks>
+        /// <remarks>When receive Data is reconstructed back to Responses. Then cleared.</remarks>
         [JsonIgnore]
         public ReadOnlyMemory<byte> Data { get; set; }
 
@@ -64,7 +65,7 @@ namespace NaiveMq.Client.Commands
         {
             await base.RestoreAsync(cancellationToken);
 
-            Responses = (await new CommandPacker(new JsonCommandConverter()).Unpack(Data.ToArray(), cancellationToken)).
+            Responses = (await new CommandPacker(new JsonCommandConverter()).Unpack(Data.AsStream(), cancellationToken)).
                Cast<IResponse>().ToList();
 
             Data = new ReadOnlyMemory<byte>();
