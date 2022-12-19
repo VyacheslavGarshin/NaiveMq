@@ -371,11 +371,11 @@ namespace NaiveMq.Client
         /// <exception cref="ClientStoppedException"></exception>
         private async Task WriteCommandAsync(ICommand command, CancellationToken cancellationToken)
         {
-            byte[] buffer = null;
+            PackResult package = null;
 
             try
             {
-                var package = _commandPacker.Pack(command, ArrayPool<byte>.Shared);
+                package = _commandPacker.Pack(command, ArrayPool<byte>.Shared);
 
                 await WriteBytesAsync(package.Buffer.AsMemory(0, package.Length), cancellationToken);
 
@@ -395,9 +395,9 @@ namespace NaiveMq.Client
             }
             finally
             {
-                if (buffer != null)
+                if (package != null)
                 {
-                    ArrayPool<byte>.Shared.Return(buffer);
+                    ArrayPool<byte>.Shared.Return(package.Buffer);
                 }
             }
         }        
