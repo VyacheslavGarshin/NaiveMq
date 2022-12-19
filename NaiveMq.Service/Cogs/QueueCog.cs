@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Cogs
 
         public bool Started { get; set; } = true;
 
-        public long? LengthLimit { get; set; }
+        public long? ForcedLengthLimit { get; set; }
 
         public long? VolumeLimit { get; set; }
 
@@ -52,19 +52,19 @@ namespace NaiveMq.Service.Cogs
                 {
                     Interlocked.Add(ref _volumeInMemory, -message.DataLength);
                 }
+            }
 
-                try
+            try
+            {
+                if (_limitSemaphore.CurrentCount == 0 && LimitExceeded(message.DataLength) == LimitType.None)
                 {
-                    if (_limitSemaphore.CurrentCount == 0 && LimitExceeded(message.DataLength) != LimitType.None)
-                    {
-                        LengthLimit = null;
-                        _limitSemaphore.Release();
-                    }
+                    ForcedLengthLimit = null;
+                    _limitSemaphore.Release();
                 }
-                catch (SemaphoreFullException)
-                {
+            }
+            catch (SemaphoreFullException)
+            {
 
-                }
             }
 
             return message;
@@ -76,14 +76,14 @@ namespace NaiveMq.Service.Cogs
 
             _messages.Enqueue(message);
 
+            _dequeueSemaphore.Release();
+
             Interlocked.Add(ref _volume, message.DataLength);
 
             if (message.Persistent != Persistence.DiskOnly)
             {
                 Interlocked.Add(ref _volumeInMemory, message.DataLength);
             }
-
-            _dequeueSemaphore.Release();
         }
 
         public async Task<bool> WaitLimitSemaphoreAsync(TimeSpan timout, CancellationToken cancellationToken)
@@ -93,7 +93,7 @@ namespace NaiveMq.Service.Cogs
 
         public LimitType LimitExceeded(int dataLength)
         {
-            if (Entity.LengthLimit != null && (Length >= Entity.LengthLimit) || (LengthLimit != null && Length >= LengthLimit))
+            if ((Entity.LengthLimit != null && (Length >= Entity.LengthLimit)) || (ForcedLengthLimit != null && (Length >= ForcedLengthLimit)))
             {
                 return LimitType.Length;
             }

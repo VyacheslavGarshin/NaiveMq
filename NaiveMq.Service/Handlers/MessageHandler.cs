@@ -80,7 +80,7 @@ namespace NaiveMq.Service.Handlers
             if (!context.Reinstate && command != null) {
                 foreach (var queue in queues)
                 {
-                    if (context.Storage.MemoryLimitExceeded && queue.LengthLimit == null && queue.Length > 1)
+                    if (context.Storage.MemoryLimitExceeded && queue.ForcedLengthLimit == null && queue.Length > 1)
                     {
                         var limit = (long)(queue.Length * (0.01 * context.Storage.Service.Options.AutoQueueLimitPercent));
 
@@ -89,7 +89,7 @@ namespace NaiveMq.Service.Handlers
                             limit = 1;
                         }
 
-                        queue.LengthLimit = limit;
+                        queue.ForcedLengthLimit = limit;
                     }
 
                     var limitType = queue.LimitExceeded(command.Data.Length);
