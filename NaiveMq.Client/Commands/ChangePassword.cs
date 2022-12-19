@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class ChangePassword : AbstractRequest<Confirmation>
+    public class ChangePassword : AbstractRequest<Confirmation>, IReplicable
     {
         public string CurrentPassword { get; set; }
         

@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class ClearQueue : AbstractRequest<Confirmation>
+    public class ClearQueue : AbstractRequest<Confirmation>, IReplicable
     {
         public string Name { get; set; }
 

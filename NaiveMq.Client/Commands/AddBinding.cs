@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class AddBinding : AbstractRequest<Confirmation>
+    public class AddBinding : AbstractRequest<Confirmation>, IReplicable
     {
         public string Exchange { get; set; }
 

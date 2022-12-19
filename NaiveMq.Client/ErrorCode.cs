@@ -180,5 +180,8 @@ namespace NaiveMq.Client
 
         [Description("You must have cluster administrator rights to perform this operation.")]
         AccessDeniedNotClusterAdmin = 141,
+
+        [Description("Request is not replicable.")]
+        NotReplicableRequest = 142,
     }
 }

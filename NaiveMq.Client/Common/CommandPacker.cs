@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Threading;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace NaiveMq.Client.Common

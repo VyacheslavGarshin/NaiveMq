@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;

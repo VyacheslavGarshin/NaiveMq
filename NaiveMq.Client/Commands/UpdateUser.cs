@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Commands
 {
-    public class UpdateUser : AbstractRequest<Confirmation>
+    public class UpdateUser : AbstractRequest<Confirmation>, IReplicable
     {
         public string Username { get; set; }
 
