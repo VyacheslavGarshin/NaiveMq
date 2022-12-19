@@ -101,5 +101,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public bool Wait { get; set; } = true;
 
         public bool ClearQueue { get; set; } = false;
+
+        public bool LogServerActivity { get; set; } = false;
     }
 }

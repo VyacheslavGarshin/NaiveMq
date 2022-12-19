@@ -27,6 +27,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _stoppingToken = stoppingToken;
+            Timer timer = null;
 
             if (_options.Value.IsEnabled)
             {
@@ -40,19 +41,22 @@ namespace NaiveMq.LoadTests.SpamQueue
                     await Task.Delay(1000, _stoppingToken);
                 }
 
-                using var timer = new Timer((s) =>
+                if (_options.Value.LogServerActivity)
                 {
-                    _queueService.Storage.Users[_options.Value.Username].Queues.TryGetValue(_options.Value.QueueName + "1", out var queue);
+                    timer = new Timer((s) =>
+                    {
+                        _queueService.Storage.Users[_options.Value.Username].Queues.TryGetValue(_options.Value.QueueName + "1", out var queue);
 
-                    _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Storage.ReadMessageCounter.LastResult};" +
-                        $"Write message/s;{_queueService.Storage.WriteMessageCounter.LastResult};" +
-                        $"Read/s;{_queueService.Storage.ReadCounter.LastResult};" +
-                        $"Write/s;{_queueService.Storage.WriteCounter.LastResult};" +
-                        $"Total read;{_queueService.Storage.ReadCounter.Total};" +
-                        $"Total write;{_queueService.Storage.WriteCounter.Total};" +
-                        $"QueueLength;{queue?.Length};" +
-                        $"QueueVolume;{queue?.Volume};") ;
-                }, null, 0, 1000);
+                        _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Storage.ReadMessageCounter.LastResult};" +
+                            $"Write message/s;{_queueService.Storage.WriteMessageCounter.LastResult};" +
+                            $"Read/s;{_queueService.Storage.ReadCounter.LastResult};" +
+                            $"Write/s;{_queueService.Storage.WriteCounter.LastResult};" +
+                            $"Total read;{_queueService.Storage.ReadCounter.Total};" +
+                            $"Total write;{_queueService.Storage.WriteCounter.Total};" +
+                            $"QueueLength;{queue?.Length};" +
+                            $"QueueVolume;{queue?.Volume};");
+                    }, null, 0, 1000);
+                }
 
                 await QueueSpamAsync();
             }
