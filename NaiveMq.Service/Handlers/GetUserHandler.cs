@@ -5,9 +5,9 @@ using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class GetUserHandler : IHandler<GetUser, GetUserResponse>
+    public class GetUserHandler : AbstractHandler<GetUser, GetUserResponse>
     {
-        public Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command)
+        public override Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command)
         {
             context.CheckAdmin(context);
             
@@ -28,10 +28,6 @@ namespace NaiveMq.Service.Handlers
             {
                 throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

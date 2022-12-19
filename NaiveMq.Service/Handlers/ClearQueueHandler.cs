@@ -4,9 +4,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class ClearQueueHandler : IHandler<ClearQueue, Confirmation>
+    public class ClearQueueHandler : AbstractHandler<ClearQueue, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, ClearQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ClearQueue command)
         {
             context.CheckUser(context);
 
@@ -39,10 +39,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Confirmation.Ok(command);
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

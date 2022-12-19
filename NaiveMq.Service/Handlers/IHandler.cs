@@ -5,13 +5,13 @@ namespace NaiveMq.Service.Handlers
 {
     public interface IHandler
     {
+        Task<IResponse> ExecuteAsync(ClientContext context, IRequest command);
     }
 
-    public interface IHandler<TRequest, TResponse> : IDisposable, IHandler
+    public interface IHandler<TRequest, TResponse> : IHandler
         where TRequest : IRequest<TResponse>
         where TResponse : IResponse
     {
-
         /// <summary>
         /// 
         /// </summary>

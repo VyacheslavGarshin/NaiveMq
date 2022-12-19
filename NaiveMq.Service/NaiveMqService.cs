@@ -92,18 +92,10 @@ namespace NaiveMq.Service
         {
             if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandler))
             {
-                var method = commandHandler.GetMethod(nameof(IHandler<IRequest<IResponse>, IResponse>.ExecuteAsync));
-                IDisposable instance = null;
-
                 try
                 {
-                    instance = (IDisposable)Activator.CreateInstance(commandHandler);
-                    var task = (Task)method.Invoke(instance, new object[] { clientContext, command });
-                    await task;
-
-                    var resultProperty = task.GetType().GetProperty("Result");
-                    var result = (IResponse)resultProperty.GetValue(task);
-
+                    var instance = Activator.CreateInstance(commandHandler);
+                    var result = await ((IHandler)instance).ExecuteAsync(clientContext, command);
                     return result;
                 }
                 catch (TargetInvocationException ex)
@@ -113,13 +105,6 @@ namespace NaiveMq.Service
                 catch
                 {
                     throw;
-                }
-                finally
-                {
-                    if (instance != null)
-                    {
-                        instance.Dispose();
-                    }
                 }
             }
             else

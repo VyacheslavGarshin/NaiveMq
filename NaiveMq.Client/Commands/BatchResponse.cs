@@ -65,7 +65,9 @@ namespace NaiveMq.Client.Commands
         {
             await base.RestoreAsync(cancellationToken);
 
-            Responses = (await new CommandPacker(new JsonCommandConverter()).Unpack(Data.AsStream(), cancellationToken)).
+            using var stream = Data.AsStream();
+
+            Responses = (await new CommandPacker(new JsonCommandConverter()).Unpack(stream, cancellationToken)).
                Cast<IResponse>().ToList();
 
             Data = new ReadOnlyMemory<byte>();

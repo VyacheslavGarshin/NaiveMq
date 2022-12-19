@@ -5,9 +5,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class ChangePasswordHandler : IHandler<ChangePassword, Confirmation>
+    public class ChangePasswordHandler : AbstractHandler<ChangePassword, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, ChangePassword command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ChangePassword command)
         {
             context.CheckUser(context);
 
@@ -44,10 +44,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Confirmation.Ok(command);
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

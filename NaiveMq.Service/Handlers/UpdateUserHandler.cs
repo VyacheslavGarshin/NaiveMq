@@ -7,9 +7,9 @@ using Newtonsoft.Json;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class UpdateUserHandler : IHandler<UpdateUser, Confirmation>
+    public class UpdateUserHandler : AbstractHandler<UpdateUser, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command)
         {
             context.CheckAdmin(context);
 
@@ -52,10 +52,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Confirmation.Ok(command);
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

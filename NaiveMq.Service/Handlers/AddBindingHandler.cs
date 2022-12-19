@@ -6,9 +6,9 @@ using NaiveMq.Service.Entities;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class AddBindingHandler : IHandler<AddBinding, Confirmation>
+    public class AddBindingHandler : AbstractHandler<AddBinding, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, AddBinding command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddBinding command)
         {
             context.CheckUser(context);
 

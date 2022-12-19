@@ -34,9 +34,8 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 |                                          | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
 | In memory message without confirmation   | 26.000    | 31.000*   |              |              |                 |                 |
-| In memory message with confirmation      |  7.600    |  6.600    |  7.500       |  6.000       |  700            |  550            |
+| In memory message with confirmation      |  8.000    |  6.600    |  7.500       |  6.000       |  700            |  550            |
 | - 10 queues, 1 client per queue in/out   |  7.800    |           |              |              |                 |                 |
-| - batch by 100 messages                  | 14.000    | 25.000    | 10.500       | 16.000       |                 |                 |
 | - handle confirms in a separate handler  |  8.900    |      -    |              |              |                 |                 |
 | In memory request-response message       |  7.700    |      -    |  7.300       |      -       |  690            |    -            |
 | Persistent message without confirmation  |  2.000    | 28.000**  |              |              |                 |                 |

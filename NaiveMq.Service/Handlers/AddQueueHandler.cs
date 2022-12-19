@@ -2,13 +2,12 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
-using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class AddQueueHandler : IHandler<AddQueue, Confirmation>
+    public class AddQueueHandler : AbstractHandler<AddQueue, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, AddQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddQueue command)
         {
             context.CheckUser(context);
 
@@ -46,10 +45,6 @@ namespace NaiveMq.Service.Handlers
                 queue.Dispose();
                 throw;
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

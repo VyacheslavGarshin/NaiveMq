@@ -4,19 +4,15 @@ using NaiveMq.Service.Commands;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class ReplicateHandler : IHandler<Replicate, Confirmation>
+    public class ReplicateHandler : AbstractHandler<Replicate, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command)
         {
             context.CheckClusterAdmin(context);
 
             context.Reinstate = true;
 
             return Task.FromResult(Confirmation.Ok(command));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

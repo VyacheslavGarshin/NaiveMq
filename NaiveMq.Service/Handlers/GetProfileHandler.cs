@@ -4,9 +4,9 @@ using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class GetProfileHandler : IHandler<GetProfile, GetProfileResponse>
+    public class GetProfileHandler : AbstractHandler<GetProfile, GetProfileResponse>
     {
-        public Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command)
+        public override Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command)
         {
             context.CheckUser(context);
 
@@ -18,10 +18,6 @@ namespace NaiveMq.Service.Handlers
                     Administrator = context.User.Entity.Administrator
                 };
             }));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

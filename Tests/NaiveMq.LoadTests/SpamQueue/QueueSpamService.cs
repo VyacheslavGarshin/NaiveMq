@@ -15,6 +15,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         private IOptions<QueueSpamServiceOptions> _options;
         private readonly NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
+        private Timer _timer;
 
         public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMqService queueService)
         {
@@ -27,7 +28,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _stoppingToken = stoppingToken;
-            Timer timer = null;
+            
 
             if (_options.Value.IsEnabled)
             {
@@ -43,7 +44,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 if (_options.Value.LogServerActivity)
                 {
-                    timer = new Timer((s) =>
+                    _timer = new Timer((s) =>
                     {
                         _queueService.Storage.Users[_options.Value.Username].Queues.TryGetValue(_options.Value.QueueName + "1", out var queue);
 

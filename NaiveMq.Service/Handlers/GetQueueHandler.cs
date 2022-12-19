@@ -5,9 +5,9 @@ using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class GetQueueHandler : IHandler<GetQueue, GetQueueResponse>
+    public class GetQueueHandler : AbstractHandler<GetQueue, GetQueueResponse>
     {
-        public Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command)
+        public override Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command)
         {
             context.CheckUser(context);
 
@@ -33,10 +33,6 @@ namespace NaiveMq.Service.Handlers
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

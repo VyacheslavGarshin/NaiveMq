@@ -4,9 +4,9 @@ using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class GetServerHandler : IHandler<GetServer, GetServerResponse>
+    public class GetServerHandler : AbstractHandler<GetServer, GetServerResponse>
     {
-        public Task<GetServerResponse> ExecuteAsync(ClientContext context, GetServer command)
+        public override Task<GetServerResponse> ExecuteAsync(ClientContext context, GetServer command)
         {
             return Task.FromResult(GetServerResponse.Ok(command, (response) =>
             {
@@ -16,10 +16,6 @@ namespace NaiveMq.Service.Handlers
                     ClusterKey = context.Storage.Service.Options.ClusterKey,
                 };
             }));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

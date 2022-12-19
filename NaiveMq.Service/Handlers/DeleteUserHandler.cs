@@ -4,9 +4,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class DeleteUserHandler : IHandler<DeleteUser, Confirmation>
+    public class DeleteUserHandler : AbstractHandler<DeleteUser, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteUser command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteUser command)
         {
             context.CheckAdmin(context);
 
@@ -35,10 +35,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Confirmation.Ok(command);
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

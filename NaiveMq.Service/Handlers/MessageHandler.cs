@@ -7,9 +7,9 @@ using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class MessageHandler : IHandler<Message, MessageResponse>
+    public class MessageHandler : AbstractHandler<Message, MessageResponse>
     {
-        public async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command)
+        public override async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command)
         {
             context.CheckUser(context);
 
@@ -174,10 +174,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             context.Storage.ReadMessageCounter.Add();
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

@@ -4,9 +4,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class DeleteQueueHandler : IHandler<DeleteQueue, Confirmation>
+    public class DeleteQueueHandler : AbstractHandler<DeleteQueue, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command)
         {
             context.CheckUser(context);
 
@@ -55,10 +55,6 @@ namespace NaiveMq.Service.Handlers
                     await new DeleteBindingHandler().ExecuteAsync(context, deleteBindingCommand);
                 }
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

@@ -4,9 +4,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class SubscribeHandler : IHandler<Subscribe, Confirmation>
+    public class SubscribeHandler : AbstractHandler<Subscribe, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command)
         {
             context.CheckUser(context);
 
@@ -36,10 +36,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Task.FromResult(Confirmation.Ok(command));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

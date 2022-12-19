@@ -3,9 +3,9 @@ using NaiveMq.Client.Commands;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class BatchHandler : IHandler<Batch, BatchResponse>
+    public class BatchHandler : AbstractHandler<Batch, BatchResponse>
     {
-        public async Task<BatchResponse> ExecuteAsync(ClientContext context, Batch command)
+        public override async Task<BatchResponse> ExecuteAsync(ClientContext context, Batch command)
         {
             context.CheckUser(context);
 
@@ -31,10 +31,6 @@ namespace NaiveMq.Service.Handlers
             {
                 response.Responses = responses;
             });
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

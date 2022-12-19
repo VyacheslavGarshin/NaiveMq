@@ -4,9 +4,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class UnsubscribeHandler : IHandler<Unsubscribe, Confirmation>
+    public class UnsubscribeHandler : AbstractHandler<Unsubscribe, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(ClientContext context, Unsubscribe command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Unsubscribe command)
         {
             context.CheckUser(context);
 
@@ -27,10 +27,6 @@ namespace NaiveMq.Service.Handlers
             }          
 
             return Task.FromResult(Confirmation.Ok(command));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

@@ -5,9 +5,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class LoginHandler : IHandler<Login, Confirmation>
+    public class LoginHandler : AbstractHandler<Login, Confirmation>
     {
-        public Task<Confirmation> ExecuteAsync(ClientContext context, Login command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Login command)
         {
             if (context.User == null)
             {
@@ -27,10 +27,6 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Task.FromResult(Confirmation.Ok(command));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

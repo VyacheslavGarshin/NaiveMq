@@ -206,7 +206,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)
         {
-            using var handler = new MessageHandler();
+            var handler = new MessageHandler();
             await handler.ExecuteEntityAsync(_context, messageEntity);
         }
 

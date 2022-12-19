@@ -5,9 +5,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class AddUserHandler : IHandler<AddUser, Confirmation>
+    public class AddUserHandler : AbstractHandler<AddUser, Confirmation>
     {
-        public async Task<Confirmation> ExecuteAsync(ClientContext context, AddUser command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddUser command)
         {
             if (!context.Reinstate && context.Storage.Users.Any())
             {
@@ -46,10 +46,6 @@ namespace NaiveMq.Service.Handlers
                     throw;
                 }
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

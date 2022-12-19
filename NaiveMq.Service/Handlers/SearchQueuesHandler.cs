@@ -4,9 +4,9 @@ using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class SearchQueuesHandler : IHandler<SearchQueues, SearchQueuesResponse>
+    public class SearchQueuesHandler : AbstractHandler<SearchQueues, SearchQueuesResponse>
     {
-        public Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command)
+        public override Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command)
         {
             context.CheckUser(context);
 
@@ -36,10 +36,6 @@ namespace NaiveMq.Service.Handlers
 
                 response.Count = command.Count ? expression.Count() : null;
             }));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
