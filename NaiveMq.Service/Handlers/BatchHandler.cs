@@ -15,8 +15,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    var response = await context.Storage.Service.ExecuteCommandAsync(request, context);
-                    responses.Add(response);
+                    responses.Add(await context.Storage.Service.ExecuteCommandAsync(request, context));
                 }
                 catch (Exception ex)
                 {

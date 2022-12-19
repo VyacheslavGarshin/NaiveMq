@@ -15,9 +15,9 @@ namespace NaiveMq.Service
 {
     public sealed class NaiveMqService : BackgroundService
     {
-        public bool Loaded => _loaded;
+        public bool Loaded { get; private set; }
 
-        public bool Online => _online;
+        public bool Online { get; private set; }
 
         public NaiveMqServiceOptions Options { get; }
 
@@ -27,10 +27,6 @@ namespace NaiveMq.Service
 
         private CancellationToken _stoppingToken;
         
-        private bool _loaded;
-
-        private bool _online;
-
         private TcpListener _listener;
 
         private readonly ILogger<NaiveMqService> _logger;
@@ -54,7 +50,7 @@ namespace NaiveMq.Service
             Options = options.Value;
             _persistentStorage = persistentStorage;
 
-            InitCommands();
+            RegisterHandlers(Assembly.GetExecutingAssembly());
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,7 +60,7 @@ namespace NaiveMq.Service
             Storage = new Storage(this, _persistentStorage, _logger, _clientLogger, _stoppingToken);
             await new PersistentStorageLoader(Storage, _logger, _stoppingToken).LoadAsync();
 
-            _loaded = true;
+            Loaded = true;
 
             _listener = new TcpListener(IPAddress.Any, Options.Port);
             while (!_stoppingToken.IsCancellationRequested)
@@ -92,20 +88,7 @@ namespace NaiveMq.Service
         {
             if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandler))
             {
-                try
-                {
-                    var instance = Activator.CreateInstance(commandHandler);
-                    var result = await ((IHandler)instance).ExecuteAsync(clientContext, command);
-                    return result;
-                }
-                catch (TargetInvocationException ex)
-                {
-                    throw ex.InnerException;
-                }
-                catch
-                {
-                    throw;
-                }
+                return await ((IHandler)Activator.CreateInstance(commandHandler)).ExecuteAsync(clientContext, command);
             }
             else
             {
@@ -114,9 +97,9 @@ namespace NaiveMq.Service
             }
         }
 
-        private void InitCommands()
+        public void RegisterHandlers(Assembly assembly)
         {
-            foreach (var type in Assembly.GetExecutingAssembly().GetTypes())
+            foreach (var type in assembly.GetTypes())
             {
                 var ihandler = type.GetInterfaces().FirstOrDefault(y => y.IsGenericType && typeof(IHandler<IRequest<IResponse>, IResponse>).Name == y.GetGenericTypeDefinition().Name);
                 if (ihandler != null)
@@ -138,7 +121,7 @@ namespace NaiveMq.Service
                     _listener.Start();
                     Storage.Cluster.Start();
 
-                    _online = true;
+                    Online = true;
                     _logger.LogInformation($"Server listenter started on port {Options.Port}.");
                     break;
                 }
@@ -160,7 +143,7 @@ namespace NaiveMq.Service
             _listener.Stop();
             Storage.Cluster.Stop();
 
-            _online = false;
+            Online = false;
             _logger.LogWarning($"Server listenter stopped on port {Options.Port}.");
         }
 
@@ -204,7 +187,7 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task Client_OnSendMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
+        private Task Client_OnSendMessageAsync(NaiveMqClient sender, Message command)
         {
             Storage.WriteMessageCounter.Add();
             return Task.CompletedTask;
@@ -216,7 +199,7 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Client.Commands.Message command)
+        private Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Message command)
         {
             return Task.CompletedTask;
         }
