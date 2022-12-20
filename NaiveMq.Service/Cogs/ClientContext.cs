@@ -50,7 +50,7 @@ namespace NaiveMq.Service.Cogs
         {
             CheckAdmin(context);
 
-            if (!context.User.Entity.Username.Equals(Storage.Service.Options.ClusterAdmin, StringComparison.InvariantCultureIgnoreCase))
+            if (!context.User.Entity.Username.Equals(Storage.Service.Options.ClusterAdminUsername, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotClusterAdmin);
             }

@@ -39,13 +39,13 @@ namespace NaiveMq.Service.Cogs
         public void Start()
         {
             if (!Started && !string.IsNullOrWhiteSpace(_options.ClusterHosts) 
-                && !string.IsNullOrWhiteSpace(_options.ClusterAdmin) 
+                && !string.IsNullOrWhiteSpace(_options.ClusterAdminUsername) 
                 && !string.IsNullOrWhiteSpace(_options.ClusterAdminPassword))
             {
                 _discoveryTimer = new Timer((state) => { Task.Run(async () => { await ClusterDiscovery(); }); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
 
                 Started = true;
-                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdmin);
+                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
             }
         }
 
@@ -132,7 +132,7 @@ namespace NaiveMq.Service.Cogs
 
                 if (!server.Self)
                 {
-                    await client.SendAsync(new Login { Username = _options.ClusterAdmin, Password = _options.ClusterAdminPassword });
+                    await client.SendAsync(new Login { Username = _options.ClusterAdminUsername, Password = _options.ClusterAdminPassword });
 
                     server.Client = client;
                     client = null;

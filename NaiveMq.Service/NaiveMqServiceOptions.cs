@@ -29,7 +29,7 @@
 
         public TimeSpan ClusterDiscoveryInterval { get; set; } = TimeSpan.FromMinutes(1);
 
-        public string ClusterAdmin { get; set; }
+        public string ClusterAdminUsername { get; set; }
 
         public string ClusterAdminPassword { get; set; }
     }
