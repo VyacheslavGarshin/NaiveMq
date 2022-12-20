@@ -261,11 +261,23 @@ namespace NaiveMq.Service
             }
         }
 
-        private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, IRequest command)
+        private async Task<IResponse> HandleRequestAsync(NaiveMqClient sender, IRequest request)
         {
-            Storage.TryGetClientContext(sender.Id, out var clientContext);
-            
-            return await ExecuteCommandAsync(command, clientContext);
+            if (Storage.TryGetClientContext(sender.Id, out var clientContext))
+            {
+                var result = await ExecuteCommandAsync(request, clientContext);
+
+                if (Storage.Cluster.Started)
+                {
+                    Storage.Cluster.HandleRequest(request, clientContext);
+                }
+
+                return result;
+            }
+            else
+            {
+                throw new ServerException(ErrorCode.ClientNotFound);
+            }
         }
     }
 }

@@ -2,12 +2,22 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;
+using NaiveMq.Service.Commands;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
 {
     public class Cluster : IDisposable
     {
+        private class ClusterServer
+        {
+            public string Name { get; set; }
+
+            public bool Self { get; set; }
+
+            public NaiveMqClient Client { get; set; }
+        }
+
         public bool Started { get; private set; }
 
         private Timer _discoveryTimer;
@@ -69,7 +79,15 @@ namespace NaiveMq.Service.Cogs
                 Started = false;
             }
         }
-       
+
+        public void HandleRequest(IRequest request, ClientContext clientContext)
+        {
+            if (request is IReplicable)
+            {
+                _ = Task.Run(async () => { await ReplicateRequest(request, clientContext); });
+            };
+        }
+
         public void Dispose()
         {
             Stop();
@@ -164,6 +182,21 @@ namespace NaiveMq.Service.Cogs
                 server.Value.Client = null;
 
                 _logger.LogInformation("Removed cluster server '{Host}', name '{Name}'.", server.Key, server.Value.Name);
+            }
+        }
+
+        private async Task ReplicateRequest(IRequest request, ClientContext clientContext)
+        {
+            foreach (var server in _servers.Values.Where(x => !x.Self && x.Client != null))
+            {
+                try
+                {
+                    await server.Client.SendAsync(new Replicate(clientContext.User.Entity.Username, request));
+                }
+                catch(Exception ex)
+                {
+                    _logger.LogError(ex, "Error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
+                }
             }
         }
     }

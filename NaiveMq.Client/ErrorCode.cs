@@ -183,5 +183,8 @@ namespace NaiveMq.Client
 
         [Description("Request is not replicable.")]
         NotReplicableRequest = 142,
+
+        [Description("Client not found.")]
+        ClientNotFound = 143,
     }
 }

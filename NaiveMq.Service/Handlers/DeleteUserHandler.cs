@@ -24,7 +24,10 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
                 }
 
-                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
+                if (!context.Reinstate)
+                {
+                    await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
+                }
 
                 user.Dispose();
             }

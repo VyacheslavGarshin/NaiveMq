@@ -6,13 +6,30 @@ namespace NaiveMq.Service.Handlers
 {
     public class ReplicateHandler : AbstractHandler<Replicate, Confirmation>
     {
-        public override Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command)
         {
             context.CheckClusterAdmin(context);
 
-            context.Reinstate = true;
+            if (context.Storage.Users.TryGetValue(command.User, out var user))
+            {
+                var replicaContext = new ClientContext
+                {
+                    Client = context.Client,
+                    Logger = context.Logger,
+                    Reinstate = true,
+                    StoppingToken = context.StoppingToken,
+                    Storage = context.Storage,
+                    User = user,
+                };
 
-            return Task.FromResult(Confirmation.Ok(command));
+                await context.Storage.Service.ExecuteCommandAsync(command.Request, replicaContext);
+            }
+            else
+            {
+                throw new ServerException(Client.ErrorCode.UserNotFound);
+            };
+
+            return Confirmation.Ok(command);
         }
     }
 }

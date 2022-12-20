@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
                 // todo not clear what to do
             }
 
-            if (binding.Entity.Durable)
+            if (!context.Reinstate && binding.Entity.Durable)
             {
                 try
                 {

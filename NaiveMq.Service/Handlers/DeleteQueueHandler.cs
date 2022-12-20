@@ -18,7 +18,7 @@ namespace NaiveMq.Service.Handlers
                 {
                     await DeleteBindingsAsync(context, command);
 
-                    if (queue.Entity.Durable)
+                    if (!context.Reinstate && queue.Entity.Durable)
                     {
                         await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
                     }
