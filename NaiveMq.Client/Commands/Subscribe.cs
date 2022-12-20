@@ -19,7 +19,7 @@ namespace NaiveMq.Client.Commands
         public TimeSpan? ConfirmMessageTimeout { get; set; }
 
         /// <summary>
-        /// Behaviour when current queue runs out of messages.
+        /// Behaviour when current server queue runs out of messages.
         /// </summary>
         public ClusterStrategy ClusterStrategy { get; set; }
 
