@@ -9,26 +9,29 @@ namespace NaiveMq.Service.Cogs
 {
     public class SubscriptionCog : IDisposable
     {
-        public bool _confirm { get; set; }
-
-        public TimeSpan? _confirmTimeout { get; set; }
-
-        private readonly ClientContext _context;
-
         private readonly QueueCog _queue;
 
+        private bool _confirm { get; set; }
+
+        private TimeSpan? _confirmTimeout { get; set; }
+
+        private readonly ClusterStrategy _clusterStrategy;
+        
+        private readonly ClientContext _context;
+        
         private bool _isStarted;
 
         private CancellationTokenSource _cancellationTokenSource;
 
         private Task _sendTask;
-
-        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout)
+        
+        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy)
         {
             _context = context;
             _queue = queue;
             _confirm = confirm;
             _confirmTimeout = confirmTimeout;
+            _clusterStrategy = clusterStrategy;
         }
 
         public void Start()

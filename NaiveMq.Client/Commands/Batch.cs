@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace NaiveMq.Client.Commands
 {
-    // todo redo on any command by making Messages IRequest and JsonIgnore
     public class Batch : AbstractRequest<BatchResponse>, IDataCommand
     {
         [JsonIgnore]

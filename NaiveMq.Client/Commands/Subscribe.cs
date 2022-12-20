@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NaiveMq.Client.Enums;
+using System;
 
 namespace NaiveMq.Client.Commands
 {
@@ -17,15 +18,21 @@ namespace NaiveMq.Client.Commands
         /// <remarks>If not set then server default will be used.</remarks>
         public TimeSpan? ConfirmMessageTimeout { get; set; }
 
+        /// <summary>
+        /// Behaviour when current queue runs out of messages.
+        /// </summary>
+        public ClusterStrategy ClusterStrategy { get; set; }
+
         public Subscribe()
         {
         }
 
-        public Subscribe(string queue, bool confirmMessage = true, TimeSpan? confirmMessageTimeout = null)
+        public Subscribe(string queue, bool confirmMessage = true, TimeSpan? confirmMessageTimeout = null, ClusterStrategy clusterStrategy = ClusterStrategy.Proxy)
         {
             Queue = queue;
             ConfirmMessage = confirmMessage;
             ConfirmMessageTimeout = confirmMessageTimeout;
+            ClusterStrategy = clusterStrategy;
         }
 
         public override void Validate()
