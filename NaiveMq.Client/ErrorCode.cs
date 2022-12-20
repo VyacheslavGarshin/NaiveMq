@@ -61,6 +61,9 @@ namespace NaiveMq.Client
         [Description("Request message should be confirmed.")]
         RequestConfirmRequred = 19,
 
+        [Description("Connection timeout occured.")]
+        ConnectionTimout = 20,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 

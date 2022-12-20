@@ -17,18 +17,23 @@ namespace NaiveMq.Service.PersistentStorage
 
         private const string UsersDirecotory = "users";
 
-        private readonly IOptions<FilePersistentStorageOptions> _options;
+        private readonly FilePersistentStorageOptions _options;
 
         private readonly ILogger<FilePersistentStorage> _logger;
 
         private readonly string _basePath;
+        
+        private readonly string _baseClusterPath;
 
         public FilePersistentStorage(IOptions<FilePersistentStorageOptions> options, ILogger<FilePersistentStorage> logger)
         {
-            _options = options;
+            _options = options.Value;
             _logger = logger;
 
-            _basePath = string.IsNullOrEmpty(options.Value.Path) ? AppDomain.CurrentDomain.BaseDirectory : options.Value.Path;
+            _basePath = string.IsNullOrEmpty(_options.Path) ? AppDomain.CurrentDomain.BaseDirectory : _options.Path;
+            _baseClusterPath = string.IsNullOrEmpty(_options.ClusterPath) ? _basePath : _options.ClusterPath;
+
+            _logger.LogInformation("Base path '{BasePath}' for messages, cluster base path '{ClusterBasePath}' for other.", _basePath, _baseClusterPath);
         }
 
         public async Task SaveUserAsync(UserEntity user, CancellationToken cancellationToken)
@@ -307,37 +312,37 @@ namespace NaiveMq.Service.PersistentStorage
 
         private string GetUsersPath()
         {
-            return Path.Combine(_basePath, UsersDirecotory);
+            return Path.Combine(_baseClusterPath, UsersDirecotory);
         }
 
         private string GetUserPath(string user)
         {
-            return Path.Combine(_basePath, UsersDirecotory, $"{user.ToLowerInvariant()}.json");
+            return Path.Combine(_baseClusterPath, UsersDirecotory, $"{user.ToLowerInvariant()}.json");
         }
 
         private string GetUserQueuesPath(string user)
         {
-            return Path.Combine(_basePath, QueuesDirectory, user.ToLowerInvariant());
+            return Path.Combine(_baseClusterPath, QueuesDirectory, user.ToLowerInvariant());
         }
 
         private string GetQueuePath(string user, string queue)
         {
-            return Path.Combine(_basePath, QueuesDirectory, user.ToLowerInvariant(), $"{queue.ToLowerInvariant()}.json");
+            return Path.Combine(_baseClusterPath, QueuesDirectory, user.ToLowerInvariant(), $"{queue.ToLowerInvariant()}.json");
         }
 
         private string GetUserBindingsPath(string user)
         {
-            return Path.Combine(_basePath, BindingsDirectory, user.ToLowerInvariant());
+            return Path.Combine(_baseClusterPath, BindingsDirectory, user.ToLowerInvariant());
         }        
 
         private string GetBindingPath(string user, string exchange, string queue)
         {
-            return Path.Combine(_basePath, BindingsDirectory, user.ToLowerInvariant(), $"{exchange.ToLowerInvariant()}-{queue.ToLowerInvariant()}.json");
+            return Path.Combine(_baseClusterPath, BindingsDirectory, user.ToLowerInvariant(), $"{exchange.ToLowerInvariant()}-{queue.ToLowerInvariant()}.json");
         }
 
         private string GetBindingPath(string user, string binding)
         {
-            return Path.Combine(_basePath, BindingsDirectory, user.ToLowerInvariant(), $"{binding.ToLowerInvariant()}.json");
+            return Path.Combine(_baseClusterPath, BindingsDirectory, user.ToLowerInvariant(), $"{binding.ToLowerInvariant()}.json");
         }
 
         private string GetUserMessagesPath(string user)

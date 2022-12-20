@@ -3,7 +3,9 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service;
+using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Text;
 
 namespace NaiveMq.LoadTests.SpamQueue
@@ -12,7 +14,7 @@ namespace NaiveMq.LoadTests.SpamQueue
     {
         private CancellationToken _stoppingToken;
         private ILogger<QueueSpamService> _logger;
-        private IOptions<QueueSpamServiceOptions> _options;
+        private QueueSpamServiceOptions _options;
         private readonly NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
         private Timer _timer;
@@ -20,7 +22,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMqService queueService)
         {
             _logger = logger;
-            _options = options;
+            _options = options.Value;
             _queueService = queueService;
             _serviceProvider = serviceProvider;
         }
@@ -30,7 +32,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             _stoppingToken = stoppingToken;
             
 
-            if (_options.Value.IsEnabled)
+            if (_options.IsEnabled)
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -42,11 +44,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                     await Task.Delay(1000, _stoppingToken);
                 }
 
-                if (_options.Value.LogServerActivity)
+                if (_options.LogServerActivity)
                 {
                     _timer = new Timer((s) =>
                     {
-                        _queueService.Storage.Users[_options.Value.Username].Queues.TryGetValue(_options.Value.QueueName + "1", out var queue);
+                        _queueService.Storage.Users[_options.Username].Queues.TryGetValue(_options.QueueName + "1", out var queue);
 
                         _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Storage.ReadMessageCounter.LastResult};" +
                             $"Write message/s;{_queueService.Storage.WriteMessageCounter.LastResult};" +
@@ -68,11 +70,6 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private Task OnMessageReceived(NaiveMqClient sender, ICommand args)
-        {
-            return Task.CompletedTask;
-        }
-
         private async Task QueueSpamAsync()
         {
             var clientLogger = _serviceProvider.GetRequiredService<ILogger<NaiveMqClient>>();
@@ -81,21 +78,21 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 await Task.Delay(1000);
                 
-                var taskCount = _options.Value.ThreadsCount;
-                var max = _options.Value.MessageCount;
+                var taskCount = _options.ThreadsCount;
+                var max = _options.MessageCount;
 
-                var options = new NaiveMqClientOptions { Hosts = _options.Value.Hosts, Parallelism = _options.Value.Parallelism };
+                var options = new NaiveMqClientOptions { Hosts = _options.Hosts, Parallelism = _options.Parallelism };
 
                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
                 // c.Start();
 
-                if (!string.IsNullOrEmpty(_options.Value.Username))
+                if (!string.IsNullOrEmpty(_options.Username))
                 {
-                    await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                    await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
                 }
 
-                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                for (var queue = 1; queue <= _options.QueueCount; queue++)
                 {
                     await CheckQueueCommandsAsync(c, queue);
                 }
@@ -104,18 +101,18 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 await CheckExchangeAsync(c);
 
-                var swt = Stopwatch.StartNew();
-
-                var message = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*")));
+                var message = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, _options.MessageLength).Select(x => "*")));
 
                 var consumers = new List<NaiveMqClient>();
 
                 await CreateConsumersAsync(clientLogger, taskCount, options, consumers);
 
-                for (var run = 0; run < _options.Value.Runs; run++)
+                for (var run = 0; run < _options.Runs; run++)
                 {
                     _logger.LogInformation($"Run {run + 1} is started.");
-                    
+
+                    var swt = new Stopwatch();
+
                     RunProducers(clientLogger, taskCount, max, options, message);
 
                     _logger.LogInformation($"Run {run + 1} is ended. Sent {max * taskCount} messages in {swt.Elapsed}.");
@@ -123,23 +120,23 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 await UnsubscribeAsync(c, consumers);
 
-                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                for (var queue = 1; queue <= _options.QueueCount; queue++)
                 {
-                    if (_options.Value.DeleteQueue)
-                        await c.SendAsync(new DeleteQueue { Name = _options.Value.QueueName + queue }, _stoppingToken);
+                    if (_options.DeleteQueue)
+                        await c.SendAsync(new DeleteQueue { Name = _options.QueueName + queue }, _stoppingToken);
                 }
             });
         }
 
         private async Task UnsubscribeAsync(NaiveMqClient c, List<NaiveMqClient> consumers)
         {
-            if (_options.Value.Subscribe)
+            if (_options.Subscribe)
             {
                 foreach (var consumer in consumers)
                 {
-                    for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                    for (var queue = 1; queue <= _options.QueueCount; queue++)
                     {
-                        var queueName = _options.Value.QueueName + queue;
+                        var queueName = _options.QueueName + queue;
                         await consumer.SendAsync(new Unsubscribe { Queue = queueName }, _stoppingToken);
                     }
                 }
@@ -150,19 +147,26 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             var tasks = new List<Task>();
 
-            for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+            for (var queue = 1; queue <= _options.QueueCount; queue++)
             {
-                var queueName = _options.Value.QueueName + queue;
+                var queueName = _options.QueueName + queue;
 
                 for (var i = 0; i < taskCount; i++)
                 {
                     var t = Task.Run(async () =>
                     {
-                        using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
+                        var opts = JsonConvert.DeserializeObject<NaiveMqClientOptions>(JsonConvert.SerializeObject(options));
 
-                        if (!string.IsNullOrEmpty(_options.Value.Username))
+                        if (!string.IsNullOrEmpty(_options.ClusterHosts))
                         {
-                            await c.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                            opts.Hosts = _options.ClusterHosts;
+                        }
+
+                        using var c = new NaiveMqClient(opts, clientLogger, _stoppingToken);
+
+                        if (!string.IsNullOrEmpty(_options.Username))
+                        {
+                            await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
                         }
 
                         for (var j = 1; j <= max; j++)
@@ -187,26 +191,33 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
         {
-            if (_options.Value.Subscribe)
+            if (_options.Subscribe)
             {
                 var tasks = new List<Task>();
 
-                for (var queue = 1; queue <= _options.Value.QueueCount; queue++)
+                for (var queue = 1; queue <= _options.QueueCount; queue++)
                 {
-                    var queueName = _options.Value.QueueName + queue;
+                    var queueName = _options.QueueName + queue;
 
                     for (var i = 0; i < taskCount; i++)
                     {
                         tasks.Add(Task.Run(async () =>
                         {
-                            var client = new NaiveMqClient(options, clientLogger, _stoppingToken);
+                            var opts = JsonConvert.DeserializeObject<NaiveMqClientOptions>(JsonConvert.SerializeObject(options));
 
-                            if (!string.IsNullOrEmpty(_options.Value.Username))
+                            if (!string.IsNullOrEmpty(_options.ClusterHosts))
                             {
-                                await client.SendAsync(new Login { Username = _options.Value.Username, Password = _options.Value.Password }, _stoppingToken);
+                                opts.Hosts = _options.ClusterHosts;
                             }
 
-                            await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.Value.ConfirmSubscription, ConfirmMessageTimeout = _options.Value.ConfirmMessageTimeout }, _stoppingToken);
+                            var client = new NaiveMqClient(opts, clientLogger, _stoppingToken);
+
+                            if (!string.IsNullOrEmpty(_options.Username))
+                            {
+                                await client.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                            }
+
+                            await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.ConfirmSubscription, ConfirmMessageTimeout = _options.ConfirmMessageTimeout }, _stoppingToken);
 
                             Consume(client);
 
@@ -223,23 +234,23 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             try
             {
-                if (_options.Value.Batch)
+                if (_options.Batch)
                 {
                     var batch = new Batch
                     {
-                        Requests = Enumerable.Range(0, _options.Value.BatchSize).Select(x => CreateMessage(bytes, queueName) as IRequest).ToList()
+                        Requests = Enumerable.Range(0, _options.BatchSize).Select(x => CreateMessage(bytes, queueName) as IRequest).ToList()
                     };
 
-                    var response = await c.SendAsync(batch, _options.Value.Wait, _stoppingToken);
+                    var response = await c.SendAsync(batch, _options.Wait, _stoppingToken);
                 }
                 else
                 {
-                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _options.Value.Wait, _stoppingToken);
+                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _options.Wait, _stoppingToken);
                 }
 
-                if (_options.Value.SendDelay != null)
+                if (_options.SendDelay != null)
                 {
-                    await Task.Delay(_options.Value.SendDelay.Value);
+                    await Task.Delay(_options.SendDelay.Value);
                 }
             }
             catch (ClientException ex)
@@ -267,11 +278,11 @@ namespace NaiveMq.LoadTests.SpamQueue
             {
                 Tag = $"Tag {DateTime.Now.ToShortTimeString()}",
                 Queue = queueName,
-                Persistent = _options.Value.PersistentMessage,
-                Request = _options.Value.Request,
+                Persistent = _options.PersistentMessage,
+                Request = _options.Request,
                 Data = bytes,
-                Confirm = _options.Value.Confirm,
-                ConfirmTimeout = _options.Value.ConfirmTimeout,
+                Confirm = _options.Confirm,
+                ConfirmTimeout = _options.ConfirmTimeout,
             };
         }
 
@@ -279,7 +290,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             c.OnReceiveMessageAsync += async (client, message) =>
             {
-                if (_options.Value.ReadBody)
+                if (_options.ReadBody)
                 {
                     var body = message.Data.ToArray();
                 }
@@ -300,9 +311,9 @@ namespace NaiveMq.LoadTests.SpamQueue
                     }
                 }
 
-                if (_options.Value.ReceiveDelay != null)
+                if (_options.ReceiveDelay != null)
                 {
-                    await Task.Delay(_options.Value.ReceiveDelay.Value);
+                    await Task.Delay(_options.ReceiveDelay.Value);
                 }
             };
 
@@ -319,37 +330,37 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task CheckExchangeAsync(NaiveMqClient c)
         {
-            if (_options.Value.AddExchange)
+            if (_options.AddExchange)
             {
-                await c.SendAsync(new AddQueue { Name = _options.Value.Exchange, Durable = true, Exchange = true }, _stoppingToken);
-                await c.SendAsync(new AddQueue { Name = _options.Value.ExchangeTo, Durable = true }, _stoppingToken);
+                await c.SendAsync(new AddQueue { Name = _options.Exchange, Durable = true, Exchange = true }, _stoppingToken);
+                await c.SendAsync(new AddQueue { Name = _options.ExchangeTo, Durable = true }, _stoppingToken);
             }
 
-            if (_options.Value.AddBinding)
+            if (_options.AddBinding)
             {
-                await c.SendAsync(new AddBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo, Durable = true, Pattern = _options.Value.BindingPattern }, _stoppingToken);
+                await c.SendAsync(new AddBinding { Exchange = _options.Exchange, Queue = _options.ExchangeTo, Durable = true, Pattern = _options.BindingPattern }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.SendExchangeMessageWithKey))
+            if (!string.IsNullOrEmpty(_options.SendExchangeMessageWithKey))
             {
-                await c.SendAsync(new Message { Queue = _options.Value.Exchange, Confirm = true, Persistent = Persistence.Yes, RoutingKey = _options.Value.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
+                await c.SendAsync(new Message { Queue = _options.Exchange, Confirm = true, Persistent = Persistence.Yes, RoutingKey = _options.SendExchangeMessageWithKey, Data = Encoding.UTF8.GetBytes("Some text to exchange") }, _stoppingToken);
             }
 
-            if (_options.Value.DeleteBinding)
+            if (_options.DeleteBinding)
             {
-                await c.SendAsync(new DeleteBinding { Exchange = _options.Value.Exchange, Queue = _options.Value.ExchangeTo }, _stoppingToken);
+                await c.SendAsync(new DeleteBinding { Exchange = _options.Exchange, Queue = _options.ExchangeTo }, _stoppingToken);
             }
         }
 
         private async Task CheckQueueCommandsAsync(NaiveMqClient c, int queue)
         {
-            var queueName = _options.Value.QueueName + queue;
+            var queueName = _options.QueueName + queue;
 
-            if (_options.Value.AddQueue)
+            if (_options.AddQueue)
             {
                 if ((await c.SendAsync(new GetQueue { Name = queueName, Try = true }, _stoppingToken)).Entity != null)
                 {
-                    if (_options.Value.RewriteQueue)
+                    if (_options.RewriteQueue)
                     {
                         await c.SendAsync(new DeleteQueue { Name = queueName }, _stoppingToken);
                     }
@@ -358,19 +369,19 @@ namespace NaiveMq.LoadTests.SpamQueue
                 await c.SendAsync(new AddQueue
                 {
                     Name = queueName,
-                    Durable = _options.Value.Durable,
-                    LengthLimit = _options.Value.LengthLimit,
-                    VolumeLimit = _options.Value.VolumeLimit,
-                    LimitStrategy = _options.Value.LimitStrategy,
+                    Durable = _options.Durable,
+                    LengthLimit = _options.LengthLimit,
+                    VolumeLimit = _options.VolumeLimit,
+                    LimitStrategy = _options.LimitStrategy,
                 }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.SearchQueues))
+            if (!string.IsNullOrEmpty(_options.SearchQueues))
             {
-                await c.SendAsync(new SearchQueues { Name = _options.Value.SearchQueues }, _stoppingToken);
+                await c.SendAsync(new SearchQueues { Name = _options.SearchQueues }, _stoppingToken);
             }
 
-            if (_options.Value.ClearQueue)
+            if (_options.ClearQueue)
             {
                 await c.SendAsync(new ClearQueue { Name = queueName }, _stoppingToken);
             }
@@ -378,39 +389,39 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task CheckUserCommandsAsync(NaiveMqClient c)
         {
-            if (_options.Value.GetProfile)
+            if (_options.GetProfile)
             {
                 await c.SendAsync(new GetProfile(), _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.ChangePassword))
+            if (!string.IsNullOrEmpty(_options.ChangePassword))
             {
-                await c.SendAsync(new ChangePassword { CurrentPassword = _options.Value.Password, NewPassword = _options.Value.ChangePassword }, _stoppingToken);
+                await c.SendAsync(new ChangePassword { CurrentPassword = _options.Password, NewPassword = _options.ChangePassword }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.GetUser))
+            if (!string.IsNullOrEmpty(_options.GetUser))
             {
-                await c.SendAsync(new GetUser { Username = _options.Value.AddUser, Try = _options.Value.GetUserTry }, _stoppingToken);
+                await c.SendAsync(new GetUser { Username = _options.AddUser, Try = _options.GetUserTry }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.SearchUsers))
+            if (!string.IsNullOrEmpty(_options.SearchUsers))
             {
-                await c.SendAsync(new SearchUsers { Username = _options.Value.SearchUsers }, _stoppingToken);
+                await c.SendAsync(new SearchUsers { Username = _options.SearchUsers }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.AddUser))
+            if (!string.IsNullOrEmpty(_options.AddUser))
             {
-                await c.SendAsync(new AddUser { Username = _options.Value.AddUser, Administrator = true, Password = "guest" }, _stoppingToken);
+                await c.SendAsync(new AddUser { Username = _options.AddUser, Administrator = true, Password = "guest" }, _stoppingToken);
             }
 
-            if (!string.IsNullOrEmpty(_options.Value.UpdateUser))
+            if (!string.IsNullOrEmpty(_options.UpdateUser))
             {
-                await c.SendAsync(new UpdateUser { Username = _options.Value.UpdateUser, Administrator = true }, _stoppingToken);
+                await c.SendAsync(new UpdateUser { Username = _options.UpdateUser, Administrator = true }, _stoppingToken);
             }
 
-            if (_options.Value.DeleteUser)
+            if (_options.DeleteUser)
             {
-                await c.SendAsync(new DeleteUser { Username = _options.Value.AddUser }, _stoppingToken);
+                await c.SendAsync(new DeleteUser { Username = _options.AddUser }, _stoppingToken);
             }
         }
     }

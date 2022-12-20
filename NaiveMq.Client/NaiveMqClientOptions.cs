@@ -14,6 +14,8 @@ namespace NaiveMq.Client
 
         public bool Autostart { get; set; } = true;
 
+        public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);

@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,29 +24,17 @@ namespace NaiveMq.Client
     {
         public const int DefaultPort = 8506;
 
-        private class ResponseItem : IDisposable
-        {
-            public SemaphoreSlim SemaphoreSlim { get; set; } = new(0, 1);
-
-            public IResponse Response { get; set; }
-
-            public void Dispose()
-            {
-                SemaphoreSlim.Dispose();
-            }
-        }
-
         public int Id => GetHashCode();
 
         public TcpClient TcpClient { get; private set; }
 
-        public bool Started => _started;
+        public bool Started { get; private set; }
 
         public SpeedCounter WriteCounter { get; set; } = new(10);
 
         public SpeedCounter ReadCounter { get; set; } = new(10);
 
-        public NaiveMqClientOptions Options { get; set; }
+        public NaiveMqClientOptions Options { get; }
 
         public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -84,8 +73,6 @@ namespace NaiveMq.Client
         public delegate Task OnSendMessageHandler(NaiveMqClient sender, Commands.Message message);
 
         public event OnSendMessageHandler OnSendMessageAsync;
-
-        private bool _started;
 
         private SemaphoreSlim _readSemaphore;
         
@@ -146,7 +133,7 @@ namespace NaiveMq.Client
         {
             lock (_startLocker)
             {
-                if (!_started)
+                if (!Started)
                 {
                     if (Options.TcpClient != null)
                     {
@@ -163,7 +150,7 @@ namespace NaiveMq.Client
 
                         Task.Run(ReceiveAsync);
 
-                        _started = true;
+                        Started = true;
 
                         OnStart?.Invoke(this);
                     }
@@ -179,7 +166,7 @@ namespace NaiveMq.Client
         {
             lock (_startLocker)
             {
-                if (_started)
+                if (Started)
                 {
                     TcpClient.Close();
                     TcpClient.Dispose();
@@ -188,7 +175,7 @@ namespace NaiveMq.Client
                     _readSemaphore.Dispose();
                     _readSemaphore = null;
 
-                    _started = false;
+                    Started = false;
 
                     OnStop?.Invoke(this);
                 }
@@ -303,22 +290,34 @@ namespace NaiveMq.Client
                 throw new ClientException(ErrorCode.HostsNotSet);
             }
 
-            var random = new Random();
-
+            do
             {
-                var randomHostIndex = random.Next(0, hosts.Count - 1);
+                var randomHostIndex = hosts.Count == 1 ? 0 : RandomNumberGenerator.GetInt32(0, hosts.Count);
                 var host = hosts[randomHostIndex];
 
                 try
                 {
-                    TcpClient = new TcpClient(host.Name, host.Port ?? DefaultPort);
-                    return;
+                    var tcpClient = new TcpClient();
+
+                    if (tcpClient.ConnectAsync(host.Name, host.Port ?? DefaultPort).Wait(Options.ConnectionTimeout))
+                    {
+                        TcpClient = tcpClient;
+                        return;
+                    }
+                    else
+                    {
+                        tcpClient.Dispose();
+                    }
                 }
-                catch (SocketException)
+                catch (Exception)
+                {
+                    // ok, taking the next one
+                }
+                finally
                 {
                     hosts.RemoveAt(randomHostIndex);
                 }
-            } while (hosts.Any()) ;
+            } while (hosts.Any());
 
             throw new ClientException(ErrorCode.HostsUnavailable);
         }
@@ -342,7 +341,7 @@ namespace NaiveMq.Client
 
             if (!entered)
             {
-                throw new ClientException(_started ? ErrorCode.ConfirmationTimeout : ErrorCode.ClientStopped);
+                throw new ClientException(Started ? ErrorCode.ConfirmationTimeout : ErrorCode.ClientStopped);
             }   
             else
             {
@@ -402,7 +401,7 @@ namespace NaiveMq.Client
 
         private async Task WriteBytesAsync(Memory<byte> bytes, CancellationToken cancellationToken)
         {
-            if (!_started)
+            if (!Started)
             {
                 throw new ClientException(ErrorCode.ClientStopped);
             }
@@ -415,7 +414,7 @@ namespace NaiveMq.Client
 
                 var stream = TcpClient?.GetStream();
                 
-                if (!_started || stream == null)
+                if (!Started || stream == null)
                 {
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
@@ -433,7 +432,7 @@ namespace NaiveMq.Client
 
         private async Task ReceiveAsync()
         {
-            while (!_stoppingToken.IsCancellationRequested && _started)
+            while (!_stoppingToken.IsCancellationRequested && Started)
             {
                 try
                 {
@@ -576,6 +575,18 @@ namespace NaiveMq.Client
             {
                 var dataCommand = command as IDataCommand;
                 _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
+            }
+        }
+
+        private class ResponseItem : IDisposable
+        {
+            public SemaphoreSlim SemaphoreSlim { get; set; } = new(0, 1);
+
+            public IResponse Response { get; set; }
+
+            public void Dispose()
+            {
+                SemaphoreSlim.Dispose();
             }
         }
     }

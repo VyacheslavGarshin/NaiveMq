@@ -12,6 +12,8 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         public string Hosts { get; set; }
 
+        public string ClusterHosts { get; set; }
+
         public bool Durable { get; set; }
 
         public int ThreadsCount { get; set; } = 1;

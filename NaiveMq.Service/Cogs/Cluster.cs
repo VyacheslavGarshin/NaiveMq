@@ -9,15 +9,6 @@ namespace NaiveMq.Service.Cogs
 {
     public class Cluster : IDisposable
     {
-        private class ClusterServer
-        {
-            public string Name { get; set; }
-
-            public bool Self { get; set; }
-
-            public NaiveMqClient Client { get; set; }
-        }
-
         public bool Started { get; private set; }
 
         private Timer _discoveryTimer;
@@ -198,6 +189,15 @@ namespace NaiveMq.Service.Cogs
                     _logger.LogError(ex, "Error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
                 }
             }
+        }
+
+        private class ClusterServer
+        {
+            public string Name { get; set; }
+
+            public bool Self { get; set; }
+
+            public NaiveMqClient Client { get; set; }
         }
     }
 }
