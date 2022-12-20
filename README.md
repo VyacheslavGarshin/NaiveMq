@@ -17,9 +17,10 @@ Implemented so far:
 + Server memory limits manual/automatic
 + Management console applicaton
 + Message batching
++ Clustering
 
 Plans:
-+ Clustering
++ Better clustering
 + Better durable queues
 + Management UI
 + Unit tests
