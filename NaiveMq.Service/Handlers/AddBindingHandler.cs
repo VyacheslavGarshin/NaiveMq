@@ -92,7 +92,7 @@ namespace NaiveMq.Service.Handlers
 
             if (!exchangeBindings.TryAdd(binding.Entity.Queue, binding))
             {
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
+                throw new ServerException(ErrorCode.BindingAlreadyExists, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
             }
 
             if (!context.User.Bindings.TryGetValue(binding.Entity.Queue, out queueBindings))
@@ -105,7 +105,7 @@ namespace NaiveMq.Service.Handlers
             {
                 exchangeBindings.TryRemove(binding.Entity.Queue, out var _);
 
-                throw new ServerException(ErrorCode.ExchangeAlreadyBoundToQueue, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
+                throw new ServerException(ErrorCode.BindingAlreadyExists, new object[] { binding.Entity.Exchange, binding.Entity.Queue });
             }
         }
 

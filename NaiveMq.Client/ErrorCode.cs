@@ -82,9 +82,6 @@ namespace NaiveMq.Client
         [Description("Queue '{0}' is not found.")]
         QueueNotFound = 106,
 
-        [Description("Queue '{0}' is empty.")]
-        QueueIsEmpty = 107,
-
         [Description("Cannot perform operation. Persistence storage is not set up.")]
         PersistenceStorageNotSetUp = 108,
 
@@ -125,7 +122,7 @@ namespace NaiveMq.Client
         UserBindingsNotFound = 120,
 
         [Description("Exchange '{0}' is already bound to queue '{1}'.")]
-        ExchangeAlreadyBoundToQueue = 121,
+        BindingAlreadyExists = 121,
 
         [Description("Exchange '{0}' is not found.")]
         ExchangeNotFound = 122,

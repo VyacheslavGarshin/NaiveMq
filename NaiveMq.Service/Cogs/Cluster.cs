@@ -11,6 +11,8 @@ namespace NaiveMq.Service.Cogs
     {
         public bool Started { get; private set; }
 
+        private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
+
         private Timer _discoveryTimer;
         
         private readonly Storage _storage;
@@ -43,7 +45,7 @@ namespace NaiveMq.Service.Cogs
                 _discoveryTimer = new Timer((state) => { Task.Run(async () => { await ClusterDiscovery(); }); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
 
                 Started = true;
-                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and user '{ClusterUser}'.", _options.ClusterHosts, _options.ClusterAdmin);
+                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdmin);
             }
         }
 
@@ -94,7 +96,7 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var host in Host.Parse(_options.ClusterHosts))
                 {
-                    if (!_servers.TryGetValue(host.ToString(), out var server) || server == null)
+                    if (!_servers.TryGetValue(host.ToString(), out var server) || !server.Self && server.Client == null)
                     {
                         tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
                     }
@@ -184,9 +186,17 @@ namespace NaiveMq.Service.Cogs
                 {
                     await server.Client.SendAsync(new Replicate(clientContext.User.Entity.Username, request));
                 }
-                catch(Exception ex)
+                catch (ClientException ex)
                 {
-                    _logger.LogError(ex, "Error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
+                    // we expect not all data where replicated, especially not Durable things.
+                    if (!_goodErrors.Any(x => (ex?.Response?.ErrorCode ?? string.Empty).Contains(x, StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        _logger.LogError(ex, "Unexpected client error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
                 }
             }
         }
