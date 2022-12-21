@@ -12,9 +12,9 @@ namespace NaiveMq.Service.Cogs
     {
         private readonly QueueCog _queue;
 
-        private bool _confirm { get; set; }
+        private readonly bool _confirm;
 
-        private TimeSpan? _confirmTimeout { get; set; }
+        private readonly TimeSpan? _confirmTimeout;
 
         private readonly ClusterStrategy _clusterStrategy;
         
@@ -24,8 +24,6 @@ namespace NaiveMq.Service.Cogs
 
         private CancellationTokenSource _cancellationTokenSource;
 
-        private Task _sendTask;
-        
         public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy)
         {
             _context = context;
@@ -42,7 +40,7 @@ namespace NaiveMq.Service.Cogs
                 Stop();
 
                 _cancellationTokenSource = new CancellationTokenSource();
-                _sendTask = Task.Run(SendAsync, _cancellationTokenSource.Token);
+                Task.Run(() => SendAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
                 _isStarted = true;
             }
@@ -53,7 +51,6 @@ namespace NaiveMq.Service.Cogs
             if (_isStarted)
             {
                 _cancellationTokenSource.Cancel();
-
                 _isStarted = false;
             }
         }
@@ -63,19 +60,24 @@ namespace NaiveMq.Service.Cogs
             Stop();
         }
 
-        private async Task SendAsync()
+        private async Task SendAsync(CancellationToken cancellationToken)
         {
-            var cancellationToken = _cancellationTokenSource.Token;
-
             try
             {
-                while (_isStarted && !_context.StoppingToken.IsCancellationRequested)
+                while (_isStarted && !_context.StoppingToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
                         if (_queue.Status != QueueStatus.Started)
                         {
-                            continue;
+                            if (_queue.Status == QueueStatus.Deleted)
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
 
                         var messageEntity = await _queue.TryDequeueAsync(cancellationToken);
@@ -94,9 +96,9 @@ namespace NaiveMq.Service.Cogs
                     }
                     finally
                     {
-                        if (_queue.Status != QueueStatus.Deleted)
+                        if (_queue.Status != QueueStatus.Started)
                         {
-                            await Task.Delay(TimeSpan.FromSeconds(1));
+                            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                         }
                     }
                 }
@@ -187,11 +189,9 @@ namespace NaiveMq.Service.Cogs
         {
             MessageResponse result = null;
 
-            var clientException = ex as ClientException;
-            if (clientException != null && clientException.Response != null)
+            if (ex is ClientException clientException && clientException.Response != null)
             {
-                var response = clientException.Response as MessageResponse;
-                if (response != null && response.Response)
+                if (clientException.Response is MessageResponse response && response.Response)
                 {
                     result = response;
                 }
