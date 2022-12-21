@@ -29,10 +29,7 @@ namespace NaiveMq.Client.Common
             Minute.Add(value);
             Hour.Add(value);
 
-            if (Parent != null)
-            {
-                Parent.Add(value);
-            }
+            Parent?.Add(value);
         }
 
         public void Dispose()

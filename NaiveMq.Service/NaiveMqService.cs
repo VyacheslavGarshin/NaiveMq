@@ -298,7 +298,6 @@ namespace NaiveMq.Service
 
             public SpeedCounters WriteCommand { get; }
 
-
             public ServiceCounters(SpeedCounterService service) : base(service)
             {
                 ReadCommand = new(service);

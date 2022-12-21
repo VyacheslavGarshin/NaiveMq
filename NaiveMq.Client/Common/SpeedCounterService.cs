@@ -1,5 +1,6 @@
 ﻿using NaiveMq.Client.Enums;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -59,7 +60,7 @@ namespace NaiveMq.Client.Common
 
             private readonly CounterInterval _counterInterval;
             
-            private HashSet<SpeedCounter> _counters = new();
+            private ConcurrentDictionary<int, SpeedCounter> _counters = new();
 
             public IntervalService(CounterInterval counterInterval)
             {
@@ -70,13 +71,13 @@ namespace NaiveMq.Client.Common
             public SpeedCounter Create(long value = 0)
             {
                 var result = new SpeedCounter(_counterInterval, value);
-                _counters.Add(result);
+                _counters.TryAdd(result.GetHashCode(),result);
                 return result;
             }
 
             public void Delete(SpeedCounter counter)
             {
-                if (_counters != null && !_counters.Remove(counter))
+                if (_counters != null && !_counters.TryRemove(counter.GetHashCode(), out var _))
                 {
                     throw new ArgumentOutOfRangeException(nameof(counter));
                 }
@@ -92,7 +93,7 @@ namespace NaiveMq.Client.Common
             {
                 foreach (var counter in _counters)
                 {
-                    counter.OnTimer();
+                    counter.Value.OnTimer();
                 }
             }
         }

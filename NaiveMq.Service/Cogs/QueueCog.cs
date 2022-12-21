@@ -20,19 +20,11 @@ namespace NaiveMq.Service.Cogs
 
         public int Length => _messages.Count;
 
-        public long Volume => _volume;
-
-        public long VolumeInMemory => _volumeInMemory;
-
         public QueueCounters Counters { get; }
 
         private SemaphoreSlim _dequeueSemaphore { get; set; }
 
         private SemaphoreSlim _limitSemaphore { get; set; }
-
-        private long _volume;
-
-        private long _volumeInMemory;
 
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
@@ -51,13 +43,12 @@ namespace NaiveMq.Service.Cogs
 
             if (_messages.TryDequeue(out var message))
             {
-                Interlocked.Add(ref _volume, -message.DataLength);
-
+                Counters.Length.Add(-1);
+                Counters.Volume.Add(-message.DataLength);
                 if (message.Persistent != Persistence.DiskOnly)
                 {
-                    Interlocked.Add(ref _volumeInMemory, -message.DataLength);
+                    Counters.VolumeInMemory.Add(-message.DataLength);
                 }
-
                 Counters.Write.Add();
             }
 
@@ -85,13 +76,12 @@ namespace NaiveMq.Service.Cogs
 
             _dequeueSemaphore.Release();
 
-            Interlocked.Add(ref _volume, message.DataLength);
-
+            Counters.Length.Add();
+            Counters.Volume.Add(message.DataLength);
             if (message.Persistent != Persistence.DiskOnly)
             {
-                Interlocked.Add(ref _volumeInMemory, message.DataLength);
+                Counters.VolumeInMemory.Add(message.DataLength);
             }
-
             Counters.Read.Add();
         }
 
@@ -107,7 +97,7 @@ namespace NaiveMq.Service.Cogs
                 return LimitType.Length;
             }
 
-            if (Entity.VolumeLimit != null && (Volume + dataLength >= Entity.VolumeLimit))
+            if (Entity.VolumeLimit != null && (Counters.Volume.Value + dataLength >= Entity.VolumeLimit))
             {
                 return LimitType.Volume;
             }
@@ -132,8 +122,8 @@ namespace NaiveMq.Service.Cogs
         private void ClearData()
         {
             _messages.Clear();
-            _volume = 0;
-            _volumeInMemory = 0;
+            Counters.Volume.Reset();
+            Counters.VolumeInMemory.Reset();
         }
 
         private void CheckStarted()
@@ -162,6 +152,12 @@ namespace NaiveMq.Service.Cogs
 
             public SpeedCounters Write { get; }
 
+            public Counter Length { get; } = new();
+
+            public Counter Volume { get; } = new();
+
+            public Counter VolumeInMemory { get; } = new();
+
             public QueueCounters(SpeedCounterService service)
             {
                 Read = new(service);
@@ -172,6 +168,9 @@ namespace NaiveMq.Service.Cogs
             {
                 Read.Parent = parent.Read;
                 Write.Parent = parent.Write;
+                Length.Parent = parent.Length;
+                Volume.Parent = parent.Volume;
+                VolumeInMemory.Parent = parent.VolumeInMemory;
             }
 
             public virtual void Dispose()

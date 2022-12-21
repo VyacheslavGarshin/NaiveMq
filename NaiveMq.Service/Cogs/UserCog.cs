@@ -46,6 +46,9 @@ namespace NaiveMq.Service.Cogs
             {
                 Read.Parent = parent.Read;
                 Write.Parent = parent.Write;
+                Length.Parent = parent.Length;
+                Volume.Parent = parent.Volume;
+                VolumeInMemory.Parent = parent.VolumeInMemory;
             }
         }
     }
