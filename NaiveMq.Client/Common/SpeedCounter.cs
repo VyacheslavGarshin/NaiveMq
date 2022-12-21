@@ -1,69 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Threading;
+﻿using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Client.Common
 {
-    public class SpeedCounter : IDisposable
+    public class SpeedCounter
     {
-        public int ResultCount { get; private set; }
+        public CounterInterval CounterInterval { get; }
 
-        public long LastResult { get; private set; }
+        public long Value { get; private set; }
 
-        public long Total => _total;
+        private Counter _counting = new();
 
-        public ReadOnlyCollection<long> Results => _results.AsReadOnly();
-
-        public List<long> _results { get; } = new List<long>();
-
-        private readonly Timer _timer;
-
-        private long _currentCounter;
-
-        private long _total;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="resultCount"></param>
-        /// <param name="interval">Default is one second.</param>
-        public SpeedCounter(int resultCount = 10, TimeSpan? interval = null)
+        public SpeedCounter()
         {
-            _timer = new Timer(OnTimer, null, TimeSpan.Zero, interval ?? TimeSpan.FromSeconds(1));
-            ResultCount = resultCount;
         }
 
-        public void Add(long amount = 1)
+        public SpeedCounter(CounterInterval counterInterval) : this()
         {
-            Interlocked.Add(ref _currentCounter, amount);
-
-            try
-            {
-                Interlocked.Add(ref _total, 1);
-            }
-            catch (Exception)
-            {
-                _total = 0;
-            }
+            CounterInterval = counterInterval;
         }
 
-        public void Dispose()
+        public SpeedCounter(CounterInterval counterInterval, long value) : this(counterInterval)
         {
-            _timer.Dispose();
+            Value = value;
         }
 
-        private void OnTimer(object state)
+        public void Add(long value = 1)
         {
-            LastResult = _currentCounter;
-            _currentCounter = 0;
+            _counting.Add(value);
+        }
 
-            _results.Add(LastResult);
-
-            if (_results.Count > ResultCount)
-            {
-                _results.RemoveAt(0);
-            }
+        public void OnTimer()
+        {
+            Value = _counting.Value;
+            _counting.Reset();
         }
     }
 }

@@ -3,6 +3,8 @@ using NaiveMq.Client;
 using NaiveMq.Client.Common;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
+using static NaiveMq.Service.Cogs.UserCog;
+using static NaiveMq.Service.NaiveMqService;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -18,13 +20,7 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<string, UserCog> Users { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public SpeedCounter WriteCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadMessageCounter { get; set; } = new(10);
-
-        public SpeedCounter WriteMessageCounter { get; set; } = new(10);
+        public StorageCounters Counters { get; }
 
         private readonly NaiveMqServiceOptions _options;
         
@@ -37,7 +33,7 @@ namespace NaiveMq.Service.Cogs
         private readonly ILogger<NaiveMqClient> _clientLogger;
 
         private readonly Timer _oneSecondTimer;
-
+        
         public Storage(NaiveMqService service, IPersistentStorage persistentStorage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
             Service = service;
@@ -48,6 +44,8 @@ namespace NaiveMq.Service.Cogs
 
             PersistentStorage = persistentStorage;
             Cluster = new Cluster(this, logger, clientLogger, stoppingToken);
+
+            Counters = new(service.SpeedCounterService, service.Counters);
 
             _oneSecondTimer = new(OnTimer, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1));
         }
@@ -77,11 +75,6 @@ namespace NaiveMq.Service.Cogs
                 // we don't manage lifecycle of persistence storage
                 PersistentStorage = null;
             }
-
-            ReadCounter.Dispose();
-            WriteCounter.Dispose();
-            ReadMessageCounter.Dispose();
-            WriteMessageCounter.Dispose();
         }
 
         public bool TryGetClientContext(int id, out ClientContext clientContext)
@@ -130,6 +123,19 @@ namespace NaiveMq.Service.Cogs
             var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes + memoryInfo.HeapSizeBytes;
             MemoryLimitExceeded = freeMemory < 0.01 * (100 - _options.AutoMemoryLimitPercent) * memoryInfo.HighMemoryLoadThresholdBytes
                 || (_options.MemoryLimit != null && memoryInfo.HeapSizeBytes > _options.MemoryLimit);
+        }
+
+        public class StorageCounters : UserCounters
+        {
+            public StorageCounters(SpeedCounterService service) : base(service)
+            {
+            }
+
+            public StorageCounters(SpeedCounterService service, ServiceCounters parent) : base(service)
+            {
+                Read.Parent = parent.Read;
+                Write.Parent = parent.Write;
+            }
         }
     }
 }

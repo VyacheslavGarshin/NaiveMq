@@ -1,5 +1,8 @@
-﻿using NaiveMq.Service.Entities;
+﻿using NaiveMq.Client.Common;
+using NaiveMq.Service.Entities;
 using System.Collections.Concurrent;
+using static NaiveMq.Service.Cogs.QueueCog;
+using static NaiveMq.Service.Cogs.Storage;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -15,9 +18,12 @@ namespace NaiveMq.Service.Cogs
         /// <remarks>Keys are: from queue, to queue.</remarks>
         public ConcurrentDictionary<string, ConcurrentDictionary<string, BindingCog>> Bindings { get; }  = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public UserCog(UserEntity entity)
+        public UserCounters Counters { get; }
+
+        public UserCog(UserEntity entity, StorageCounters storageCounters, SpeedCounterService speedCounterService)
         {
             Entity = entity;
+            Counters = new(speedCounterService, storageCounters);
         }
 
         public void Dispose()
@@ -25,6 +31,21 @@ namespace NaiveMq.Service.Cogs
             foreach (var queue in Queues.Values)
             {
                 queue.Dispose();
+            }
+
+            Counters.Dispose();
+        }
+
+        public class UserCounters : QueueCounters
+        {
+            public UserCounters(SpeedCounterService service) : base(service)
+            {
+            }
+
+            public UserCounters(SpeedCounterService service, StorageCounters parent) : base(service)
+            {
+                Read.Parent = parent.Read;
+                Write.Parent = parent.Write;
             }
         }
     }

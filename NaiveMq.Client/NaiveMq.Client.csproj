@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <Compile Include="Enums\ClusterStrategy.cs" />
+    <Compile Include="Enums\CounterInterval.cs" />
     <Compile Include="Enums\LimitStrategy.cs" />
     <Compile Include="Enums\Persistence.cs" />
   </ItemGroup>

@@ -28,23 +28,25 @@ namespace NaiveMq.Service.Handlers
 
         public async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity)
         {
-            if (!context.Storage.Users.TryAdd(userEntity.Username, new UserCog(userEntity)))
-            {
-                throw new ServerException(ErrorCode.UserAlreadyExists, new object[] { userEntity.Username });
-            }
+            var userCog = new UserCog(userEntity, context.Storage.Counters, context.Storage.Service.SpeedCounterService);
 
-            if (!context.Reinstate)
+            try
             {
-                try
+                if (!context.Storage.Users.TryAdd(userEntity.Username, userCog))
                 {
+                    throw new ServerException(ErrorCode.UserAlreadyExists, new object[] { userEntity.Username });
+                }
 
+                if (!context.Reinstate)
+                {
                     await context.Storage.PersistentStorage.SaveUserAsync(userEntity, context.StoppingToken);
                 }
-                catch
-                {
-                    context.Storage.Users.TryRemove(userEntity.Username, out var _);
-                    throw;
-                }
+            }
+            catch
+            {
+                context.Storage.Users.TryRemove(userEntity.Username, out var _);
+                userCog.Dispose();
+                throw;
             }
         }
     }

@@ -21,7 +21,7 @@ namespace NaiveMq.Service.Handlers
 
         public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity)
         {
-            var queue = new QueueCog(queueEntity);
+            var queue = new QueueCog(queueEntity, context.User.Counters, context.Storage.Service.SpeedCounterService);
 
             try
             {
@@ -34,10 +34,6 @@ namespace NaiveMq.Service.Handlers
                 {
                     await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, context.StoppingToken);
                 }
-            }
-            catch (ServerException)
-            {
-                throw;
             }
             catch
             {

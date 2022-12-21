@@ -10,11 +10,14 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
+using static NaiveMq.Service.Cogs.UserCog;
 
 namespace NaiveMq.Service
 {
     public sealed class NaiveMqService : BackgroundService
     {
+        public static Dictionary<Type, Type> CommandHandlers { get; } = new();
+
         public bool Loaded { get; private set; }
 
         public bool Online { get; private set; }
@@ -23,7 +26,9 @@ namespace NaiveMq.Service
 
         public Storage Storage { get; private set; }
 
-        public Dictionary<Type, Type> CommandHandlers { get; } = new();
+        public SpeedCounterService SpeedCounterService { get; } = new();
+
+        public ServiceCounters Counters { get; }
 
         private CancellationToken _stoppingToken;
         
@@ -47,8 +52,10 @@ namespace NaiveMq.Service
         {
             _logger = loggerFactory.CreateLogger<NaiveMqService>();
             _clientLogger = loggerFactory.CreateLogger<NaiveMqClient>();
-            Options = options.Value;
             _persistentStorage = persistentStorage;
+
+            Options = options.Value;
+            Counters = new(SpeedCounterService);
 
             RegisterHandlers(Assembly.GetExecutingAssembly());
         }
@@ -81,7 +88,12 @@ namespace NaiveMq.Service
             base.Dispose();
 
             Offline();
+
+            SpeedCounterService.Dispose();
+
             Storage.Dispose();
+
+            Counters.Dispose();
         }
 
         public async Task<IResponse> ExecuteCommandAsync(IRequest command, ClientContext clientContext)
@@ -183,19 +195,18 @@ namespace NaiveMq.Service
 
         private Task Client_OnSendCommandAsync(NaiveMqClient sender, ICommand command)
         {
-            Storage.WriteCounter.Add();
+            Counters.WriteCommand.Add();
             return Task.CompletedTask;
         }
 
         private Task Client_OnSendMessageAsync(NaiveMqClient sender, Message command)
         {
-            Storage.WriteMessageCounter.Add();
             return Task.CompletedTask;
         }
 
         private Task Client_OnReceiveCommandAsync(NaiveMqClient sender, ICommand command)
         {
-            Storage.ReadCounter.Add();
+            Counters.ReadCommand.Add();
             return Task.CompletedTask;
         }
 
@@ -277,6 +288,29 @@ namespace NaiveMq.Service
             else
             {
                 throw new ServerException(ErrorCode.ClientNotFound);
+            }
+        }
+
+
+        public class ServiceCounters : UserCounters
+        {
+            public SpeedCounters ReadCommand { get; }
+
+            public SpeedCounters WriteCommand { get; }
+
+
+            public ServiceCounters(SpeedCounterService service) : base(service)
+            {
+                ReadCommand = new(service);
+                WriteCommand = new(service);
+            }
+
+            public override void Dispose()
+            {
+                base.Dispose();
+
+                ReadCommand.Dispose();
+                WriteCommand.Dispose();
             }
         }
     }

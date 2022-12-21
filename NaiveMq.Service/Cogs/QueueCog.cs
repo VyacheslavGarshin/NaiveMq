@@ -1,8 +1,10 @@
 ﻿using NaiveMq.Client;
+using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
+using static NaiveMq.Service.Cogs.UserCog;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -22,6 +24,8 @@ namespace NaiveMq.Service.Cogs
 
         public long VolumeInMemory => _volumeInMemory;
 
+        public QueueCounters Counters { get; }
+
         private SemaphoreSlim _dequeueSemaphore { get; set; }
 
         private SemaphoreSlim _limitSemaphore { get; set; }
@@ -32,10 +36,11 @@ namespace NaiveMq.Service.Cogs
 
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
-        public QueueCog(QueueEntity entity)
+        public QueueCog(QueueEntity entity, UserCounters userCounters, SpeedCounterService speedCounterService)
         {
             Entity = entity;
             CreateSemaphores();
+            Counters = new(speedCounterService, userCounters);
         }
 
         public async Task<MessageEntity> TryDequeueAsync(CancellationToken cancellationToken)
@@ -52,6 +57,8 @@ namespace NaiveMq.Service.Cogs
                 {
                     Interlocked.Add(ref _volumeInMemory, -message.DataLength);
                 }
+
+                Counters.Write.Add();
             }
 
             try
@@ -84,6 +91,8 @@ namespace NaiveMq.Service.Cogs
             {
                 Interlocked.Add(ref _volumeInMemory, message.DataLength);
             }
+
+            Counters.Read.Add();
         }
 
         public async Task<bool> WaitLimitSemaphoreAsync(TimeSpan timout, CancellationToken cancellationToken)
@@ -117,6 +126,7 @@ namespace NaiveMq.Service.Cogs
         {
             DisposeSemaphores();
             ClearData();
+            Counters.Dispose();
         }
 
         private void ClearData()
@@ -144,6 +154,31 @@ namespace NaiveMq.Service.Cogs
         {
             _dequeueSemaphore.Dispose();
             _limitSemaphore.Dispose();
+        }
+
+        public class QueueCounters : IDisposable
+        {
+            public SpeedCounters Read { get; }
+
+            public SpeedCounters Write { get; }
+
+            public QueueCounters(SpeedCounterService service)
+            {
+                Read = new(service);
+                Write = new(service);
+            }
+
+            public QueueCounters(SpeedCounterService service, UserCounters parent) : this(service)
+            {
+                Read.Parent = parent.Read;
+                Write.Parent = parent.Write;
+            }
+
+            public virtual void Dispose()
+            {
+                Read.Dispose();
+                Write.Dispose();
+            }
         }
     }
 }

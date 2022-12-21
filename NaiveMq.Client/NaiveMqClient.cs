@@ -24,19 +24,17 @@ namespace NaiveMq.Client
     {
         public const int DefaultPort = 8506;
 
+        public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+
         public int Id => GetHashCode();
 
         public TcpClient TcpClient { get; private set; }
 
         public bool Started { get; private set; }
 
-        public SpeedCounter WriteCounter { get; set; } = new(10);
-
-        public SpeedCounter ReadCounter { get; set; } = new(10);
-
         public NaiveMqClientOptions Options { get; }
 
-        public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+        public ClientCounters Counters { get; }
 
         public delegate void OnStartHandler(NaiveMqClient sender);
 
@@ -75,7 +73,7 @@ namespace NaiveMq.Client
         public event OnSendMessageHandler OnSendMessageAsync;
 
         private SemaphoreSlim _readSemaphore;
-        
+
         private readonly ILogger<NaiveMqClient> _logger;
 
         private readonly CancellationToken _stoppingToken;
@@ -100,7 +98,8 @@ namespace NaiveMq.Client
         public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
         {
             Options = options;
-            
+            Counters = new();
+
             _logger = logger;
             _stoppingToken = stoppingToken;
             _commandPacker = new CommandPacker(_converter);
@@ -226,6 +225,7 @@ namespace NaiveMq.Client
 
                 if (request is Commands.Message message && OnSendMessageAsync != null)
                 {
+                    Counters.Write.Add();
                     await OnSendMessageAsync.Invoke(this, message);
                 }
 
@@ -277,8 +277,7 @@ namespace NaiveMq.Client
 
             _responses.Clear();
 
-            ReadCounter.Dispose();
-            WriteCounter.Dispose();
+            Counters.Dispose();
         }
 
         private void CreateTcpClient()
@@ -376,7 +375,7 @@ namespace NaiveMq.Client
 
                 await WriteBytesAsync(package.Buffer.AsMemory(0, package.Length), cancellationToken);
 
-                WriteCounter.Add();
+                Counters.WriteCommand.Add();
 
                 TraceCommand(">>", command);
 
@@ -445,7 +444,7 @@ namespace NaiveMq.Client
 
                     var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, _stoppingToken, ArrayPool<byte>.Shared);
 
-                    ReadCounter.Add();
+                    Counters.ReadCommand.Add();
 
                     await _readSemaphore.WaitAsync(_stoppingToken);
 
@@ -550,6 +549,7 @@ namespace NaiveMq.Client
 
             if (command is Commands.Message message && OnReceiveMessageAsync != null)
             {
+                Counters.Read.Add();
                 await OnReceiveMessageAsync.Invoke(this, message);
             }
         }
@@ -575,6 +575,36 @@ namespace NaiveMq.Client
             {
                 var dataCommand = command as IDataCommand;
                 _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
+            }
+        }
+
+        public class ClientCounters : IDisposable
+        {
+            public SpeedCounters Read { get; }
+
+            public SpeedCounters Write { get; }
+
+            public SpeedCounters ReadCommand { get; }
+
+            public SpeedCounters WriteCommand { get; }
+
+            private SpeedCounterService _service = new();
+
+            public ClientCounters()
+            {
+                Read = new(_service);
+                Write = new(_service);
+                ReadCommand = new(_service);
+                WriteCommand = new(_service);
+            }
+
+            public virtual void Dispose()
+            {
+                _service.Dispose();
+                Read.Dispose();
+                Write.Dispose();
+                ReadCommand.Dispose();
+                WriteCommand.Dispose();
             }
         }
 

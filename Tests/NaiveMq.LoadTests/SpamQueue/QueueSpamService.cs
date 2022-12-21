@@ -5,7 +5,6 @@ using NaiveMq.Client.Enums;
 using NaiveMq.Service;
 using Newtonsoft.Json;
 using System.Diagnostics;
-using System.Net.Http.Json;
 using System.Text;
 
 namespace NaiveMq.LoadTests.SpamQueue
@@ -50,12 +49,10 @@ namespace NaiveMq.LoadTests.SpamQueue
                     {
                         _queueService.Storage.Users[_options.Username].Queues.TryGetValue(_options.QueueName + "1", out var queue);
 
-                        _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Storage.ReadMessageCounter.LastResult};" +
-                            $"Write message/s;{_queueService.Storage.WriteMessageCounter.LastResult};" +
-                            $"Read/s;{_queueService.Storage.ReadCounter.LastResult};" +
-                            $"Write/s;{_queueService.Storage.WriteCounter.LastResult};" +
-                            $"Total read;{_queueService.Storage.ReadCounter.Total};" +
-                            $"Total write;{_queueService.Storage.WriteCounter.Total};" +
+                        _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Counters.Read.Second.Value};" +
+                            $"Write message/s;{_queueService.Counters.Write.Second.Value};" +
+                            $"Read/s;{_queueService.Counters.ReadCommand.Second.Value};" +
+                            $"Write/s;{_queueService.Counters.WriteCommand.Second.Value};" +
                             $"QueueLength;{queue?.Length};" +
                             $"QueueVolume;{queue?.Volume};");
                     }, null, 0, 1000);
