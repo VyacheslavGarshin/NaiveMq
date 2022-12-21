@@ -16,7 +16,7 @@ Implemented so far:
 + Queue limits by length or volume with server behaviour delay, reject or discard the message
 + Server memory limits manual/automatic
 + Management console applicaton
-+ Message batching
++ Message or any type of request batching
 + Clustering
 
 Plans:
