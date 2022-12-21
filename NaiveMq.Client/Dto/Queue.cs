@@ -1,4 +1,5 @@
 ﻿using NaiveMq.Client.Enums;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Client.Dto
 {
@@ -17,5 +18,7 @@ namespace NaiveMq.Client.Dto
         public long? VolumeLimit { get; set; }
 
         public LimitStrategy LimitStrategy { get; set; }
+
+        public QueueStatus Status { get; set; }
     }
 }

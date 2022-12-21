@@ -32,6 +32,7 @@ namespace NaiveMq.Service.Handlers
                         LengthLimit = x.Entity.LengthLimit,
                         VolumeLimit = x.Entity.VolumeLimit,
                         LimitStrategy = x.Entity.LimitStrategy,
+                        Status = x.Status,
                     }).ToList();
 
                 response.Count = command.Count ? expression.Count() : null;

@@ -18,6 +18,7 @@
     <Compile Include="Enums\CounterInterval.cs" />
     <Compile Include="Enums\LimitStrategy.cs" />
     <Compile Include="Enums\Persistence.cs" />
+    <Compile Include="Enums\QueueStatus.cs" />
   </ItemGroup>
 
   <ItemGroup>

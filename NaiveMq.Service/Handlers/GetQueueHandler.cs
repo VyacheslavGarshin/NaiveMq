@@ -25,6 +25,7 @@ namespace NaiveMq.Service.Handlers
                             LengthLimit = queue.Entity.LengthLimit,
                             VolumeLimit = queue.Entity.VolumeLimit,
                             LimitStrategy = queue.Entity.LimitStrategy,
+                            Status = queue.Status,
                         }
                         : null;
                 }));

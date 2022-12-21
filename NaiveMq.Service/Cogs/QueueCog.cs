@@ -4,6 +4,7 @@ using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
+using System.Data;
 using static NaiveMq.Service.Cogs.UserCog;
 
 namespace NaiveMq.Service.Cogs
@@ -12,7 +13,7 @@ namespace NaiveMq.Service.Cogs
     {
         public QueueEntity Entity { get; set; }
 
-        public bool Started { get; set; } = true;
+        public QueueStatus Status { get; set; }
 
         public long? ForcedLengthLimit { get; set; }
 
@@ -25,7 +26,7 @@ namespace NaiveMq.Service.Cogs
         private SemaphoreSlim _dequeueSemaphore { get; set; }
 
         private SemaphoreSlim _limitSemaphore { get; set; }
-
+        
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
         public QueueCog(QueueEntity entity, UserCounters userCounters, SpeedCounterService speedCounterService)
@@ -39,7 +40,14 @@ namespace NaiveMq.Service.Cogs
         {
             CheckStarted();
 
-            await _dequeueSemaphore.WaitAsync(cancellationToken);
+            try
+            {
+                await _dequeueSemaphore.WaitAsync(cancellationToken);
+            }
+            catch (ObjectDisposedException)
+            {
+                throw new ServerException(ErrorCode.QueueStopped);
+            }
 
             if (_messages.TryDequeue(out var message))
             {
@@ -128,7 +136,7 @@ namespace NaiveMq.Service.Cogs
 
         private void CheckStarted()
         {
-            if (!Started)
+            if (Status != QueueStatus.Started)
             {
                 throw new ServerException(ErrorCode.QueueStopped);
             }

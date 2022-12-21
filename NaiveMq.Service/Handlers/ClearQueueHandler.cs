@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -10,32 +11,23 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser(context);
 
-            QueueCog queue = null;
-
-            try
+            if (context.User.Queues.TryGetValue(command.Name, out var queue))
             {
-                if (context.User.Queues.TryGetValue(command.Name, out queue))
-                {
-                    queue.Started = false;
+                queue.Status = QueueStatus.Clearing;
 
-                    queue.Clear();
-
-                    if (queue.Entity.Durable)
-                    {
-                        await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
-                    }
-                }
-                else
+                if (queue.Entity.Durable)
                 {
-                    throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
+                    await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
                 }
+
+                queue.Clear();
+
+                queue.Status = QueueStatus.Started;
             }
-            finally
+            else
             {
-                if (queue != null)
-                {
-                    queue.Started = true;
-                }
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
+
             }
 
             return Confirmation.Ok(command);

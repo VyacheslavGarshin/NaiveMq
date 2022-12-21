@@ -3,6 +3,7 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
+using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
 
 namespace NaiveMq.Service.Cogs
@@ -72,21 +73,30 @@ namespace NaiveMq.Service.Cogs
                 {
                     try
                     {
+                        if (_queue.Status != QueueStatus.Started)
+                        {
+                            continue;
+                        }
+
                         var messageEntity = await _queue.TryDequeueAsync(cancellationToken);
+
                         if (messageEntity != null)
                         {
                             await ProcessMessageAsync(messageEntity, cancellationToken);
-                        }
+                        }                   
                     }
                     catch (ServerException ex)
                     {
-                        if (ex.ErrorCode == ErrorCode.QueueStopped)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(1));
-                        }
-                        else
+                        if (ex.ErrorCode != ErrorCode.QueueStopped)                        
                         {
                             throw;
+                        }
+                    }
+                    finally
+                    {
+                        if (_queue.Status != QueueStatus.Deleted)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(1));
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -12,7 +13,7 @@ namespace NaiveMq.Service.Handlers
 
             if (context.User.Queues.TryRemove(command.Name, out var queue))
             {
-                queue.Started = false;
+                queue.Status = QueueStatus.Deleting;
 
                 try
                 {
@@ -24,11 +25,12 @@ namespace NaiveMq.Service.Handlers
                     }
 
                     queue.Dispose();
+
+                    queue.Status = QueueStatus.Deleted;
                 }
                 catch
                 {
                     context.User.Queues.TryAdd(command.Name, queue);
-                    queue.Started = true;
                     throw;
                 }
             }
