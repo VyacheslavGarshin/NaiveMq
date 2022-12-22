@@ -74,16 +74,12 @@
 
         public void Reset(long value = 0)
         {
-            var prev = Value;
-
             for (var i = 0; i < _count; i++)
             {
                 _cases[i] = null;
             }
-            
-            _cases[0] = value;
 
-            Add(-prev ?? 0 + value);
+            Add(value);
         }
     }
 }
