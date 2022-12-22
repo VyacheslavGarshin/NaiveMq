@@ -188,8 +188,8 @@ namespace NaiveMq.Service.Cogs
 
             if (data.Length == 0)
             {
-                var diskEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_context.User.Entity.Username,
-                    messageEntity.Queue, messageEntity.Id, true, cancellationToken);
+                var diskEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_queue.Entity.User,
+                    _queue.Entity.Name, messageEntity.Id, true, cancellationToken);
                 data = diskEntity.Data;
             }
 
@@ -224,7 +224,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task DeleteMessageAssync(MessageEntity messageEntity, CancellationToken cancellationToken)
         {
-            await _context.Storage.PersistentStorage.DeleteMessageAsync(_context.User.Entity.Username,
+            await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, cancellationToken);
         }
 
