@@ -1,21 +1,16 @@
 ﻿using NaiveMq.Client.Commands;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace NaiveMq.Client.Converters
 {
     public class JsonCommandConverter : ICommandConverter
     {
-        private static StringEnumConverter _stringEnumConverter = new ();
-        
         private static JsonSerializerSettings _jsonSerializerSettings = new()
         {
             NullValueHandling = NullValueHandling.Ignore,
-            Converters = new List<JsonConverter> { _stringEnumConverter },
             ContractResolver = new DefaultContractResolver(),
         };
 
