@@ -5,6 +5,7 @@ using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
+using System.Diagnostics;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -142,6 +143,8 @@ namespace NaiveMq.Service.Cogs
                     data = await LoadDiskOnlyDataAsync(messageEntity, cancellationToken);
                 }
 
+                UpdateAvgLifeTime(messageEntity);
+
                 var message = CreateMessage(messageEntity, data);
                 response = await SendMessageAsync(message, cancellationToken);
                 messageEntity.Delivered = true;
@@ -175,11 +178,19 @@ namespace NaiveMq.Service.Cogs
                     await DeleteMessageAssync(messageEntity, cancellationToken);
                 }
 
+                _queue.Counters.AvgIoTime.Add(messageEntity.IoTime.Value);
+
                 if (messageEntity.Request && response != null && response.Response)
                 {
                     await SendRequestResponseAsync(messageEntity, response, cancellationToken);
                 }
             }
+        }
+
+        private void UpdateAvgLifeTime(MessageEntity messageEntity)
+        {
+            var diff = DateTime.UtcNow.Subtract(messageEntity.Date);
+            _queue.Counters.AvgLifeTime.Add((long)diff.TotalMilliseconds);
         }
 
         private async Task<ReadOnlyMemory<byte>> LoadDiskOnlyDataAsync(MessageEntity messageEntity, CancellationToken cancellationToken)
@@ -188,8 +199,15 @@ namespace NaiveMq.Service.Cogs
 
             if (data.Length == 0)
             {
+                var sw = new Stopwatch();
+                sw.Start();
+
                 var diskEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_queue.Entity.User,
                     _queue.Entity.Name, messageEntity.Id, true, cancellationToken);
+
+                sw.Stop();
+                messageEntity.IoTime.Add(sw.ElapsedMilliseconds);
+
                 data = diskEntity.Data;
             }
 
@@ -224,8 +242,14 @@ namespace NaiveMq.Service.Cogs
 
         private async Task DeleteMessageAssync(MessageEntity messageEntity, CancellationToken cancellationToken)
         {
+            var sw = new Stopwatch();
+            sw.Start();
+
             await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, cancellationToken);
+
+            sw.Stop();
+            messageEntity.IoTime.Add(sw.ElapsedMilliseconds);
         }
 
         private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)

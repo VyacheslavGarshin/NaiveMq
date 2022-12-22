@@ -14,7 +14,17 @@ namespace NaiveMq.Service.Counters
 
         public Counter VolumeInMemory { get; } = new();
 
-        public Counter Subscriptions { get; set; } = new();
+        public Counter Subscriptions { get; } = new();
+
+        /// <summary>
+        /// Average time beetween messages put to queue and ready to send.
+        /// </summary>
+        public AvgCounter AvgLifeTime { get; } = new(10);
+
+        /// <summary>
+        /// Average IO time during life time.
+        /// </summary>
+        public AvgCounter AvgIoTime { get; } = new(10);
 
         public QueueCounters(SpeedCounterService service)
         {
@@ -30,6 +40,8 @@ namespace NaiveMq.Service.Counters
             Volume.Parent = parent.Volume;
             VolumeInMemory.Parent = parent.VolumeInMemory;
             Subscriptions.Parent = parent.Subscriptions;
+            AvgLifeTime.Parent = parent.AvgLifeTime;
+            AvgIoTime.Parent = parent.AvgIoTime;
         }
 
         public virtual void Dispose()

@@ -1,4 +1,5 @@
 ﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 
@@ -27,6 +28,18 @@ namespace NaiveMq.Service.Entities
 
         [JsonIgnore]
         public bool Delivered { get; set; }
+
+        /// <summary>
+        /// UTC date the message put in the queue.
+        /// </summary>
+        [JsonIgnore]
+        public DateTime Date { get; set; }
+
+        /// <summary>
+        /// Accumulate IO time in milliseconds.
+        /// </summary>
+        [JsonIgnore]
+        public Counter IoTime { get; } = new();
 
         public static MessageEntity FromCommand(Message command)
         {
