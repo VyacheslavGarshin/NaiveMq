@@ -16,7 +16,7 @@ namespace NaiveMq.Client
         [Description("Confirmation timeout.")]
         ConfirmationTimeout = 4,
 
-        [Description("Confirmation error.")]
+        [Description("Unknown confirmation error. See exception 'Response' property for original response.")]
         ConfirmationError = 5,
 
         [Description("Connection parameters are empty.")]
@@ -186,5 +186,8 @@ namespace NaiveMq.Client
 
         [Description("Client not found.")]
         ClientNotFound = 143,
+
+        [Description("Server not found.")]
+        ServerNotFound = 144,
     }
 }

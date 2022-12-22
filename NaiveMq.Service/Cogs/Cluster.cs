@@ -3,6 +3,8 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;
 using NaiveMq.Service.Commands;
+using NaiveMq.Service.Dto;
+using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
@@ -11,10 +13,16 @@ namespace NaiveMq.Service.Cogs
     {
         public bool Started { get; private set; }
 
+        public ConcurrentDictionary<string, ClusterServer> Servers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+
         private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
 
         private Timer _discoveryTimer;
-        
+
+        private Timer _statsTimer;
+
+        private ClusterServer _self;
+
         private readonly Storage _storage;
         
         private readonly ILogger<NaiveMqService> _logger;
@@ -25,8 +33,6 @@ namespace NaiveMq.Service.Cogs
         
         private readonly NaiveMqServiceOptions _options;
         
-        private readonly ConcurrentDictionary<string, ClusterServer> _servers = new(StringComparer.InvariantCultureIgnoreCase);
-
         public Cluster(Storage storage, ILogger<NaiveMqService> logger, ILogger<NaiveMqClient> clientLogger, CancellationToken stoppingToken)
         {
             _storage = storage;
@@ -42,7 +48,9 @@ namespace NaiveMq.Service.Cogs
                 && !string.IsNullOrWhiteSpace(_options.ClusterAdminUsername) 
                 && !string.IsNullOrWhiteSpace(_options.ClusterAdminPassword))
             {
-                _discoveryTimer = new Timer((state) => { Task.Run(async () => { await ClusterDiscovery(); }); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
+                _discoveryTimer = new Timer(async (state) => { await DiscoverHosts(); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
+
+                _statsTimer = new Timer(async (state) => { await SendServerStats(); }, null, TimeSpan.Zero, _options.ClusterStatsInterval);
 
                 Started = true;
                 _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
@@ -59,15 +67,18 @@ namespace NaiveMq.Service.Cogs
                     _discoveryTimer = null;
                 }
 
-                foreach (var server in _servers.Values)
+                if (_statsTimer != null)
                 {
-                    if (server.Client != null)
-                    {
-                        server.Client.Dispose();
-                    }
+                    _statsTimer.Dispose();
+                    _statsTimer = null;
                 }
 
-                _servers.Clear();
+                foreach (var server in Servers.Values)
+                {
+                    server.Dispose();
+                }
+
+                Servers.Clear();
 
                 Started = false;
             }
@@ -86,7 +97,7 @@ namespace NaiveMq.Service.Cogs
             Stop();
         }
 
-        private async Task ClusterDiscovery()
+        private async Task DiscoverHosts()
         {
             try
             {
@@ -96,13 +107,17 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var host in Host.Parse(_options.ClusterHosts))
                 {
-                    if (!_servers.TryGetValue(host.ToString(), out var server) || !server.Self && server.Client == null)
+                    if (!Servers.TryGetValue(host.ToString(), out var server) || !server.Self && server.Client == null)
                     {
                         tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
                     }
                 }
 
                 await Task.WhenAll(tasks.ToArray());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected exception while discovering cluster servers.");
             }
             finally
             {
@@ -127,8 +142,13 @@ namespace NaiveMq.Service.Cogs
                     throw new ServerException(ErrorCode.ClusterKeysDontMatch);
                 }
 
-                var server = new ClusterServer { Name = getServerResponse.Entity.Name, Self = getServerResponse.Entity.Name == _options.Name };
-                _servers.AddOrUpdate(host.ToString(), (key) => server, (key, value) => server);
+                var server = new ClusterServer
+                {
+                    Host = host,
+                    Name = getServerResponse.Entity.Name,
+                    Self = getServerResponse.Entity.Name == _options.Name
+                };
+                Servers.AddOrUpdate(host.ToString(), (key) => server, (key, value) => server);
 
                 if (!server.Self)
                 {
@@ -138,6 +158,10 @@ namespace NaiveMq.Service.Cogs
                     client = null;
 
                     _logger.LogInformation("Discovered cluster server '{Host}', name '{Name}'.", host, server.Name);
+                }
+                else
+                {
+                    _self = server;
                 }
             }
             catch (ClientException ex)
@@ -164,23 +188,100 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
+        private async Task SendServerStats()
+        {
+            try
+            {
+                _discoveryTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                if (_self == null)
+                {
+                    return;
+                }
+
+                var tasks = new List<Task>();
+
+                foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
+                {
+                    tasks.Add(Task.Run(async () => { await SendServerStats(server); }));
+                }
+
+                await Task.WhenAll(tasks);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected exception while send stats.");
+            }
+            finally
+            {
+                _discoveryTimer.Change(_options.ClusterStatsInterval, _options.ClusterStatsInterval);
+            }
+        }
+
+        private async Task SendServerStats(ClusterServer server)
+        {
+            try
+            {
+                await server.Client.SendAsync(new ServerStats(_self.Name, true, false));
+
+                ServerStats serverStats = null;
+
+                foreach (var queue in _storage.Users.Values.SelectMany(x => x.Queues.Values)
+                    .Where(x => x.Status == QueueStatus.Started && x.Length > 0))
+                {
+                    serverStats ??= new ServerStats(_self.Name, false, false, new());
+
+                    if (serverStats.QueueStats.Count < _storage.Service.Options.ClusterStatsBatchSize)
+                    {
+                        serverStats.QueueStats.Add(new QueueStats(
+                            queue.Entity.User,
+                            queue.Entity.Name,
+                            queue.Length,
+                            queue.Counters.Subscriptions.Value));
+                    }
+                    else
+                    {
+                        await server.Client.SendAsync(serverStats);
+                        serverStats = null;
+                    }
+                }
+
+                if (serverStats != null)
+                {
+                    await server.Client.SendAsync(serverStats);
+                }
+
+                await server.Client.SendAsync(new ServerStats(_self.Name, false, true));
+            }
+            catch (ClientException ex)
+            {
+                if (ex.ErrorCode != ErrorCode.ServerNotFound)
+                {
+                    _logger.LogError(ex, "Unexpected client exception while send stats for server '{Host}'.", server.Host);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected exception while send stats for server '{Host}'.", server.Host);
+            }
+        }
+
         private void Client_OnStop(NaiveMqClient sender)
         {
-            var server = _servers.FirstOrDefault(x => x.Value?.Client?.Id == sender.Id);
+            var server = Servers.Values.FirstOrDefault(x => x.Client?.Id == sender.Id);
 
-            if (server.Key != null)
+            if (server != null)
             {
-                _servers.Remove(server.Key, out var _);
-                server.Value.Client.Dispose();
-                server.Value.Client = null;
+                server.Client.Dispose();
+                server.Client = null;
 
-                _logger.LogInformation("Removed cluster server '{Host}', name '{Name}'.", server.Key, server.Value.Name);
+                _logger.LogInformation("Disconnected cluster server '{Host}', name '{Name}'.", server.Host, server.Name);
             }
         }
 
         private async Task ReplicateRequest(IRequest request, ClientContext clientContext)
         {
-            foreach (var server in _servers.Values.Where(x => !x.Self && x.Client != null))
+            foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
             {
                 try
                 {
@@ -199,15 +300,6 @@ namespace NaiveMq.Service.Cogs
                     _logger.LogError(ex, "Unexpected error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
                 }
             }
-        }
-
-        private class ClusterServer
-        {
-            public string Name { get; set; }
-
-            public bool Self { get; set; }
-
-            public NaiveMqClient Client { get; set; }
         }
     }
 }

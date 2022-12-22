@@ -20,7 +20,6 @@ Implemented so far:
 + Clustering
 
 Plans:
-+ Better counters
 + Better clustering
 + Better durable queues
 + Management UI

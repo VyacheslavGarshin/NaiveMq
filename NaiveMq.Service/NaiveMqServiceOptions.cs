@@ -32,5 +32,9 @@
         public string ClusterAdminUsername { get; set; }
 
         public string ClusterAdminPassword { get; set; }
+
+        public TimeSpan ClusterStatsInterval { get; set; } = TimeSpan.FromSeconds(10);
+
+        public int ClusterStatsBatchSize { get; set; } = 100;
     }
 }

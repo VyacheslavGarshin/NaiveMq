@@ -20,7 +20,7 @@ namespace NaiveMq.Service.Cogs
         
         private readonly ClientContext _context;
         
-        private bool _isStarted;
+        public bool Started { get; private set; }
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -35,23 +35,23 @@ namespace NaiveMq.Service.Cogs
 
         public void Start()
         {
-            if (!_isStarted)
+            if (!Started)
             {
                 Stop();
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 Task.Run(() => SendAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
-                _isStarted = true;
+                Started = true;
             }
         }
 
         public void Stop()
         {
-            if (_isStarted)
+            if (Started)
             {
                 _cancellationTokenSource.Cancel();
-                _isStarted = false;
+                Started = false;
             }
         }
 
@@ -64,7 +64,9 @@ namespace NaiveMq.Service.Cogs
         {
             try
             {
-                while (_isStarted && !_context.StoppingToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                _queue.Counters.Subscriptions.Add();
+
+                while (Started && !_context.StoppingToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
@@ -115,6 +117,15 @@ namespace NaiveMq.Service.Cogs
                 }
 
                 throw;
+            }
+            finally
+            {
+                _queue.Counters.Subscriptions.Add(-1);
+
+                if (_context.Subscriptions.TryRemove(_queue, out var subscription))
+                {
+                    subscription.Dispose();
+                }
             }
         }
 

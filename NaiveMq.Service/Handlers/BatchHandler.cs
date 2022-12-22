@@ -1,5 +1,6 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -19,9 +20,11 @@ namespace NaiveMq.Service.Handlers
                 }
                 catch (Exception ex)
                 {
+                    var serverException = ex as ServerException;
                     responses.Add(Confirmation.Error(
                         command,
-                        ex is ServerException serverException ? serverException.ErrorCode.ToString() : string.Empty,
+                        serverException != null ? nameof(ClientException) : ex.GetType().Name,
+                        serverException != null ? serverException.ErrorCode.ToString() : string.Empty,
                         ex.GetBaseException().Message));
                 }
             }

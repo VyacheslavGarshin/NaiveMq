@@ -346,7 +346,12 @@ namespace NaiveMq.Client
             {
                 if (!responseItem.Response.Success)
                 {
-                    throw new ClientException(ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage) { Response = responseItem.Response };
+                    ErrorCode errorCode;
+                    var parsed = Enum.TryParse(responseItem.Response.ErrorCode, true, out errorCode);
+                    throw new ClientException(parsed ? errorCode : ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage)
+                    {
+                        Response = responseItem.Response
+                    };
                 }
                 else
                 {

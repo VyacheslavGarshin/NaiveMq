@@ -10,6 +10,8 @@ namespace NaiveMq.Client.Commands
 
         public bool Success { get; set; }
 
+        public string ErrorType { get; set; }
+
         public string ErrorCode { get; set; }
 
         public string ErrorMessage { get; set; }

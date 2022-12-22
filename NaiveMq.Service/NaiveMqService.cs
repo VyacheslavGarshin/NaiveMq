@@ -10,7 +10,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Service.Handlers;
 using NaiveMq.Service.PersistentStorage;
 using NaiveMq.Client;
-using static NaiveMq.Service.Cogs.UserCog;
+using NaiveMq.Service.Counters;
 
 namespace NaiveMq.Service
 {
@@ -236,23 +236,23 @@ namespace NaiveMq.Service
             }
             catch (ClientException ex)
             {
-                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, nameof(ClientException), ex.ErrorCode.ToString(), ex.Message);
             }
             catch (ServerException ex)
             {
-                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, nameof(ClientException), ex.ErrorCode.ToString(), ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Client receive request error.");
 
-                await SendErrorAsync(sender, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
+                await SendErrorAsync(sender, request, string.Empty, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
             }
         }
 
-        private async Task SendErrorAsync(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
+        private async Task SendErrorAsync(NaiveMqClient sender, IRequest request, string errorType, string errorCode, string errorMessage)
         {
-            await SendAsync(sender, Confirmation.Error(request, errorCode, errorMessage));
+            await SendAsync(sender, Confirmation.Error(request, errorType, errorCode, errorMessage));
         }
 
         private async Task SendAsync(NaiveMqClient client, IResponse response)
@@ -291,26 +291,6 @@ namespace NaiveMq.Service
             }
         }
 
-
-        public class ServiceCounters : UserCounters
-        {
-            public SpeedCounters ReadCommand { get; }
-
-            public SpeedCounters WriteCommand { get; }
-
-            public ServiceCounters(SpeedCounterService service) : base(service)
-            {
-                ReadCommand = new(service);
-                WriteCommand = new(service);
-            }
-
-            public override void Dispose()
-            {
-                base.Dispose();
-
-                ReadCommand.Dispose();
-                WriteCommand.Dispose();
-            }
-        }
+       
     }
 }

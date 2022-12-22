@@ -22,6 +22,7 @@ namespace NaiveMq.Service.Handlers
                     }
                     else
                     {
+                        subscription.Dispose();
                         throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new object[] { queue.Entity.Name });
                     }
                 }

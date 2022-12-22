@@ -19,5 +19,10 @@
         /// Send a hint message to client with servers statistics to deal with message shortage manually.
         /// </summary>
         Hint = 2,
+
+        /// <summary>
+        /// Wait for the new messages to appear.
+        /// </summary>
+        Wait = 3,
     }
 }

@@ -1,11 +1,10 @@
 ﻿using NaiveMq.Client;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
+using NaiveMq.Service.Counters;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
-using System.Data;
-using static NaiveMq.Service.Cogs.UserCog;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -152,40 +151,6 @@ namespace NaiveMq.Service.Cogs
         {
             _dequeueSemaphore.Dispose();
             _limitSemaphore.Dispose();
-        }
-
-        public class QueueCounters : IDisposable
-        {
-            public SpeedCounters Read { get; }
-
-            public SpeedCounters Write { get; }
-
-            public Counter Length { get; } = new();
-
-            public Counter Volume { get; } = new();
-
-            public Counter VolumeInMemory { get; } = new();
-
-            public QueueCounters(SpeedCounterService service)
-            {
-                Read = new(service);
-                Write = new(service);
-            }
-
-            public QueueCounters(SpeedCounterService service, UserCounters parent) : this(service)
-            {
-                Read.Parent = parent.Read;
-                Write.Parent = parent.Write;
-                Length.Parent = parent.Length;
-                Volume.Parent = parent.Volume;
-                VolumeInMemory.Parent = parent.VolumeInMemory;
-            }
-
-            public virtual void Dispose()
-            {
-                Read.Dispose();
-                Write.Dispose();
-            }
         }
     }
 }

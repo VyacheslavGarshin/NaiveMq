@@ -1,10 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
-using NaiveMq.Client.Common;
+using NaiveMq.Service.Counters;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
-using static NaiveMq.Service.Cogs.UserCog;
-using static NaiveMq.Service.NaiveMqService;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -123,22 +121,6 @@ namespace NaiveMq.Service.Cogs
             var freeMemory = memoryInfo.HighMemoryLoadThresholdBytes - memoryInfo.MemoryLoadBytes + memoryInfo.HeapSizeBytes;
             MemoryLimitExceeded = freeMemory < 0.01 * (100 - _options.AutoMemoryLimitPercent) * memoryInfo.HighMemoryLoadThresholdBytes
                 || (_options.MemoryLimit != null && memoryInfo.HeapSizeBytes > _options.MemoryLimit);
-        }
-
-        public class StorageCounters : UserCounters
-        {
-            public StorageCounters(SpeedCounterService service) : base(service)
-            {
-            }
-
-            public StorageCounters(SpeedCounterService service, ServiceCounters parent) : base(service)
-            {
-                Read.Parent = parent.Read;
-                Write.Parent = parent.Write;
-                Length.Parent = parent.Length;
-                Volume.Parent = parent.Volume;
-                VolumeInMemory.Parent = parent.VolumeInMemory;
-            }
         }
     }
 }
