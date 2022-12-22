@@ -8,18 +8,21 @@ namespace NaiveMq.Client.Common
 
         public long Value { get; private set; }
 
+        public bool Average { get; private set; }
+
         private Counter _counting = new();
 
         public SpeedCounter()
         {
         }
 
-        public SpeedCounter(CounterInterval counterInterval) : this()
+        public SpeedCounter(CounterInterval counterInterval, bool average) : this()
         {
             CounterInterval = counterInterval;
+            Average = average;  
         }
 
-        public SpeedCounter(CounterInterval counterInterval, long value) : this(counterInterval)
+        public SpeedCounter(CounterInterval counterInterval, long value, bool average) : this(counterInterval, average)
         {
             Value = value;
         }
@@ -31,7 +34,7 @@ namespace NaiveMq.Client.Common
 
         public void OnTimer()
         {
-            Value = _counting.Value;
+            Value = Average && _counting.Count != 0 ? _counting.Value / _counting.Count : _counting.Value;
             _counting.Reset();
         }
     }

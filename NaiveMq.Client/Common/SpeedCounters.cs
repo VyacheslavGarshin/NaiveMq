@@ -14,13 +14,13 @@ namespace NaiveMq.Client.Common
 
         public SpeedCounters Parent { get; set; }
 
-        public SpeedCounters(SpeedCounterService service, SpeedCounters parent = null)
+        public SpeedCounters(SpeedCounterService service, SpeedCounters parent = null, long value = 0, bool average = false)
         {
             _service = service;
             Parent = parent;
-            Second = _service.Create(Enums.CounterInterval.Second);
-            Minute = _service.Create(Enums.CounterInterval.Minute);
-            Hour = _service.Create(Enums.CounterInterval.Hour);
+            Second = _service.Create(Enums.CounterInterval.Second, value, average);
+            Minute = _service.Create(Enums.CounterInterval.Minute, value, average);
+            Hour = _service.Create(Enums.CounterInterval.Hour, value, average);
         }
 
         public void Add(long value = 1)

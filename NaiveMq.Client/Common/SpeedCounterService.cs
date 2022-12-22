@@ -13,16 +13,16 @@ namespace NaiveMq.Client.Common
 
         private readonly IntervalService _hour = new IntervalService(CounterInterval.Hour);
 
-        public SpeedCounter Create(CounterInterval counterInterval, long value = 0)
+        public SpeedCounter Create(CounterInterval counterInterval, long value = 0, bool average = false)
         {
             switch (counterInterval)
             {
                 case CounterInterval.Second:
-                    return _second.Create(value);
+                    return _second.Create(value, average);
                 case CounterInterval.Minute:
-                    return _minute.Create(value);
+                    return _minute.Create(value, average);
                 case CounterInterval.Hour:
-                    return _hour.Create(value);
+                    return _hour.Create(value, average);
                 default:
                     throw new NotSupportedException($"Counter interval {counterInterval} is not supported.");
             }
@@ -67,9 +67,9 @@ namespace NaiveMq.Client.Common
                 _timer = new Timer(Timer_OnTimer, null, TimeSpan.Zero, TimeSpan.FromSeconds((int)counterInterval));
             }
 
-            public SpeedCounter Create(long value = 0)
+            public SpeedCounter Create(long value = 0, bool average = false)
             {
-                var result = new SpeedCounter(_counterInterval, value);
+                var result = new SpeedCounter(_counterInterval, value, average);
                 _counters.TryAdd(result.GetHashCode(),result);
                 return result;
             }
@@ -90,9 +90,9 @@ namespace NaiveMq.Client.Common
 
             private void Timer_OnTimer(object state)
             {
-                foreach (var counter in _counters)
+                foreach (var counter in _counters.Values)
                 {
-                    counter.Value.OnTimer();
+                    counter.OnTimer();
                 }
             }
         }

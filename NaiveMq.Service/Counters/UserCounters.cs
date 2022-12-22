@@ -16,8 +16,6 @@ namespace NaiveMq.Service.Counters
             Volume.Parent = parent.Volume;
             VolumeInMemory.Parent = parent.VolumeInMemory;
             Subscriptions.Parent = parent.Subscriptions;
-            AvgLifeTime.Parent = parent.AvgLifeTime;
-            AvgIoTime.Parent = parent.AvgIoTime;
         }
     }
 }

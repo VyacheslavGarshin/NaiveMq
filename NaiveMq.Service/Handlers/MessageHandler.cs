@@ -152,9 +152,7 @@ namespace NaiveMq.Service.Handlers
 
             for (var i = 0; i < queues.Count; i++)
             {
-                var entity = entities[i];
-                queues[i].Enqueue(entity);
-                entity.Date = DateTime.UtcNow;
+                queues[i].Enqueue(entities[i]);
             }
 
             if (!context.Reinstate && messageEntity.Persistent != Persistence.No)
@@ -166,13 +164,7 @@ namespace NaiveMq.Service.Handlers
 
                     if (queue.Entity.Durable)
                     {
-                        var sw = new Stopwatch(); 
-                        sw.Start();
-                        
                         await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, entity, context.StoppingToken);
-                        
-                        sw.Stop();
-                        messageEntity.IoTime.Add(sw.ElapsedMilliseconds);
                     }
                  
                     if (entity.Persistent == Persistence.DiskOnly)
