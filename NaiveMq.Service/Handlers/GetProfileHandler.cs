@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetProfileHandler : AbstractHandler<GetProfile, GetProfileResponse>
     {
-        public override Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command)
+        public override Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 

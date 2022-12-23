@@ -8,18 +8,18 @@ namespace NaiveMq.Service.Handlers
 {
     public class AddBindingHandler : AbstractHandler<AddBinding, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddBinding command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddBinding command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
             var bindingEnity = BindingEntity.FromCommand(command);
             
-            await ExecuteEntityAsync(context, bindingEnity);
+            await ExecuteEntityAsync(context, bindingEnity, cancellationToken);
 
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEntity)
+        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEntity, CancellationToken cancellationToken)
         {
             var binding = new BindingCog(bindingEntity);
 
@@ -31,7 +31,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Entity.Username, bindingEntity, context.StoppingToken);
+                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Entity.Username, bindingEntity, cancellationToken);
                 }
                 catch
                 {

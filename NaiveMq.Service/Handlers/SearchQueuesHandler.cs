@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class SearchQueuesHandler : AbstractHandler<SearchQueues, SearchQueuesResponse>
     {
-        public override Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command)
+        public override Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 

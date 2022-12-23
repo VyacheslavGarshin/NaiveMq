@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class DeleteBindingHandler : AbstractHandler<DeleteBinding, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteBinding command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteBinding command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
@@ -26,7 +26,7 @@ namespace NaiveMq.Service.Handlers
             {
                 try
                 {
-                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Entity.Username, binding.Entity.Exchange, binding.Entity.Queue, context.StoppingToken);
+                    await context.Storage.PersistentStorage.DeleteBindingAsync(context.User.Entity.Username, binding.Entity.Exchange, binding.Entity.Queue, cancellationToken);
                 }
                 catch (Exception)
                 {

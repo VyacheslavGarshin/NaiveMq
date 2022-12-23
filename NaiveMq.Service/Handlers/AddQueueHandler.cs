@@ -7,19 +7,19 @@ namespace NaiveMq.Service.Handlers
 {
     public class AddQueueHandler : AbstractHandler<AddQueue, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddQueue command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
             var queueEnity = QueueEntity.FromCommand(command);
             queueEnity.User = context.User.Entity.Username;
 
-            await ExecuteEntityAsync(context, queueEnity);
+            await ExecuteEntityAsync(context, queueEnity, cancellationToken);
 
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity)
+        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity, CancellationToken cancellationToken)
         {
             var queue = new QueueCog(queueEntity, context.User.Counters, context.Storage.Service.SpeedCounterService);
 
@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate && queueEntity.Durable)
                 {
-                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, context.StoppingToken);
+                    await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, cancellationToken);
                 }
             }
             catch

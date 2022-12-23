@@ -100,7 +100,7 @@ namespace NaiveMq.Service
         {
             if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandler))
             {
-                return await ((IHandler)Activator.CreateInstance(commandHandler)).ExecuteAsync(clientContext, command);
+                return await ((IHandler)Activator.CreateInstance(commandHandler)).ExecuteAsync(clientContext, command, _stoppingToken);
             }
             else
             {

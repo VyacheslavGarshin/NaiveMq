@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class DeleteUserHandler : AbstractHandler<DeleteUser, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteUser command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteUser command, CancellationToken cancellationToken)
         {
             context.CheckAdmin(context);
 
@@ -26,7 +26,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (!context.Reinstate)
                 {
-                    await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, context.StoppingToken);
+                    await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, cancellationToken);
                 }
 
                 user.Dispose();

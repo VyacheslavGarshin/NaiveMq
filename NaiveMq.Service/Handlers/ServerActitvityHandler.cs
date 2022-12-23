@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class ServerActitvityHandler : AbstractHandler<ServerActitvity, Confirmation>
     {
-        public override Task<Confirmation> ExecuteAsync(ClientContext context, ServerActitvity command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, ServerActitvity command, CancellationToken cancellationToken)
         {
             context.CheckClusterAdmin(context);
 

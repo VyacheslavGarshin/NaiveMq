@@ -10,17 +10,17 @@ namespace NaiveMq.Service.Handlers
 {
     public class MessageHandler : AbstractHandler<Message, MessageResponse>
     {
-        public override async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command)
+        public override async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
             var message = MessageEntity.FromCommand(command);
             message.ClientId = context.Client?.Id;
 
-            return await ExecuteEntityAsync(context, message, command);
+            return await ExecuteEntityAsync(context, message, command, cancellationToken);
         }
 
-        public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command = null)
+        public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command, CancellationToken cancellationToken)
         {
             if (context.User.Queues.TryGetValue(messageEntity.Queue, out var queue))
             {
@@ -42,12 +42,12 @@ namespace NaiveMq.Service.Handlers
 
                 CkeckMessage(messageEntity, queue, queues);
 
-                if (await CheckLimitsAndDiscardAsync(context, queues, command))
+                if (await CheckLimitsAndDiscardAsync(context, queues, command, cancellationToken))
                 {
                     return MessageResponse.Ok(command);
                 }
 
-                await EnqueueAsync(context, messageEntity, queues);
+                await EnqueueAsync(context, messageEntity, queues, cancellationToken);
 
                 if (messageEntity.Request)
                 {
@@ -76,7 +76,7 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command)
+        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command, CancellationToken cancellationToken)
         {
             if (!context.Reinstate && command != null) {
                 foreach (var queue in queues)
@@ -99,7 +99,7 @@ namespace NaiveMq.Service.Handlers
                         switch (queue.Entity.LimitStrategy)
                         {
                             case LimitStrategy.Delay:
-                                if (!await queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, context.StoppingToken))
+                                if (!await queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, cancellationToken))
                                 {
                                     // Client side will fire it's own confirmation timeout and abandon request. 
                                     // We need to discard the message.
@@ -146,7 +146,7 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task EnqueueAsync(ClientContext context, MessageEntity messageEntity, List<QueueCog> queues)
+        private static async Task EnqueueAsync(ClientContext context, MessageEntity messageEntity, List<QueueCog> queues, CancellationToken cancellationToken)
         {
             var entities = queues.Select(x => queues.Count == 1 ? messageEntity : messageEntity.Copy()).ToArray();
 
@@ -164,7 +164,7 @@ namespace NaiveMq.Service.Handlers
 
                     if (queue.Entity.Durable)
                     {
-                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, entity, context.StoppingToken);
+                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, entity, cancellationToken);
                     }
                  
                     if (entity.Persistent == Persistence.DiskOnly)

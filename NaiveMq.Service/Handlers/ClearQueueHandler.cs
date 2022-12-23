@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class ClearQueueHandler : AbstractHandler<ClearQueue, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ClearQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ClearQueue command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
 
                 if (queue.Entity.Durable)
                 {
-                    await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
+                    await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
                 }
 
                 queue.Clear();

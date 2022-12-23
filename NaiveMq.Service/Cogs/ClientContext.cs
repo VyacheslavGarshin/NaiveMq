@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Cogs
 
         public ILogger Logger { get; set; }
 
-        public CancellationToken StoppingToken { get; set; }
+        // public CancellationToken StoppingToken { get; set; }
 
         public UserCog User { get; set; }
 

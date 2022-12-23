@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetQueueHandler : AbstractHandler<GetQueue, GetQueueResponse>
     {
-        public override Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command)
+        public override Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 

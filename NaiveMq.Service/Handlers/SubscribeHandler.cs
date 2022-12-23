@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class SubscribeHandler : AbstractHandler<Subscribe, Confirmation>
     {
-        public override Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 

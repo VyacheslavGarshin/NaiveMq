@@ -86,7 +86,6 @@ namespace NaiveMq.Service.Cogs
             {
                 Storage = this,
                 Client = client,
-                StoppingToken = _stoppingToken,
                 Logger = _logger
             };
 

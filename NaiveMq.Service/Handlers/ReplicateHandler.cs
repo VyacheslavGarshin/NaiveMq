@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class ReplicateHandler : AbstractHandler<Replicate, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command, CancellationToken cancellationToken)
         {
             context.CheckClusterAdmin(context);
 
@@ -17,7 +17,6 @@ namespace NaiveMq.Service.Handlers
                     Client = context.Client,
                     Logger = context.Logger,
                     Reinstate = true,
-                    StoppingToken = context.StoppingToken,
                     Storage = context.Storage,
                     User = user,
                 };

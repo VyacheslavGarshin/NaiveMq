@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class BatchHandler : AbstractHandler<Batch, BatchResponse>
     {
-        public override async Task<BatchResponse> ExecuteAsync(ClientContext context, Batch command)
+        public override async Task<BatchResponse> ExecuteAsync(ClientContext context, Batch command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 

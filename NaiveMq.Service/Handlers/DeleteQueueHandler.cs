@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class DeleteQueueHandler : AbstractHandler<DeleteQueue, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
@@ -17,11 +17,11 @@ namespace NaiveMq.Service.Handlers
 
                 try
                 {
-                    await DeleteBindingsAsync(context, command);
+                    await DeleteBindingsAsync(context, command, cancellationToken);
 
                     if (!context.Reinstate && queue.Entity.Durable)
                     {
-                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, context.StoppingToken);
+                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
                     }
 
                     queue.Dispose();
@@ -42,7 +42,7 @@ namespace NaiveMq.Service.Handlers
             return Confirmation.Ok(command);
         }
 
-        private static async Task DeleteBindingsAsync(ClientContext context, DeleteQueue command)
+        private static async Task DeleteBindingsAsync(ClientContext context, DeleteQueue command, CancellationToken cancellationToken)
         {
             if (context.User.Bindings.TryGetValue(command.Name, out var bindings))
             {
@@ -54,7 +54,7 @@ namespace NaiveMq.Service.Handlers
                         Queue = binding.Entity.Queue
                     };
 
-                    await new DeleteBindingHandler().ExecuteAsync(context, deleteBindingCommand);
+                    await new DeleteBindingHandler().ExecuteAsync(context, deleteBindingCommand, cancellationToken);
                 }
             }
         }

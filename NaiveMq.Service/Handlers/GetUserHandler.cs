@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetUserHandler : AbstractHandler<GetUser, GetUserResponse>
     {
-        public override Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command)
+        public override Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command, CancellationToken cancellationToken)
         {
             context.CheckAdmin(context);
             

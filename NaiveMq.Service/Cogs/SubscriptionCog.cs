@@ -8,6 +8,7 @@ using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -59,7 +60,8 @@ namespace NaiveMq.Service.Cogs
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _timerService.Add(this, OnTimer);
-                Task.Run(() => SendAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
+
+                Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not end this task of messages will be lost
 
                 Started = true;
             }
@@ -70,6 +72,7 @@ namespace NaiveMq.Service.Cogs
             if (Started)
             {
                 _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
                 _timerService.Remove(this);
                 Started = false;
             }
@@ -86,7 +89,7 @@ namespace NaiveMq.Service.Cogs
             {
                 _queue.Counters.Subscriptions.Add();
 
-                while (Started && !_context.StoppingToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                while (Started && !cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
@@ -166,24 +169,12 @@ namespace NaiveMq.Service.Cogs
 
                 var message = CreateMessage(messageEntity, data);
                 response = await SendMessageAsync(message, cancellationToken);
+
                 messageEntity.Delivered = true;
             }
             catch (Exception ex)
             {
-                if (messageEntity.Request)
-                {
-                    response = FindRequestResponse(ex);
-
-                    if (response != null)
-                    {
-                        messageEntity.Delivered = true;
-                    }
-                }
-
-                if (response == null)
-                {
-                    await ReEnqueueMessageAsync(messageEntity);
-                }
+                response = FindRequestResponse(messageEntity, ex);
 
                 if (ex is not ClientException)
                 {
@@ -192,9 +183,16 @@ namespace NaiveMq.Service.Cogs
             }
             finally
             {
-                if (messageEntity.Delivered && messageEntity.Persistent != Persistence.No)
+                if (messageEntity.Delivered)
                 {
-                    await DeleteMessageAssync(messageEntity, cancellationToken);
+                    if (messageEntity.Persistent != Persistence.No)
+                    {
+                        await DeleteMessageAssync(messageEntity);
+                    }
+                }
+                else
+                {
+                    await ReEnqueueMessageAsync(messageEntity);
                 }
 
                 if (messageEntity.Request && response != null && response.Response)
@@ -218,15 +216,23 @@ namespace NaiveMq.Service.Cogs
             return data;
         }
 
-        private static MessageResponse FindRequestResponse(Exception ex)
+        private static MessageResponse FindRequestResponse(MessageEntity messageEntity, Exception ex)
         {
             MessageResponse result = null;
 
-            if (ex is ClientException clientException && clientException.Response != null)
+            if (messageEntity.Request)
             {
-                if (clientException.Response is MessageResponse response && response.Response)
+                if (ex is ClientException clientException && clientException.Response != null)
                 {
-                    result = response;
+                    if (clientException.Response is MessageResponse response && response.Response)
+                    {
+                        result = response;
+                    }
+                }
+
+                if (result != null)
+                {
+                    messageEntity.Delivered = true;
                 }
             }
 
@@ -244,16 +250,16 @@ namespace NaiveMq.Service.Cogs
             return result;
         }
 
-        private async Task DeleteMessageAssync(MessageEntity messageEntity, CancellationToken cancellationToken)
+        private async Task DeleteMessageAssync(MessageEntity messageEntity)
         {
             await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
-                _queue.Entity.Name, messageEntity.Id, cancellationToken);
+                _queue.Entity.Name, messageEntity.Id, CancellationToken.None); // none cancellation to ensure operation is not interrupted
         }
 
         private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)
         {
             var handler = new MessageHandler();
-            await handler.ExecuteEntityAsync(_context, messageEntity);
+            await handler.ExecuteEntityAsync(_context, messageEntity, null, CancellationToken.None); // none cancellation to ensure operation is not interrupted
         }
 
         private async Task<MessageResponse> SendMessageAsync(Message message, CancellationToken cancellationToken)
@@ -325,7 +331,8 @@ namespace NaiveMq.Service.Cogs
 
             if (hints.Any())
             {
-                await _context.Client.SendAsync(new ClusterRedirect(hints.OrderBy(x => x.Length).First().Host));
+                var hint = hints.OrderBy(x => x.Subscriptions).ThenByDescending(x => x.Length).First();
+                await _context.Client.SendAsync(new ClusterRedirect(hint.Host));
             }
         }
 

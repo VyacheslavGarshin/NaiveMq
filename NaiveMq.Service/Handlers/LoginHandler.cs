@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class LoginHandler : AbstractHandler<Login, Confirmation>
     {
-        public override Task<Confirmation> ExecuteAsync(ClientContext context, Login command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, Login command, CancellationToken cancellationToken)
         {
             if (context.User == null)
             {

@@ -9,7 +9,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class UpdateUserHandler : AbstractHandler<UpdateUser, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command, CancellationToken cancellationToken)
         {
             context.CheckAdmin(context);
 
@@ -38,7 +38,7 @@ namespace NaiveMq.Service.Handlers
                     user.Entity.PasswordHash = command.Password.ComputeHash();
                 }
 
-                await context.Storage.PersistentStorage.SaveUserAsync(user.Entity, context.StoppingToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(user.Entity, cancellationToken);
             }
             catch
             {

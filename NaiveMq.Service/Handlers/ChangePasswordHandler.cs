@@ -7,7 +7,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class ChangePasswordHandler : AbstractHandler<ChangePassword, Confirmation>
     {
-        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ChangePassword command)
+        public override async Task<Confirmation> ExecuteAsync(ClientContext context, ChangePassword command, CancellationToken cancellationToken)
         {
             context.CheckUser(context);
 
@@ -34,7 +34,7 @@ namespace NaiveMq.Service.Handlers
 
                 context.User.Entity.PasswordHash = command.NewPassword.ComputeHash();
 
-                await context.Storage.PersistentStorage.SaveUserAsync(context.User.Entity, context.StoppingToken);
+                await context.Storage.PersistentStorage.SaveUserAsync(context.User.Entity, cancellationToken);
             }
             catch
             {

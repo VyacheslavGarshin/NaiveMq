@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task LoadUsersAsync()
         {
-            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
+            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true };
 
             var count = 0;     
             
@@ -53,7 +53,7 @@ namespace NaiveMq.Service.Cogs
                 var user = await _storage.PersistentStorage.LoadUserAsync(key, _cancellationToken);
                 
                 var handler = new AddUserHandler();
-                await handler.ExecuteEntityAsync(context, user);
+                await handler.ExecuteEntityAsync(context, user, _cancellationToken);
                 
                 count++;
             }
@@ -67,7 +67,7 @@ namespace NaiveMq.Service.Cogs
                 _logger.LogInformation($"There are no users in the persistent storage. Adding default user.");
 
                 context.Reinstate = false;
-                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", Administrator = true });
+                await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", Administrator = true }, _cancellationToken);
 
                 _logger.LogInformation($"Added default 'guest' user with the same password.");
             }
@@ -79,14 +79,14 @@ namespace NaiveMq.Service.Cogs
 
             foreach (var user in _storage.Users.Values)
             {
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
 
                 foreach (var keys in await _storage.PersistentStorage.LoadQueueKeysAsync(user.Entity.Username, _cancellationToken))
                 {
                     var queue = await _storage.PersistentStorage.LoadQueueAsync(user.Entity.Username, keys, _cancellationToken);
 
                     var handler = new AddQueueHandler();
-                    await handler.ExecuteEntityAsync(context, queue);
+                    await handler.ExecuteEntityAsync(context, queue, _cancellationToken);
 
                     queuesCount++;
                 }
@@ -103,14 +103,14 @@ namespace NaiveMq.Service.Cogs
             {
                 var bindings = (await _storage.PersistentStorage.LoadBindingKeysAsync(user.Entity.Username, _cancellationToken)).ToList();
 
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
+                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
 
                 foreach (var key in bindings)
                 {
                     var binding = await _storage.PersistentStorage.LoadBindingAsync(user.Entity.Username, key, _cancellationToken);
 
                     var handler = new AddBindingHandler();
-                    await handler.ExecuteEntityAsync(context, binding);
+                    await handler.ExecuteEntityAsync(context, binding, _cancellationToken);
 
                     bindingsCount++;
                 }
@@ -128,7 +128,7 @@ namespace NaiveMq.Service.Cogs
             {
                 foreach (var queue in user.Queues.Values)
                 {
-                    var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true, StoppingToken = _cancellationToken };
+                    var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
 
                     var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.Entity.User, queue.Entity.Name, _cancellationToken)).ToList();
                     var queueMessageCount = 0;
@@ -140,7 +140,7 @@ namespace NaiveMq.Service.Cogs
                         if (message != null)
                         {
                             var handler = new MessageHandler();
-                            await handler.ExecuteEntityAsync(context, message);
+                            await handler.ExecuteEntityAsync(context, message, null, _cancellationToken);
 
                             messageCount++;
                         }

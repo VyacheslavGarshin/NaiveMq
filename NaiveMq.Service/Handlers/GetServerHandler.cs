@@ -6,7 +6,7 @@ namespace NaiveMq.Service.Handlers
 {
     public class GetServerHandler : AbstractHandler<GetServer, GetServerResponse>
     {
-        public override Task<GetServerResponse> ExecuteAsync(ClientContext context, GetServer command)
+        public override Task<GetServerResponse> ExecuteAsync(ClientContext context, GetServer command, CancellationToken cancellationToken)
         {
             return Task.FromResult(GetServerResponse.Ok(command, (response) =>
             {
