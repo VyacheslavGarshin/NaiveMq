@@ -4,7 +4,6 @@ using NaiveMq.Client;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
-using System.Diagnostics;
 
 namespace NaiveMq.Service.Handlers
 {

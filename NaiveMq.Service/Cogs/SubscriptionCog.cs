@@ -7,8 +7,6 @@ using NaiveMq.Service.Dto;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -61,7 +59,7 @@ namespace NaiveMq.Service.Cogs
                 _cancellationTokenSource = new CancellationTokenSource();
                 _timerService.Add(this, OnTimer);
 
-                Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not end this task of messages will be lost
+                Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not cancel this task or messages will be lost
 
                 Started = true;
             }
@@ -187,7 +185,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     if (messageEntity.Persistent != Persistence.No)
                     {
-                        await DeleteMessageAssync(messageEntity);
+                        await DeleteMessageAsync(messageEntity);
                     }
                 }
                 else
@@ -250,7 +248,7 @@ namespace NaiveMq.Service.Cogs
             return result;
         }
 
-        private async Task DeleteMessageAssync(MessageEntity messageEntity)
+        private async Task DeleteMessageAsync(MessageEntity messageEntity)
         {
             await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, CancellationToken.None); // none cancellation to ensure operation is not interrupted

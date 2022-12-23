@@ -1,5 +1,4 @@
 ﻿using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 
