@@ -327,7 +327,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task SendRedirectCommandAsync()
         {
-            var hints = GetQueueHints().Where(x => x.Subscriptions < _queue.Counters.Subscriptions.Value);
+            var hints = GetQueueHints().Where(x => x.Subscriptions < _queue.Counters.Subscriptions.Value).ToList();
 
             if (hints.Any())
             {
