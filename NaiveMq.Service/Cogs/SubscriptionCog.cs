@@ -7,6 +7,7 @@ using NaiveMq.Service.Dto;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
+using System.Security.Cryptography.X509Certificates;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -318,33 +319,43 @@ namespace NaiveMq.Service.Cogs
             throw new NotImplementedException();
         }
 
-        private Task SendRedirectCommandAsync()
+        private async Task SendRedirectCommandAsync()
         {
-            throw new NotImplementedException();
+            var hints = GetQueueHints().Where(x => x.Subscriptions < _queue.Counters.Subscriptions.Value);
+
+            if (hints.Any())
+            {
+                await _context.Client.SendAsync(new ClusterRedirect(hints.OrderBy(x => x.Length).First().Host));
+            }
         }
 
         private async Task SendHintCommandAsync()
+        {
+            var hints = GetQueueHints().ToList();
+
+            if (hints.Any())
+            {
+                await _context.Client.SendAsync(new ClusterHint(hints));
+            }
+        }
+
+        private IEnumerable<QueueHint> GetQueueHints()
         {
             var hints = new List<QueueHint>();
 
             foreach (var server in _context.Storage.Cluster.Servers.Values)
             {
-                if (server.ActiveQueues.TryGetValue(ActiveQueue.CreateKey(_queue.Entity.User, _queue.Entity.Name), out var activeQueue))
+                if (server.Name != _context.Storage.Cluster.Self.Name
+                    && server.ActiveQueues.TryGetValue(ActiveQueue.CreateKey(_queue.Entity.User, _queue.Entity.Name), out var activeQueue))
                 {
-                    hints.Add(new QueueHint
+                    yield return new QueueHint
                     {
                         Name = _queue.Entity.Name,
                         Host = server.Host.ToString(),
                         Length = activeQueue.Length,
                         Subscriptions = activeQueue.Subscriptions,
-
-                    });
+                    };
                 }
-            }
-
-            if (hints.Any())
-            {
-                await _context.Client.SendAsync(new ClusterHint(hints));
             }
         }
     }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NaiveMq.Client.Commands
 {
-    public class ClusterHint : AbstractRequest<Confirmation>, IReplicable
+    public class ClusterHint : AbstractRequest<Confirmation>
     {
         public List<QueueHint> Hints { get; set; }
 

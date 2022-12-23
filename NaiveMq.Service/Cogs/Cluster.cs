@@ -17,11 +17,11 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<string, ClusterServer> Servers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
+        public ClusterServer Self { get; private set; }
+
         private Timer _discoveryTimer;
 
         private Timer _statsTimer;
-
-        private ClusterServer _self;
 
         private readonly Storage _storage;
         
@@ -161,7 +161,7 @@ namespace NaiveMq.Service.Cogs
                 }
                 else
                 {
-                    _self = server;
+                    Self = server;
                 }
             }
             catch (ClientException ex)
@@ -194,7 +194,7 @@ namespace NaiveMq.Service.Cogs
             {
                 _discoveryTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
-                if (_self == null)
+                if (Self == null)
                 {
                     return;
                 }
@@ -204,7 +204,7 @@ namespace NaiveMq.Service.Cogs
                 var queues = _storage.Users.Values.SelectMany(x => x.Queues.Values)
                     .Where(x => x.Status == QueueStatus.Started && x.Length > 0).ToArray();
 
-                _self.ReplaceActiveQueues(queues.Select(x => new ActiveQueue
+                Self.ReplaceActiveQueues(queues.Select(x => new ActiveQueue
                 {
                     User = x.Entity.User,
                     Name = x.Entity.Name,
@@ -233,13 +233,13 @@ namespace NaiveMq.Service.Cogs
         {
             try
             {
-                await server.Client.SendAsync(new ServerActitvity(_self.Name, true, false));
+                await server.Client.SendAsync(new ServerActitvity(Self.Name, true, false));
 
                 ServerActitvity serverStats = null;
 
                 foreach (var queue in queues)
                 {
-                    serverStats ??= new ServerActitvity(_self.Name, false, false, new());
+                    serverStats ??= new ServerActitvity(Self.Name, false, false, new());
 
                     if (serverStats.ActiveQueues.Count < _storage.Service.Options.ClusterStatsBatchSize)
                     {
@@ -261,7 +261,7 @@ namespace NaiveMq.Service.Cogs
                     await server.Client.SendAsync(serverStats);
                 }
 
-                await server.Client.SendAsync(new ServerActitvity(_self.Name, false, true));
+                await server.Client.SendAsync(new ServerActitvity(Self.Name, false, true));
             }
             catch (ClientException ex)
             {
