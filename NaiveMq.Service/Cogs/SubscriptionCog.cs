@@ -1,16 +1,29 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client.Dto;
 using NaiveMq.Client.Enums;
+using NaiveMq.Service.Dto;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
-using System.Diagnostics;
 
 namespace NaiveMq.Service.Cogs
 {
     public class SubscriptionCog : IDisposable
     {
+        private static TimerService _timerService = new(TimeSpan.FromSeconds(1));
+
+        public TimeSpan? IdleTime { get; private set; }
+
+        private DateTime? _lastSendDate;
+
+        private DateTime? _lastRedirectSendDate;
+        
+        private DateTime? _lastHintSendDate;
+
+        private bool _proxyStarted;
+
         private readonly QueueCog _queue;
 
         private readonly bool _confirm;
@@ -18,20 +31,23 @@ namespace NaiveMq.Service.Cogs
         private readonly TimeSpan? _confirmTimeout;
 
         private readonly ClusterStrategy _clusterStrategy;
-        
+
+        private readonly TimeSpan _clusterIdleTimout;
+
         private readonly ClientContext _context;
         
         public bool Started { get; private set; }
 
         private CancellationTokenSource _cancellationTokenSource;
 
-        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy)
+        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy, TimeSpan clusterIdleTimout)
         {
             _context = context;
             _queue = queue;
             _confirm = confirm;
             _confirmTimeout = confirmTimeout;
             _clusterStrategy = clusterStrategy;
+            _clusterIdleTimout = clusterIdleTimout;
         }
 
         public void Start()
@@ -41,6 +57,7 @@ namespace NaiveMq.Service.Cogs
                 Stop();
 
                 _cancellationTokenSource = new CancellationTokenSource();
+                _timerService.Add(this, OnTimer);
                 Task.Run(() => SendAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
 
                 Started = true;
@@ -52,6 +69,7 @@ namespace NaiveMq.Service.Cogs
             if (Started)
             {
                 _cancellationTokenSource.Cancel();
+                _timerService.Remove(this);
                 Started = false;
             }
         }
@@ -99,6 +117,8 @@ namespace NaiveMq.Service.Cogs
                     }
                     finally
                     {
+                        _lastSendDate = DateTime.UtcNow;
+
                         if (_queue.Status != QueueStatus.Started)
                         {
                             await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
@@ -251,6 +271,80 @@ namespace NaiveMq.Service.Cogs
                 response.RequestTag = messageEntity.Tag;
 
                 await receiverContext.Client.SendAsync(response, cancellationToken);
+            }
+        }
+
+        private void OnTimer()
+        {
+            if (_lastSendDate != null)
+            {
+                IdleTime = DateTime.UtcNow.Subtract(_lastSendDate.Value);
+            }
+
+            if (_queue.Length == 0 && _context.Storage.Cluster.Started 
+                && (IdleTime == null || IdleTime > _clusterIdleTimout))
+            {
+                switch (_clusterStrategy)
+                {
+                    case ClusterStrategy.Proxy:
+                        if (!_proxyStarted)
+                        {
+                            Task.Run(StartProxyAsync);
+                            _proxyStarted = true;
+                        }
+                        break;
+                    case ClusterStrategy.Redirect:
+                        if (_lastRedirectSendDate == null || DateTime.UtcNow.Subtract(_lastRedirectSendDate.Value) > _clusterIdleTimout)
+                        {
+                            Task.Run(SendRedirectCommandAsync);
+                            _lastRedirectSendDate = DateTime.UtcNow;
+                        }
+                        break;
+                    case ClusterStrategy.Hint:
+                        if (_lastHintSendDate == null || DateTime.UtcNow.Subtract(_lastHintSendDate.Value) > _clusterIdleTimout)
+                        {
+                            Task.Run(SendHintCommandAsync);
+                            _lastHintSendDate = DateTime.UtcNow;
+                        }
+                        break;
+                    case ClusterStrategy.Wait:
+                        break;
+                }
+            }
+        }
+
+        private Task StartProxyAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task SendRedirectCommandAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task SendHintCommandAsync()
+        {
+            var hints = new List<QueueHint>();
+
+            foreach (var server in _context.Storage.Cluster.Servers.Values)
+            {
+                if (server.ActiveQueues.TryGetValue(ActiveQueue.CreateKey(_queue.Entity.User, _queue.Entity.Name), out var activeQueue))
+                {
+                    hints.Add(new QueueHint
+                    {
+                        Name = _queue.Entity.Name,
+                        Host = server.Host.ToString(),
+                        Length = activeQueue.Length,
+                        Subscriptions = activeQueue.Subscriptions,
+
+                    });
+                }
+            }
+
+            if (hints.Any())
+            {
+                await _context.Client.SendAsync(new ClusterHint(hints));
             }
         }
     }

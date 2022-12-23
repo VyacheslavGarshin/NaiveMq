@@ -3,7 +3,7 @@ using NaiveMq.Service.Dto;
 
 namespace NaiveMq.Service.Commands
 {
-    public class ServerStats : AbstractRequest<Confirmation>
+    public class ServerActitvity : AbstractRequest<Confirmation>
     {
         public string Name { get; set; }
 
@@ -11,18 +11,18 @@ namespace NaiveMq.Service.Commands
 
         public bool Finish { get; set; }
 
-        public List<QueueStats> QueueStats { get; set; }
+        public List<ActiveQueue> ActiveQueues { get; set; }
 
-        public ServerStats()
+        public ServerActitvity()
         {
         }
 
-        public ServerStats(string name, bool start, bool finish, List<QueueStats> queueStats = null)
+        public ServerActitvity(string name, bool start, bool finish, List<ActiveQueue> activeQueues = null)
         {
             Name = name;
             Start = start;
             Finish = finish;
-            QueueStats = queueStats;
+            ActiveQueues = activeQueues;
         }
     }
 }

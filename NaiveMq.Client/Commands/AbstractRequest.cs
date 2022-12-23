@@ -13,9 +13,17 @@ namespace NaiveMq.Client.Commands
 
         public override void Validate()
         {
-            if (Confirm && (ConfirmTimeout == null || ConfirmTimeout.Value <= TimeSpan.Zero))
+            if (Confirm)
             {
-                throw new ClientException(ErrorCode.ConfirmTimeoutNotSet);
+                if (ConfirmTimeout == null)
+                {
+                    throw new ClientException(ErrorCode.ParameterNotSet, new object[] { nameof(ConfirmTimeout) });
+                }
+
+                if (ConfirmTimeout.Value <= TimeSpan.Zero)
+                {
+                    throw new ClientException(ErrorCode.ParameterLessThan, new object[] { nameof(ConfirmTimeout), 0 });
+                }
             }
         }
     }

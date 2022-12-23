@@ -12,7 +12,9 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         public string Hosts { get; set; }
 
-        public string ClusterHosts { get; set; }
+        public string ProducerHosts { get; set; }
+
+        public string ConsumerHosts { get; set; }
 
         public bool Durable { get; set; }
 
@@ -105,5 +107,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public bool ClearQueue { get; set; } = false;
 
         public bool LogServerActivity { get; set; } = false;
+        
+        public ClusterStrategy ClusterStrategy { get; set; }
     }
 }

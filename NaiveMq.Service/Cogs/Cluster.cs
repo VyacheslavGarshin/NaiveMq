@@ -11,11 +11,11 @@ namespace NaiveMq.Service.Cogs
 {
     public class Cluster : IDisposable
     {
+        private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
+
         public bool Started { get; private set; }
 
         public ConcurrentDictionary<string, ClusterServer> Servers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
-
-        private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
 
         private Timer _discoveryTimer;
 
@@ -201,9 +201,20 @@ namespace NaiveMq.Service.Cogs
 
                 var tasks = new List<Task>();
 
+                var queues = _storage.Users.Values.SelectMany(x => x.Queues.Values)
+                    .Where(x => x.Status == QueueStatus.Started && x.Length > 0).ToArray();
+
+                _self.ReplaceActiveQueues(queues.Select(x => new ActiveQueue
+                {
+                    User = x.Entity.User,
+                    Name = x.Entity.Name,
+                    Length = x.Length,
+                    Subscriptions = x.Counters.Subscriptions.Value
+                }));
+
                 foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
                 {
-                    tasks.Add(Task.Run(async () => { await SendServerStats(server); }));
+                    tasks.Add(Task.Run(async () => { await SendServerStats(server, queues); }));
                 }
 
                 await Task.WhenAll(tasks);
@@ -218,22 +229,21 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task SendServerStats(ClusterServer server)
+        private async Task SendServerStats(ClusterServer server, IEnumerable<QueueCog> queues)
         {
             try
             {
-                await server.Client.SendAsync(new ServerStats(_self.Name, true, false));
+                await server.Client.SendAsync(new ServerActitvity(_self.Name, true, false));
 
-                ServerStats serverStats = null;
+                ServerActitvity serverStats = null;
 
-                foreach (var queue in _storage.Users.Values.SelectMany(x => x.Queues.Values)
-                    .Where(x => x.Status == QueueStatus.Started && x.Length > 0))
+                foreach (var queue in queues)
                 {
-                    serverStats ??= new ServerStats(_self.Name, false, false, new());
+                    serverStats ??= new ServerActitvity(_self.Name, false, false, new());
 
-                    if (serverStats.QueueStats.Count < _storage.Service.Options.ClusterStatsBatchSize)
+                    if (serverStats.ActiveQueues.Count < _storage.Service.Options.ClusterStatsBatchSize)
                     {
-                        serverStats.QueueStats.Add(new QueueStats(
+                        serverStats.ActiveQueues.Add(new ActiveQueue(
                             queue.Entity.User,
                             queue.Entity.Name,
                             queue.Length,
@@ -251,7 +261,7 @@ namespace NaiveMq.Service.Cogs
                     await server.Client.SendAsync(serverStats);
                 }
 
-                await server.Client.SendAsync(new ServerStats(_self.Name, false, true));
+                await server.Client.SendAsync(new ServerActitvity(_self.Name, false, true));
             }
             catch (ClientException ex)
             {

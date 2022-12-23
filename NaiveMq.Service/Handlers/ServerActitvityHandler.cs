@@ -5,9 +5,9 @@ using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
-    public class ServerStatsHandler : AbstractHandler<ServerStats, Confirmation>
+    public class ServerActitvityHandler : AbstractHandler<ServerActitvity, Confirmation>
     {
-        public override Task<Confirmation> ExecuteAsync(ClientContext context, ServerStats command)
+        public override Task<Confirmation> ExecuteAsync(ClientContext context, ServerActitvity command)
         {
             context.CheckClusterAdmin(context);
 
@@ -23,7 +23,7 @@ namespace NaiveMq.Service.Handlers
                 MarkOutdated(server);
             }
 
-            if (command.QueueStats?.Count > 0)
+            if (command.ActiveQueues?.Count > 0)
             {
                 SaveQueueStats(command, server);
             }
@@ -38,23 +38,23 @@ namespace NaiveMq.Service.Handlers
 
         private static void MarkOutdated(ClusterServer server)
         {
-            foreach (var stat in server.UserQueueStats.Values)
+            foreach (var stat in server.ActiveQueues.Values)
             {
                 stat.Outdated = true;
             }
         }
 
-        private static void SaveQueueStats(ServerStats command, ClusterServer server)
+        private static void SaveQueueStats(ServerActitvity command, ClusterServer server)
         {
-            foreach (var stat in command.QueueStats)
+            foreach (var stat in command.ActiveQueues)
             {
-                server.UserQueueStats.AddOrUpdate(stat.Key, stat, (key, value) => stat);
+                server.ActiveQueues.AddOrUpdate(stat.Key, stat, (key, value) => stat);
             }
         }
 
         private static void ClearOutdated(ClusterServer server)
         {
-            server.ReplaceUserQueueStats(server.UserQueueStats.Values.Where(x => !x.Outdated));
+            server.ReplaceActiveQueues(server.ActiveQueues.Values.Where(x => !x.Outdated));
         }        
     }
 }

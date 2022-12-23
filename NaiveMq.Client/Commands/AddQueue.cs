@@ -39,9 +39,14 @@ namespace NaiveMq.Client.Commands
                 throw new ClientException(ErrorCode.ParameterNotSet, new[] { nameof(Name) });
             }
 
-            if ((LengthLimit != null && LengthLimit.Value < 1) || (VolumeLimit != null && VolumeLimit.Value < 1))
+            if (LengthLimit != null && LengthLimit.Value < 1)
             {
-                throw new ClientException(ErrorCode.QueueLimitLessThanOne);
+                throw new ClientException(ErrorCode.ParameterLessThan, new object[] { nameof(LengthLimit), 1 });
+            }
+
+            if (VolumeLimit != null && VolumeLimit.Value < 1)
+            {
+                throw new ClientException(ErrorCode.ParameterLessThan, new object[] { nameof(VolumeLimit), 1 });
             }
         }
     }

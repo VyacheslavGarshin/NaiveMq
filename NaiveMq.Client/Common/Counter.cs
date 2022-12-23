@@ -6,6 +6,9 @@ namespace NaiveMq.Client.Common
     {
         public long Value => _value;
 
+        /// <summary>
+        /// Number of times <see cref="Add"/> function was called.
+        /// </summary>
         public long Count => _count;
 
         public Counter Parent { get; set; }

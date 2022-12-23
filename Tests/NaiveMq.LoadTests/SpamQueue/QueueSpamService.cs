@@ -108,7 +108,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     _logger.LogInformation($"Run {run + 1} is started.");
 
-                    var swt = new Stopwatch();
+                    var swt = Stopwatch.StartNew();
 
                     RunProducers(clientLogger, taskCount, max, options, message);
 
@@ -154,9 +154,9 @@ namespace NaiveMq.LoadTests.SpamQueue
                     {
                         var opts = JsonConvert.DeserializeObject<NaiveMqClientOptions>(JsonConvert.SerializeObject(options));
 
-                        if (!string.IsNullOrEmpty(_options.ClusterHosts))
+                        if (!string.IsNullOrEmpty(_options.ProducerHosts))
                         {
-                            opts.Hosts = _options.ClusterHosts;
+                            opts.Hosts = _options.ProducerHosts;
                         }
 
                         using var c = new NaiveMqClient(opts, clientLogger, _stoppingToken);
@@ -202,9 +202,9 @@ namespace NaiveMq.LoadTests.SpamQueue
                         {
                             var opts = JsonConvert.DeserializeObject<NaiveMqClientOptions>(JsonConvert.SerializeObject(options));
 
-                            if (!string.IsNullOrEmpty(_options.ClusterHosts))
+                            if (!string.IsNullOrEmpty(_options.ConsumerHosts))
                             {
-                                opts.Hosts = _options.ClusterHosts;
+                                opts.Hosts = _options.ConsumerHosts;
                             }
 
                             var client = new NaiveMqClient(opts, clientLogger, _stoppingToken);
@@ -214,7 +214,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 await client.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
                             }
 
-                            await client.SendAsync(new Subscribe { Queue = queueName, ConfirmMessage = _options.ConfirmSubscription, ConfirmMessageTimeout = _options.ConfirmMessageTimeout }, _stoppingToken);
+                            await client.SendAsync(new Subscribe (queueName, _options.ConfirmSubscription, _options.ConfirmMessageTimeout, _options.ClusterStrategy), _stoppingToken);
 
                             Consume(client);
 

@@ -19,18 +19,18 @@ namespace NaiveMq.Service.Cogs
         /// 
         /// </summary>
         /// <remarks>Key is User:Queue.</remarks>
-        public ConcurrentDictionary<string, QueueStats> UserQueueStats { get; private set; } = new(StringComparer.InvariantCultureIgnoreCase);
+        public ConcurrentDictionary<string, ActiveQueue> ActiveQueues { get; private set; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public void ReplaceUserQueueStats(IEnumerable<QueueStats> userQueueStats)
+        public void ReplaceActiveQueues(IEnumerable<ActiveQueue> queueStats)
         {
-            var newOne = new ConcurrentDictionary<string, QueueStats>(StringComparer.InvariantCultureIgnoreCase);
+            var newOne = new ConcurrentDictionary<string, ActiveQueue>(StringComparer.InvariantCultureIgnoreCase);
             
-            foreach (var stat in userQueueStats)
+            foreach (var stat in queueStats)
             {
                 newOne.TryAdd(stat.Key, stat);
             }
 
-            UserQueueStats = newOne;
+            ActiveQueues = newOne;
         }
 
         public void Dispose()

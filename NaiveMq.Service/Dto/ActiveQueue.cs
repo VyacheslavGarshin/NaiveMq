@@ -1,8 +1,8 @@
 ﻿namespace NaiveMq.Service.Dto
 {
-    public class QueueStats
+    public class ActiveQueue
     {
-        public string Key => $"{User}:{Name}";
+        public string Key => CreateKey(User, Name);
 
         public string User { get; set; }
 
@@ -14,16 +14,21 @@
 
         public bool Outdated { get; set; }
 
-        public QueueStats()
+        public ActiveQueue()
         {
         }
 
-        public QueueStats(string user, string name, long length, long subscriptions)
+        public ActiveQueue(string user, string name, long length, long subscriptions)
         {
             User = user;
             Name = name;
             Length = length;
             Subscriptions = subscriptions;
+        }
+
+        public static string CreateKey(string user, string queue)
+        {
+            return $"{user}:{queue}";
         }
     }
 }

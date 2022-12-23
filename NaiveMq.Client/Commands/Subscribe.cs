@@ -23,16 +23,32 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         public ClusterStrategy ClusterStrategy { get; set; }
 
+        /// <summary>
+        /// When there is no message sent for this time then <see cref="ClusterStrategy"/> is applied.
+        /// </summary>
+        /// <remarks>Default is 10 seconds.</remarks>
+        public TimeSpan ClusterIdleTimout { get; set; } = TimeSpan.FromSeconds(10);
+
         public Subscribe()
         {
         }
 
-        public Subscribe(string queue, bool confirmMessage = true, TimeSpan? confirmMessageTimeout = null, ClusterStrategy clusterStrategy = ClusterStrategy.Proxy)
+        public Subscribe(
+            string queue, 
+            bool confirmMessage = true, 
+            TimeSpan? confirmMessageTimeout = null, 
+            ClusterStrategy clusterStrategy = ClusterStrategy.Proxy,
+            TimeSpan? clusterIdleTimout = null)
         {
             Queue = queue;
             ConfirmMessage = confirmMessage;
             ConfirmMessageTimeout = confirmMessageTimeout;
             ClusterStrategy = clusterStrategy;
+
+            if (clusterIdleTimout != null)
+            {
+                ClusterIdleTimout = clusterIdleTimout.Value;
+            }
         }
 
         public override void Validate()
@@ -42,6 +58,11 @@ namespace NaiveMq.Client.Commands
             if (string.IsNullOrEmpty(Queue))
             {
                 throw new ClientException(ErrorCode.ParameterNotSet, new[] { nameof(Queue) });
+            }
+
+            if (ClusterIdleTimout < TimeSpan.FromSeconds(1))
+            {
+                throw new ClientException(ErrorCode.ParameterLessThan, new object[] { nameof(ClusterIdleTimout), "one second" });
             }
         }
     }

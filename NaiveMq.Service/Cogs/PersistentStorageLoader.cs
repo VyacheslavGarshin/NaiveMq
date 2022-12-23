@@ -122,8 +122,7 @@ namespace NaiveMq.Service.Cogs
         private async Task LoadMessagesAsync()
         {
             var messageCount = 0;
-            var sw = new Stopwatch();
-            sw.Start();
+            var sw = Stopwatch.StartNew();
 
             foreach (var user in _storage.Users.Values)
             {

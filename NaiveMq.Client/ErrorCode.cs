@@ -64,6 +64,9 @@ namespace NaiveMq.Client
         [Description("Connection timeout occured.")]
         ConnectionTimout = 20,
 
+        [Description("Parameter '{0}' cannot be less than {1}.")]
+        ParameterLessThan = 21,
+
         [Description("Cannot find handler for command '{0}'.")]
         CommandHandlerNotFound = 101,
 
@@ -151,17 +154,11 @@ namespace NaiveMq.Client
         [Description("Cannot enqueue persistent message in not durable queue '{0}'.")]
         PersistentMessageInNotDurableQueue = 130,
 
-        [Description("Queue limit cannot be less than one. Leave it empty for limitless queue.")]
-        QueueLimitLessThanOne = 131,
-
         [Description("Queue length limit of '{0}' messages is exceeded.")]
         QueueLengthLimitExceeded = 133,
 
         [Description("Queue volume limit of '{0}' bytes is exceeded.")]
         QueueVolumeLimitExceeded = 134,
-
-        [Description("Request confirm timeout must be set when confirmation is requested.")]
-        ConfirmTimeoutNotSet = 135,
 
         [Description("You are already logged in. In case of changing user send Logout command first.")]
         AlreadyLoggedIn = 136,
