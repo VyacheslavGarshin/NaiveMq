@@ -78,15 +78,24 @@ namespace NaiveMq.LoadTests.SpamQueue
                 var taskCount = _options.ThreadsCount;
                 var max = _options.MessageCount;
 
-                var options = new NaiveMqClientOptions { Hosts = _options.Hosts, Parallelism = _options.Parallelism };
+                var options = new NaiveMqClientOptions
+                {
+                    Hosts = _options.Hosts,
+                    Parallelism = _options.Parallelism,
+                    Username = _options.Username,
+                    Password = _options.Password
+                };
 
                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
-                // c.Start();
-
-                if (!string.IsNullOrEmpty(_options.Username))
+                if (!options.Autostart)
                 {
-                    await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                    c.Start(false);
+
+                    if (!string.IsNullOrEmpty(_options.Username))
+                    {
+                        await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                    }
                 }
 
                 for (var queue = 1; queue <= _options.QueueCount; queue++)
@@ -161,9 +170,14 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         using var c = new NaiveMqClient(opts, clientLogger, _stoppingToken);
 
-                        if (!string.IsNullOrEmpty(_options.Username))
+                        if (!options.Autostart)
                         {
-                            await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                            c.Start(false);
+
+                            if (!string.IsNullOrEmpty(_options.Username))
+                            {
+                                await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                            }
                         }
 
                         if (_options.Track)
@@ -175,7 +189,29 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         for (var j = 0; j < max; j++)
                         {
-                            await Produce(message, queueName, c);
+                            try
+                            {
+                                if (c.Started)
+                                {
+                                    await Produce(message, queueName, c);
+                                }
+                                else
+                                {
+                                    await Task.Delay(1000);
+                                    i--;
+                                }
+                            }
+                            catch (ClientException ex)
+                            {
+                                if (ex.ErrorCode == ErrorCode.ClientStopped)
+                                {
+                                    await Task.Delay(1000);
+                                }
+                                else
+                                {
+                                    throw;
+                                }
+                            }
 
                             if (_options.Track)
                             {
@@ -232,14 +268,25 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 opts.Hosts = _options.ConsumerHosts;
                             }
 
+                            opts.OnStart = (sender) =>
+                            {
+                                Task.Run(async () =>
+                                {
+                                    await sender.SendAsync(new Subscribe(queueName, _options.ConfirmSubscription, _options.ConfirmMessageTimeout, _options.ClusterStrategy), _stoppingToken);
+                                });
+                            };
+
                             var client = new NaiveMqClient(opts, clientLogger, _stoppingToken);
 
-                            if (!string.IsNullOrEmpty(_options.Username))
+                            if (!opts.Autostart)
                             {
-                                await client.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
-                            }
+                                client.Start(false);
 
-                            await client.SendAsync(new Subscribe (queueName, _options.ConfirmSubscription, _options.ConfirmMessageTimeout, _options.ClusterStrategy), _stoppingToken);
+                                if (!string.IsNullOrEmpty(_options.Username))
+                                {
+                                    await client.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                                }
+                            }
 
                             Consume(client);
 

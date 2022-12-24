@@ -56,7 +56,7 @@ namespace NaiveMq.Client
 
         public event OnReceiveRequestHandler OnReceiveRequestAsync;
 
-        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Commands.Message message);
+        public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message message);
 
         public event OnReceiveMessageHandler OnReceiveMessageAsync;
 
@@ -68,7 +68,7 @@ namespace NaiveMq.Client
 
         public event OnSendCommandHandler OnSendCommandAsync;
 
-        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Commands.Message message);
+        public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message message);
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
@@ -104,9 +104,14 @@ namespace NaiveMq.Client
             _stoppingToken = stoppingToken;
             _commandPacker = new CommandPacker(_converter);
 
-            if (options.Autostart)
+            if (Options.OnStart != null)
             {
-                Start();
+                OnStart += Options.OnStart;
+            }
+
+            if (Options.Autostart)
+            {
+                Start(true);
             }
         }
 
@@ -128,7 +133,7 @@ namespace NaiveMq.Client
             }
         }
 
-        public void Start()
+        public void Start(bool login = false)
         {
             lock (_startLocker)
             {
@@ -150,6 +155,11 @@ namespace NaiveMq.Client
                         Task.Run(ReceiveAsync);
 
                         Started = true;
+
+                        if (login)
+                        {
+                            SendAsync(new Login(Options.Username, Options.Password)).Wait();
+                        }
 
                         OnStart?.Invoke(this);
                     }
@@ -280,6 +290,31 @@ namespace NaiveMq.Client
             Counters.Dispose();
         }
 
+        private void Restart()
+        {
+            if (Options.Autostart)
+            {
+                Task.Run(async () =>
+                {
+                    do
+                    {
+                        await Task.Delay(Options.RestartInterval);
+
+                        Trace("..", () => "Trying to reconnect");
+
+                        try
+                        {
+                            Start(true);
+                        }
+                        catch
+                        {
+
+                        }
+                    } while (!Started);
+                });
+            }
+        }
+
         private void CreateTcpClient()
         {
             var hosts = Host.Parse(Options.Hosts).ToList();
@@ -392,6 +427,7 @@ namespace NaiveMq.Client
             catch
             {
                 Stop();
+                Restart();
                 throw;
             }
             finally
@@ -515,6 +551,7 @@ namespace NaiveMq.Client
         private async Task HandleReceiveErrorAsync(Exception ex)
         {
             Stop();
+            Restart();
 
             if (ex is TaskCanceledException || ex is IOException || ex is OperationCanceledException
                 || ex is ObjectDisposedException)
@@ -571,6 +608,14 @@ namespace NaiveMq.Client
 
                 responseItem.Response = response;
                 responseItem.SemaphoreSlim.Release();
+            }
+        }
+
+        private void Trace(string prefix, Func<string> func)
+        {
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace($"{prefix} {func()}, {Id}");
             }
         }
 

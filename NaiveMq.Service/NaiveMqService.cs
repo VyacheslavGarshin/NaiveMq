@@ -173,7 +173,7 @@ namespace NaiveMq.Service
                 client.OnSendCommandAsync += Client_OnSendCommandAsync;
                 client.OnSendMessageAsync += Client_OnSendMessageAsync;
                 client.OnReceiveMessageAsync += Client_OnReceiveMessageAsync;
-                client.Start();
+                client.Start(false);
                 
                 Storage.TryAddClient(client);
             }

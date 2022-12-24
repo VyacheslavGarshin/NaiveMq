@@ -138,7 +138,7 @@ bool Connect(string input)
             client.Options.Hosts = startSplit[1];
         }
 
-        client.Start();
+        client.Start(false);
 
         return true;
     }

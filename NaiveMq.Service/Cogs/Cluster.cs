@@ -133,7 +133,7 @@ namespace NaiveMq.Service.Cogs
             {
                 client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), Autostart = false }, _clientLogger, _stoppingToken);
                 client.OnStop += Client_OnStop;
-                client.Start();
+                client.Start(false);
 
                 var getServerResponse = await client.SendAsync(new GetServer());
 
