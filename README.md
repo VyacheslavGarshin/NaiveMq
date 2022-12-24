@@ -52,7 +52,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 
 \* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are around 15.000.
 
-\*\* Same as * but disk I/O is low, not sure it's durable after all.
+\*\* Same as * and disk I/O is low, not sure it's durable after all.
 
 Requirements
 --------------
