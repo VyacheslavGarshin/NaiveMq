@@ -34,7 +34,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 |------------------------------------------|-----------|-----------|--------------|--------------|-----------------|-----------------|
 |                                          | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers+Consumers**                  |           |           |              |              |                 |                 |
-| In memory message without confirmation   | 28.000    | 31.000*   |              |              |                 |                 |
+| In memory message without confirmation   | 28.000    | 50.000*   |              |              |                 |                 |
 | In memory message with confirmation      |  7.900    |  6.600    |  7.500       |  6.000       |  700            |  550            |
 | - batch by 100 messages                  | 11.000    | 25.000    | 10.500       | 16.000       |                 |                 |
 | - handle confirms in a separate handler  |  8.900    |      -    |              |              |                 |                 |
@@ -44,13 +44,13 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | - 10 queues, 1 client per queue in/out   |           |           |              |              |                 |                 |
 | Disk only message with confirmation      |  1.700    |      -    |  1.400       |      -       |  470            |    -            |
 | **Producers**                            |           |           |              |              |                 |                 |
-| In memory message without confirmation   | 38.000    | 25.000*   |              |              |                 |                 |
+| In memory message without confirmation   | 47.000    | 25.000*   |              |              |                 |                 |
 | In memory message with confirmation      | 15.000    |  8.000    |              |              |                 |                 |
 | - handle confirms in a separate handler  | 21.000    |      -    |              |              |                 |                 |
 | Persistent message without confirmation  |  2.700    | 10.000**  |              |              |                 |                 |
 | Persistent message with confirmation     |  1.900    |  1.000    |              |              |                 |                 |
 
-\* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute.
+\* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are around 15.000.
 
 \*\* Same as * but disk I/O is low, not sure it's durable after all.
 
