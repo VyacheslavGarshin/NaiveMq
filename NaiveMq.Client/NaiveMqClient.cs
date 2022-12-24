@@ -109,7 +109,7 @@ namespace NaiveMq.Client
                 OnStart += Options.OnStart;
             }
 
-            if (Options.Autostart)
+            if (Options.AutoStart)
             {
                 Start(true);
             }
@@ -292,7 +292,7 @@ namespace NaiveMq.Client
 
         private void Restart()
         {
-            if (Options.Autostart)
+            if (Options.AutoRestart)
             {
                 Task.Run(async () =>
                 {

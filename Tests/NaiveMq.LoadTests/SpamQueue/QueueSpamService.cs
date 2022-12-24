@@ -88,7 +88,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                 using var c = new NaiveMqClient(options, clientLogger, _stoppingToken);
 
-                if (!options.Autostart)
+                if (!options.AutoStart)
                 {
                     c.Start(false);
 
@@ -170,7 +170,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         using var c = new NaiveMqClient(opts, clientLogger, _stoppingToken);
 
-                        if (!options.Autostart)
+                        if (!options.AutoStart)
                         {
                             c.Start(false);
 
@@ -278,7 +278,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             var client = new NaiveMqClient(opts, clientLogger, _stoppingToken);
 
-                            if (!opts.Autostart)
+                            if (!opts.AutoStart)
                             {
                                 client.Start(false);
 

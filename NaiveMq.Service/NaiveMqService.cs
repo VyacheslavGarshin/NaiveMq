@@ -165,7 +165,7 @@ namespace NaiveMq.Service
 
             try
             {
-                client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient, Autostart = false }, _clientLogger, _stoppingToken);
+                client = new NaiveMqClient(new NaiveMqClientOptions { TcpClient = tcpClient, AutoStart = false }, _clientLogger, _stoppingToken);
                 client.OnStop += Client_OnStop;
                 client.OnReceiveErrorAsync += Client_OnReceiveErrorAsync;
                 client.OnReceiveRequestAsync += Client_OnReceiveRequestAsync;

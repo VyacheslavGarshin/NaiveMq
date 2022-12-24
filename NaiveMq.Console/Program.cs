@@ -80,7 +80,7 @@ void WriteCommand(bool isOut, ICommand command)
 
 NaiveMqClient CreateClient()
 {
-    var client = new NaiveMqClient(new NaiveMqClientOptions { Autostart = false }, logger, CancellationToken.None);
+    var client = new NaiveMqClient(new NaiveMqClientOptions { AutoStart = false }, logger, CancellationToken.None);
 
     client.OnStart += (sender) =>
     {

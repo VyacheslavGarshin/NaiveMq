@@ -21,11 +21,13 @@ namespace NaiveMq.Client
         /// Connect and login to the server on client creation.
         /// </summary>
         /// <remarks>Default is true.</remarks>
-        public bool Autostart { get; set; } = true;
+        public bool AutoStart { get; set; } = true;
 
         /// <summary>
-        /// If <see cref="Autostart"/> is enabled then client will try to reconnect based on this value on loosing the connection.
+        /// Auto restart on connection lost.
         /// </summary>
+        public bool AutoRestart { get; set; } = true;
+
         public TimeSpan RestartInterval { get; set; } = TimeSpan.FromSeconds(5);
 
         public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(10);

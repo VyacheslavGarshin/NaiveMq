@@ -131,7 +131,7 @@ namespace NaiveMq.Service.Cogs
 
             try
             {
-                client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), Autostart = false }, _clientLogger, _stoppingToken);
+                client = new NaiveMqClient(new NaiveMqClientOptions { Hosts = host.ToString(), AutoStart = false }, _clientLogger, _stoppingToken);
                 client.OnStop += Client_OnStop;
                 client.Start(false);
 
