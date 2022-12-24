@@ -109,5 +109,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         public bool LogServerActivity { get; set; } = false;
         
         public ClusterStrategy ClusterStrategy { get; set; }
+
+        public bool Track { get; set; }
     }
 }

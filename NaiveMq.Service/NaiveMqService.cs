@@ -139,10 +139,10 @@ namespace NaiveMq.Service
                 }
                 catch (Exception ex)
                 {
-                    if (lastError != ex.GetBaseException().Message)
+                    if (lastError != ex.Message)
                     {
                         _logger.LogError(ex, $"Cannot start server listener on port {Options.Port}. Retry in {Options.ListenerRecoveryInterval}.");
-                        lastError = ex.GetBaseException().Message;
+                        lastError = ex.Message;
                     }
                 }
 
@@ -236,23 +236,26 @@ namespace NaiveMq.Service
             }
             catch (ClientException ex)
             {
-                await SendErrorAsync(sender, request, nameof(ClientException), ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (ServerException ex)
             {
-                await SendErrorAsync(sender, request, nameof(ClientException), ex.ErrorCode.ToString(), ex.Message);
+                await SendErrorAsync(sender, request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Client receive request error.");
 
-                await SendErrorAsync(sender, request, string.Empty, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.GetBaseException().Message);
+                await SendErrorAsync(sender, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.Message);
             }
         }
 
-        private async Task SendErrorAsync(NaiveMqClient sender, IRequest request, string errorType, string errorCode, string errorMessage)
+        private async Task SendErrorAsync(NaiveMqClient sender, IRequest request, string errorCode, string errorMessage)
         {
-            await SendAsync(sender, Confirmation.Error(request, errorType, errorCode, errorMessage));
+            if (request.Confirm)
+            {
+                await SendAsync(sender, Confirmation.Error(request, errorCode, errorMessage));
+            }
         }
 
         private async Task SendAsync(NaiveMqClient client, IResponse response)
@@ -276,14 +279,23 @@ namespace NaiveMq.Service
         {
             if (Storage.TryGetClientContext(sender.Id, out var clientContext))
             {
-                var result = await ExecuteCommandAsync(request, clientContext);
-
-                if (Storage.Cluster.Started)
+                try
                 {
-                    Storage.Cluster.HandleRequest(request, clientContext);
-                }
+                    var result = await ExecuteCommandAsync(request, clientContext);
 
-                return result;
+                    if (Storage.Cluster.Started)
+                    {
+                        Storage.Cluster.HandleRequest(request, clientContext);
+                    }
+
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    TrackHandlerError(request, clientContext, ex);
+
+                    throw;
+                }
             }
             else
             {
@@ -291,6 +303,21 @@ namespace NaiveMq.Service
             }
         }
 
-       
+        private void TrackHandlerError(IRequest request, ClientContext clientContext, Exception ex)
+        {
+            if (clientContext.Tracking)
+            {
+                if (clientContext.TrackFailedRequests.Count < Options.TrackFailedRequestsLimit)
+                {
+                    clientContext.TrackFailedRequests.Add(request.Id);
+                    clientContext.TrackLastErrorCode = (ex as ServerException)?.ErrorCode.ToString();
+                    clientContext.TrackLastErrorMessage = ex.Message;
+                }
+                else
+                {
+                    clientContext.TrackOverflow = true;
+                }
+            }
+        }
     }
 }

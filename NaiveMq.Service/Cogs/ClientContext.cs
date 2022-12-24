@@ -16,6 +16,16 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<QueueCog, SubscriptionCog> Subscriptions { get; } = new();
 
+        public bool Tracking { get; set; }
+
+        public ConcurrentBag<Guid> TrackFailedRequests { get; set; } = new();
+
+        public string TrackLastErrorCode { get; set; }
+
+        public string TrackLastErrorMessage { get; set; }
+
+        public bool TrackOverflow { get; set; }
+
         /// <summary>
         /// True in case handler is called on reinstating persistent data.
         /// </summary>

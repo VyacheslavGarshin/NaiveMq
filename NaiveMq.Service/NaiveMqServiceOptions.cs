@@ -20,6 +20,8 @@
         /// </summary>
         public int AutoQueueLimitPercent { get; set; } = 90;
 
+        public int TrackFailedRequestsLimit = 1000;
+
         public string ClusterKey { get; set; }
 
         /// <summary>

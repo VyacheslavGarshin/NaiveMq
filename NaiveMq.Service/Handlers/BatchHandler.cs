@@ -23,9 +23,8 @@ namespace NaiveMq.Service.Handlers
                     var serverException = ex as ServerException;
                     responses.Add(Confirmation.Error(
                         command,
-                        serverException != null ? nameof(ClientException) : ex.GetType().Name,
                         serverException != null ? serverException.ErrorCode.ToString() : string.Empty,
-                        ex.GetBaseException().Message));
+                        ex.Message));
                 }
             }
 

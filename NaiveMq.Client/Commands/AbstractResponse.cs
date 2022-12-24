@@ -11,8 +11,6 @@ namespace NaiveMq.Client.Commands
 
         public bool Success { get; set; } = true;
 
-        public string ErrorType { get; set; }
-
         public string ErrorCode { get; set; }
 
         public string ErrorMessage { get; set; }
@@ -38,14 +36,13 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
-        public static T Error(IRequest request, string errorType, string errorCode, string errorMessage)
+        public static T Error(IRequest request, string errorCode, string errorMessage)
         {
             var result = Activator.CreateInstance<T>();
 
             result.RequestId = request.Id;
             result.RequestTag = request.Tag;
             result.Success = false;
-            result.ErrorType = errorType;
             result.ErrorCode = errorCode;
             result.ErrorMessage = errorMessage;
 
@@ -59,7 +56,6 @@ namespace NaiveMq.Client.Commands
             result.RequestId = RequestId;
             result.RequestTag = RequestTag;
             result.Success = Success;
-            result.ErrorType = ErrorType;
             result.ErrorCode = ErrorCode;
             result.ErrorMessage = ErrorMessage;
 

@@ -166,10 +166,35 @@ namespace NaiveMq.LoadTests.SpamQueue
                             await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
                         }
 
-                        for (var j = 1; j <= max; j++)
+                        if (_options.Track)
+                        {
+                            await c.SendAsync(new Track(true, false));
+                        }
+
+                        var batchMessageNumber = 1;
+
+                        for (var j = 0; j < max; j++)
                         {
                             await Produce(message, queueName, c);
+
+                            if (_options.Track)
+                            {
+                                if (batchMessageNumber == _options.BatchSize)
+                                {
+                                    await c.SendAsync(new Track(true, true));
+                                    batchMessageNumber = 1;
+                                }
+                                else
+                                {
+                                    batchMessageNumber++;
+                                }
+                            }
                         }
+
+                        if (_options.Track)
+                        {
+                            await c.SendAsync(new Track(false, true));
+                        }                        
                     });
 
                     tasks.Add(t);

@@ -66,7 +66,7 @@ do
     {
         using (var cc = new ConsoleContext(errorColor))
         {
-            Console.WriteLine("Error on processing command: " + ex.GetBaseException().Message);
+            Console.WriteLine("Error on processing command: " + ex.Message);
         }
     }
 } while (!quit);
