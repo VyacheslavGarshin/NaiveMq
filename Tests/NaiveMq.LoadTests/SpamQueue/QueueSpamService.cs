@@ -198,7 +198,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 else
                                 {
                                     await Task.Delay(1000);
-                                    i--;
+                                    j--;
                                 }
                             }
                             catch (ClientException ex)
