@@ -596,7 +596,7 @@ namespace NaiveMq.Client
                 }
             }
 
-            if (command is Commands.Message message && OnReceiveMessageAsync != null)
+            if (command is Message message && OnReceiveMessageAsync != null)
             {
                 Counters.Read.Add();
                 await OnReceiveMessageAsync.Invoke(this, message);
