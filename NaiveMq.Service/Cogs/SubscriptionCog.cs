@@ -77,7 +77,7 @@ namespace NaiveMq.Service.Cogs
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    await WaitQueueIsStartedAsync(cancellationToken);
+                    await WaitQueueStartAsync(cancellationToken);
 
                     MessageEntity messageEntity = null;
                     
@@ -112,7 +112,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task WaitQueueIsStartedAsync(CancellationToken cancellationToken)
+        private async Task WaitQueueStartAsync(CancellationToken cancellationToken)
         {
             do
             {
@@ -134,7 +134,7 @@ namespace NaiveMq.Service.Cogs
                         }
                     }
                 }
-            } while (cancellationToken.IsCancellationRequested);
+            } while (!cancellationToken.IsCancellationRequested);
         }
 
         private async Task ProcessMessageAsync(MessageEntity messageEntity, CancellationToken cancellationToken)
