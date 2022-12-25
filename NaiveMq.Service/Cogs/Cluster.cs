@@ -88,6 +88,7 @@ namespace NaiveMq.Service.Cogs
         {
             if (request is IReplicable)
             {
+                // todo implement in a queue
                 _ = Task.Run(async () => { await ReplicateRequest(request, clientContext); });
             };
         }
