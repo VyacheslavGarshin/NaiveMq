@@ -3,6 +3,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Channels;
 
 namespace NaiveMq.LoadTests.SpamQueue
 {
@@ -39,13 +40,19 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             var sw = Stopwatch.StartNew();
 
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
+            var factory = new ConnectionFactory
             {
-                CreateQueues(channel);
-            }
+                HostName = "localhost",
+                ContinuationTimeout = TimeSpan.FromMinutes(3),
+                HandshakeContinuationTimeout = TimeSpan.FromMinutes(3),
+                RequestedConnectionTimeout = TimeSpan.FromMinutes(3)
+            };
+
+            using var connection = factory.CreateConnection();
+
+            using var channel = connection.CreateModel();
+
+            CreateQueues(channel);
 
             string message = string.Join("", Enumerable.Range(0, _options.Value.MessageLength).Select(x => "*"));
             var body = Encoding.UTF8.GetBytes(message);
@@ -64,28 +71,35 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                         var t = Task.Run(() =>
                         {
-                            using var connection = factory.CreateConnection();
-                            using var channel = connection.CreateModel();
-
-                            if (_options.Value.Confirm)
-                                channel.ConfirmSelect();
-
-                            Consume(queueName, channel);
-
-                            var number = 1;
-
-                            for (var j = 1; j <= _options.Value.MessageCount; j++)
+                            try
                             {
-                                Publish(body, queueName, channel, number);
+                                // using var connection = factory.CreateConnection();
+                                using var channel = connection.CreateModel();
 
-                                if (number < _options.Value.BatchSize)
+                                Consume(queueName, channel);
+
+                                if (_options.Value.Confirm)
+                                    channel.ConfirmSelect();
+
+                                var number = 1;
+
+                                for (var j = 1; j <= _options.Value.MessageCount; j++)
                                 {
-                                    number++;
+                                    Publish(body, queueName, channel, number);
+
+                                    if (number < _options.Value.BatchSize)
+                                    {
+                                        number++;
+                                    }
+                                    else
+                                    {
+                                        number = 1;
+                                    }
                                 }
-                                else
-                                {
-                                    number = 1;
-                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error in spam task.");
                             }
 
                             return Task.CompletedTask;

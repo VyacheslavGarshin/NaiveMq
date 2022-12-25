@@ -40,8 +40,6 @@ namespace NaiveMq.Service
         
         private readonly IPersistentStorage _persistentStorage;
 
-        private Timer timer;
-
         static NaiveMqService()
         {
             NaiveMqClient.RegisterCommands(typeof(NaiveMqService).Assembly);
@@ -70,17 +68,6 @@ namespace NaiveMq.Service
             await new PersistentStorageLoader(Storage, _logger, _stoppingToken).LoadAsync();
 
             Loaded = true;
-
-            timer = new Timer((s) =>
-            {
-                _logger.LogInformation($"{DateTime.Now:O};Read message/s;{Counters.Read.Second.Value};" +
-                    $"Write message/s;{Counters.Write.Second.Value};" +
-                    $"Read/s;{Counters.ReadCommand.Second.Value};" +
-                    $"Write/s;{Counters.WriteCommand.Second.Value};" +
-                    $"QueuesLength;{Counters.Length.Value};" +
-                    $"QueuesVolume;{Counters.Volume.Value};" +
-                    $"Subscriptions;{Counters.Subscriptions.Value};");
-            }, null, 0, 1000);
 
             _listener = new TcpListener(IPAddress.Any, Options.Port);
             while (!_stoppingToken.IsCancellationRequested)
