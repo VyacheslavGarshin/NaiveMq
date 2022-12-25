@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client.Commands;
+using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
 using System.Diagnostics;
 
@@ -44,7 +45,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task LoadUsersAsync()
         {
-            var context = new ClientContext { Logger = _logger, Storage = _storage, Reinstate = true };
+            using var context = new ClientContext { Logger = _logger, Storage = _storage, Mode = ClientContextMode.Reinstate };
 
             var count = 0;     
             
@@ -60,13 +61,13 @@ namespace NaiveMq.Service.Cogs
 
             if (count > 0)
             {
-                _logger.LogInformation($"{count} users are loaded.");
+                _logger.LogInformation("{Count} users are loaded.", count);
             }
             else
             {
                 _logger.LogInformation($"There are no users in the persistent storage. Adding default user.");
 
-                context.Reinstate = false;
+                context.Mode = ClientContextMode.Init;
                 await new AddUserHandler().ExecuteAsync(context, new AddUser { Username = "guest", Password = "guest", Administrator = true }, _cancellationToken);
 
                 _logger.LogInformation($"Added default 'guest' user with the same password.");
@@ -79,7 +80,7 @@ namespace NaiveMq.Service.Cogs
 
             foreach (var user in _storage.Users.Values)
             {
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
+                using var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Mode = ClientContextMode.Reinstate };
 
                 foreach (var keys in await _storage.PersistentStorage.LoadQueueKeysAsync(user.Entity.Username, _cancellationToken))
                 {
@@ -92,7 +93,7 @@ namespace NaiveMq.Service.Cogs
                 }
             }
 
-            _logger.LogInformation($"{queuesCount} persistent queues are loaded.");
+            _logger.LogInformation("{QueuesCount} persistent queues are loaded.", queuesCount);
         }
 
         private async Task LoadBindingsAsync()
@@ -103,7 +104,7 @@ namespace NaiveMq.Service.Cogs
             {
                 var bindings = (await _storage.PersistentStorage.LoadBindingKeysAsync(user.Entity.Username, _cancellationToken)).ToList();
 
-                var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
+                using var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Mode = ClientContextMode.Reinstate };
 
                 foreach (var key in bindings)
                 {
@@ -116,7 +117,7 @@ namespace NaiveMq.Service.Cogs
                 }
             }
 
-            _logger.LogInformation($"{bindingsCount} persistent bindings are loaded.");
+            _logger.LogInformation("{BindingsCount} persistent bindings are loaded.", bindingsCount);
         }
 
         private async Task LoadMessagesAsync()
@@ -128,7 +129,7 @@ namespace NaiveMq.Service.Cogs
             {
                 foreach (var queue in user.Queues.Values)
                 {
-                    var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Reinstate = true };
+                    using var context = new ClientContext { User = user, Logger = _logger, Storage = _storage, Mode = ClientContextMode.Reinstate };
 
                     var messages = (await _storage.PersistentStorage.LoadMessageKeysAsync(queue.Entity.User, queue.Entity.Name, _cancellationToken)).ToList();
                     var queueMessageCount = 0;
@@ -149,14 +150,15 @@ namespace NaiveMq.Service.Cogs
 
                         if (sw.Elapsed > TimeSpan.FromSeconds(10))
                         {
-                            _logger.LogInformation($"{messageCount} persistent messages are loaded. {queueMessageCount}/{messages.Count} loaded for queue '{queue.Entity.Name}'.");
+                            _logger.LogInformation("{MessageCount} persistent messages are loaded. {QueueMessageCount}/{QueueTotalMessageCount} loaded for queue '{Queue}'.",
+                                messageCount, queueMessageCount, messages.Count, queue.Entity.Name);
                             sw.Restart();
                         }
                     }
                 }
             }
 
-            _logger.LogInformation($"{messageCount} persistent messages are loaded.");
+            _logger.LogInformation("{MessageCount} persistent messages are loaded.", messageCount);
         }
     }
 }

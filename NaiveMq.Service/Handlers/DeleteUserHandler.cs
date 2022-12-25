@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -8,7 +9,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteUser command, CancellationToken cancellationToken)
         {
-            context.CheckAdmin(context);
+            context.CheckAdmin();
 
             UserCog user = null;
 
@@ -24,7 +25,7 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
                 }
 
-                if (!context.Reinstate)
+                if (context.Mode == ClientContextMode.Client)
                 {
                     await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, cancellationToken);
                 }

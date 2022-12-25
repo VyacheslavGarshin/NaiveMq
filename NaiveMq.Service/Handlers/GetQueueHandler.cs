@@ -9,7 +9,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<GetQueueResponse> ExecuteAsync(ClientContext context, GetQueue command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             if (context.User.Queues.TryGetValue(command.Name, out var queue) || command.Try)
             {

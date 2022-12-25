@@ -8,7 +8,12 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<SearchQueuesResponse> ExecuteAsync(ClientContext context, SearchQueues command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
+
+            if (!string.IsNullOrEmpty(command.User))
+            {
+                context.CheckAdmin();
+            }
 
             var queues = (context.User.Entity.Administrator 
                 ? context.Storage.Users

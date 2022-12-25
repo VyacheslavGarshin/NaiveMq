@@ -54,7 +54,8 @@ namespace NaiveMq.LoadTests.SpamQueue
                             $"Read/s;{_queueService.Counters.ReadCommand.Second.Value};" +
                             $"Write/s;{_queueService.Counters.WriteCommand.Second.Value};" +
                             $"QueuesLength;{_queueService.Counters.Length.Value};" +
-                            $"QueuesVolume;{_queueService.Counters.Volume.Value};");
+                            $"QueuesVolume;{_queueService.Counters.Volume.Value};" +
+                            $"Subscriptions;{_queueService.Counters.Subscriptions.Value};");
                     }, null, 0, 1000);
                 }
 

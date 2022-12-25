@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
@@ -26,39 +27,36 @@ namespace NaiveMq.Service.Cogs
 
         public bool TrackOverflow { get; set; }
 
-        /// <summary>
-        /// True in case handler is called on reinstating persistent data.
-        /// </summary>
-        public bool Reinstate { get; set; }
-        
-        public void CheckUser(ClientContext context)
+        public ClientContextMode Mode { get; set; }
+
+        public void CheckUser()
         {
-            if (context.User == null || string.IsNullOrWhiteSpace(context.User.Entity.Username))
+            if (User == null || string.IsNullOrWhiteSpace(User.Entity.Username))
             {
                 throw new ServerException(ErrorCode.UserNotAuthenticated);
             }
 
-            if (!Storage.Users.TryGetValue(context.User.Entity.Username, out var _))
+            if (!Storage.Users.TryGetValue(User.Entity.Username, out var _))
             {
-                throw new ServerException(ErrorCode.UserNotFound, new object[] { context.User.Entity.Username });
+                throw new ServerException(ErrorCode.UserNotFound, new object[] { User.Entity.Username });
             }
         }
 
-        public void CheckAdmin(ClientContext context)
+        public void CheckAdmin()
         {
-            CheckUser(context);
+            CheckUser();
 
-            if (!context.User.Entity.Administrator)
+            if (!User.Entity.Administrator)
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotAdmin);
             }
         }
 
-        public void CheckClusterAdmin(ClientContext context)
+        public void CheckClusterAdmin()
         {
-            CheckAdmin(context);
+            CheckAdmin();
 
-            if (!context.User.Entity.Username.Equals(Storage.Service.Options.ClusterAdminUsername, StringComparison.InvariantCultureIgnoreCase))
+            if (!User.Entity.Username.Equals(Storage.Service.Options.ClusterAdminUsername, StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new ServerException(ErrorCode.AccessDeniedNotClusterAdmin);
             }
@@ -66,14 +64,17 @@ namespace NaiveMq.Service.Cogs
 
         public void Dispose()
         {
-            foreach (var subscription in Subscriptions.Values)
+            if (Mode == ClientContextMode.Client)
             {
-                subscription.Dispose();
+                foreach (var subscription in Subscriptions.Values)
+                {
+                    subscription.Dispose();
+                }
+
+                Subscriptions.Clear();
+
+                Client.Dispose();
             }
-
-            Subscriptions.Clear();
-
-            Client.Dispose();
         }
     }
 }

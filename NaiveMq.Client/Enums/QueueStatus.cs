@@ -2,12 +2,14 @@
 {
     public enum QueueStatus
     {
-        Started = 0,
+        Starting = 0,
 
-        Clearing = 1,
+        Started = 1,
 
-        Deleting = 2,
+        Clearing = 2,
 
-        Deleted = 3
+        Deleting = 3,
+
+        Deleted = 4
     }
 }

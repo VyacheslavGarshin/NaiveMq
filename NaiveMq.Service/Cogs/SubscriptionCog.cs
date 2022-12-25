@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Cogs
 {
     public class SubscriptionCog : IDisposable
     {
-        private static TimerService _timerService = new(TimeSpan.FromSeconds(1));
+        private static readonly TimerService _timerService = new(TimeSpan.FromSeconds(1));
 
         public TimeSpan? IdleTime { get; private set; }
 
@@ -24,7 +24,7 @@ namespace NaiveMq.Service.Cogs
 
         private bool _proxyStarted;
 
-        private readonly QueueCog _queue;
+        private QueueCog _queue;
 
         private readonly bool _confirm;
 
@@ -35,10 +35,10 @@ namespace NaiveMq.Service.Cogs
         private readonly TimeSpan _clusterIdleTimout;
 
         private readonly ClientContext _context;
-        
-        public bool Started { get; private set; }
 
         private CancellationTokenSource _cancellationTokenSource;
+
+        private Task _task;
 
         public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy, TimeSpan clusterIdleTimout)
         {
@@ -52,104 +52,89 @@ namespace NaiveMq.Service.Cogs
 
         public void Start()
         {
-            if (!Started)
-            {
-                Stop();
+            _cancellationTokenSource = new CancellationTokenSource();
+            _timerService.Add(this, OnTimer);
 
-                _cancellationTokenSource = new CancellationTokenSource();
-                _timerService.Add(this, OnTimer);
+            _task = Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not cancel this task or messages will be lost
 
-                Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not cancel this task or messages will be lost
-
-                Started = true;
-            }
-        }
-
-        public void Stop()
-        {
-            if (Started)
-            {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
-                _timerService.Remove(this);
-                Started = false;
-            }
+            _queue.Counters.Subscriptions.Add();
         }
 
         public void Dispose()
         {
-            Stop();
+            _queue.Counters.Subscriptions.Add(-1);
+
+            _cancellationTokenSource.Cancel();
+            _task.Wait();
+            _cancellationTokenSource.Dispose();
+
+            _timerService.Remove(this);
         }
 
         private async Task SendAsync(CancellationToken cancellationToken)
         {
             try
             {
-                _queue.Counters.Subscriptions.Add();
-
-                while (Started && !cancellationToken.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
+                    await WaitQueueIsStartedAsync(cancellationToken);
+
+                    MessageEntity messageEntity = null;
+                    
                     try
                     {
-                        if (_queue.Status != QueueStatus.Started)
-                        {
-                            if (_queue.Status == QueueStatus.Deleted)
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-
-                        var messageEntity = await _queue.TryDequeueAsync(cancellationToken);
-
-                        if (messageEntity != null)
-                        {
-                            await ProcessMessageAsync(messageEntity, cancellationToken);
-                        }                   
+                        messageEntity = await _queue.TryDequeueAsync(cancellationToken);
                     }
                     catch (ServerException ex)
                     {
-                        if (ex.ErrorCode != ErrorCode.QueueStopped)                        
+                        if (ex.ErrorCode != ErrorCode.QueueNotStarted)                        
                         {
                             throw;
                         }
                     }
-                    finally
-                    {
-                        _lastSendDate = DateTime.UtcNow;
 
-                        if (_queue.Status != QueueStatus.Started)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                        }
+                    if (messageEntity != null)
+                    {
+                        await ProcessMessageAsync(messageEntity, cancellationToken);
+
+                        _lastSendDate = DateTime.UtcNow;
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // it's ok to exit this way
-            }
             catch (Exception ex)
             {
-                if (_context.Client.Started)
+                if (!cancellationToken.IsCancellationRequested)
                 {
                     _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
                 }
 
                 throw;
             }
-            finally
-            {
-                _queue.Counters.Subscriptions.Add(-1);
+        }
 
-                if (_context.Subscriptions.TryRemove(_queue, out var subscription))
+        private async Task WaitQueueIsStartedAsync(CancellationToken cancellationToken)
+        {
+            do
+            {
+                if (_queue.Status == QueueStatus.Started)
                 {
-                    subscription.Dispose();
+                    break;
                 }
-            }
+                else
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+
+                    if (_queue.Status == QueueStatus.Deleted)
+                    {
+                        if (_context.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
+                            _queue != newQueue && newQueue.Status == QueueStatus.Started)
+                        {
+                            _queue = newQueue;
+                            break;
+                        }
+                    }
+                }
+            } while (cancellationToken.IsCancellationRequested);
         }
 
         private async Task ProcessMessageAsync(MessageEntity messageEntity, CancellationToken cancellationToken)
@@ -170,33 +155,22 @@ namespace NaiveMq.Service.Cogs
 
                 messageEntity.Delivered = true;
             }
-            catch (Exception ex)
+            catch (ClientException ex)
             {
                 response = FindRequestResponse(messageEntity, ex);
-
-                if (ex is not ClientException)
-                {
-                    throw;
-                }
             }
             finally
             {
                 if (messageEntity.Delivered)
                 {
-                    if (messageEntity.Persistent != Persistence.No)
-                    {
-                        await DeleteMessageAsync(messageEntity);
-                    }
+                    await DeletePersistentMessageAsync(messageEntity);
                 }
                 else
                 {
                     await ReEnqueueMessageAsync(messageEntity);
                 }
 
-                if (messageEntity.Request && response != null && response.Response)
-                {
-                    await SendRequestResponseAsync(messageEntity, response, cancellationToken);
-                }
+                await SendRequestResponseAsync(messageEntity, response, cancellationToken);                
             }
         }
 
@@ -214,18 +188,15 @@ namespace NaiveMq.Service.Cogs
             return data;
         }
 
-        private static MessageResponse FindRequestResponse(MessageEntity messageEntity, Exception ex)
+        private static MessageResponse FindRequestResponse(MessageEntity messageEntity, ClientException ex)
         {
             MessageResponse result = null;
 
             if (messageEntity.Request)
             {
-                if (ex is ClientException clientException && clientException.Response != null)
+                if (ex.Response != null && ex.Response is MessageResponse response && response.Response)
                 {
-                    if (clientException.Response is MessageResponse response && response.Response)
-                    {
-                        result = response;
-                    }
+                    result = response;
                 }
 
                 if (result != null)
@@ -248,10 +219,13 @@ namespace NaiveMq.Service.Cogs
             return result;
         }
 
-        private async Task DeleteMessageAsync(MessageEntity messageEntity)
+        private async Task DeletePersistentMessageAsync(MessageEntity messageEntity)
         {
-            await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
+            if (messageEntity.Persistent != Persistence.No)
+            {
+                await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, CancellationToken.None); // none cancellation to ensure operation is not interrupted
+            }
         }
 
         private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)
@@ -268,7 +242,8 @@ namespace NaiveMq.Service.Cogs
 
         private async Task SendRequestResponseAsync(MessageEntity messageEntity, MessageResponse result, CancellationToken cancellationToken)
         {
-            if (messageEntity.ClientId != null && _context.Storage.TryGetClientContext(messageEntity.ClientId.Value, out var receiverContext))
+            if (messageEntity.Request && result != null && result.Response &&
+                messageEntity.ClientId != null && _context.Storage.TryGetClientContext(messageEntity.ClientId.Value, out var receiverContext))
             {
                 var response = result.Copy();
 
@@ -346,8 +321,6 @@ namespace NaiveMq.Service.Cogs
 
         private IEnumerable<QueueHint> GetQueueHints()
         {
-            var hints = new List<QueueHint>();
-
             foreach (var server in _context.Storage.Cluster.Servers.Values)
             {
                 if (server.Name != _context.Storage.Cluster.Self.Name

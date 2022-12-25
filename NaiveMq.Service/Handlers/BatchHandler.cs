@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<BatchResponse> ExecuteAsync(ClientContext context, Batch command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             var responses = new List<IResponse>();
 

@@ -11,7 +11,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<MessageResponse> ExecuteAsync(ClientContext context, Message command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             var message = MessageEntity.FromCommand(command);
             message.ClientId = context.Client?.Id;
@@ -77,7 +77,7 @@ namespace NaiveMq.Service.Handlers
 
         private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command, CancellationToken cancellationToken)
         {
-            if (!context.Reinstate && command != null) {
+            if (context.Mode == ClientContextMode.Client && command != null) {
                 foreach (var queue in queues)
                 {
                     if (context.Storage.MemoryLimitExceeded && queue.ForcedLengthLimit == null && queue.Length > 1)
@@ -154,7 +154,7 @@ namespace NaiveMq.Service.Handlers
                 queues[i].Enqueue(entities[i]);
             }
 
-            if (!context.Reinstate && messageEntity.Persistent != Persistence.No)
+            if (context.Mode == ClientContextMode.Client && messageEntity.Persistent != Persistence.No)
             {
                 for (var i = 0; i < queues.Count; i++)
                 {

@@ -12,7 +12,7 @@ namespace NaiveMq.Service.Cogs
     {
         public QueueEntity Entity { get; set; }
 
-        public QueueStatus Status { get; set; }
+        public QueueStatus Status { get; private set; }
 
         public long? ForcedLengthLimit { get; set; }
 
@@ -22,11 +22,15 @@ namespace NaiveMq.Service.Cogs
 
         public QueueCounters Counters { get; }
 
+        private static readonly QueueStatus[] _constantStatuses = new QueueStatus[] { QueueStatus.Started, QueueStatus.Deleted };
+
         private SemaphoreSlim _dequeueSemaphore { get; set; }
 
         private SemaphoreSlim _limitSemaphore { get; set; }
         
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
+
+        private readonly object _locker = new object();
 
         public QueueCog(QueueEntity entity, UserCounters userCounters, SpeedCounterService speedCounterService)
         {
@@ -45,18 +49,12 @@ namespace NaiveMq.Service.Cogs
             }
             catch (ObjectDisposedException)
             {
-                throw new ServerException(ErrorCode.QueueStopped);
+                throw new ServerException(ErrorCode.QueueNotStarted);
             }
 
             if (_messages.TryDequeue(out var message))
             {
-                Counters.Length.Add(-1);
-                Counters.Volume.Add(-message.DataLength);
-                if (message.Persistent != Persistence.DiskOnly)
-                {
-                    Counters.VolumeInMemory.Add(-message.DataLength);
-                }
-                Counters.Write.Add();
+                DecrementCounters(message);
             }
 
             try
@@ -82,14 +80,8 @@ namespace NaiveMq.Service.Cogs
             _messages.Enqueue(message);
 
             _dequeueSemaphore.Release();
-
-            Counters.Length.Add();
-            Counters.Volume.Add(message.DataLength);
-            if (message.Persistent != Persistence.DiskOnly)
-            {
-                Counters.VolumeInMemory.Add(message.DataLength);
-            }
-            Counters.Read.Add();
+            
+            IncrementCounters(message);
         }
 
         public async Task<bool> WaitLimitSemaphoreAsync(TimeSpan timout, CancellationToken cancellationToken)
@@ -112,6 +104,21 @@ namespace NaiveMq.Service.Cogs
             return LimitType.None;
         }
 
+        public void SetStatus(QueueStatus status)
+        {
+            lock (_locker)
+            {
+                if (_constantStatuses.Contains(status) || Status == QueueStatus.Started)
+                {
+                    Status = status;
+                }
+                else
+                {
+                    throw new ServerException(ErrorCode.QueueNotStarted);
+                }
+            }
+        }
+
         public void Clear()
         {
             DisposeSemaphores();
@@ -129,6 +136,7 @@ namespace NaiveMq.Service.Cogs
         private void ClearData()
         {
             _messages.Clear();
+            Counters.Length.Reset();
             Counters.Volume.Reset();
             Counters.VolumeInMemory.Reset();
         }
@@ -137,7 +145,31 @@ namespace NaiveMq.Service.Cogs
         {
             if (Status != QueueStatus.Started)
             {
-                throw new ServerException(ErrorCode.QueueStopped);
+                throw new ServerException(ErrorCode.QueueNotStarted);
+            }
+        }
+
+        private void IncrementCounters(MessageEntity message)
+        {
+            Counters.Length.Add();
+            Counters.Volume.Add(message.DataLength);
+            Counters.Read.Add();
+
+            if (message.Persistent != Persistence.DiskOnly)
+            {
+                Counters.VolumeInMemory.Add(message.DataLength);
+            }
+        }
+
+        private void DecrementCounters(MessageEntity message)
+        {
+            Counters.Length.Add(-1);
+            Counters.Volume.Add(-message.DataLength);
+            Counters.Write.Add();
+
+            if (message.Persistent != Persistence.DiskOnly)
+            {
+                Counters.VolumeInMemory.Add(-message.DataLength);
             }
         }
 

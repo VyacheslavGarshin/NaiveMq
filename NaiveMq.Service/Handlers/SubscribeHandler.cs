@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<Confirmation> ExecuteAsync(ClientContext context, Subscribe command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             if (context.User.Queues.TryGetValue(command.Queue, out var queue))
             {

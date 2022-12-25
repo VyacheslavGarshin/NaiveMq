@@ -14,7 +14,6 @@
         /// </summary>
         Redirect = 1,
 
-        // todo implement sending hint to client
         /// <summary>
         /// Send a hint message to client with servers statistics to deal with message shortage manually.
         /// </summary>

@@ -11,7 +11,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, UpdateUser command, CancellationToken cancellationToken)
         {
-            context.CheckAdmin(context);
+            context.CheckAdmin();
 
             UserCog user = null;
             UserEntity oldEntity = null;

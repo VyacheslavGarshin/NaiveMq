@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -9,9 +10,9 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddUser command, CancellationToken cancellationToken)
         {
-            if (!context.Reinstate && context.Storage.Users.Any())
+            if (context.Mode == ClientContextMode.Client)
             {
-                context.CheckAdmin(context);
+                context.CheckAdmin();
             }
 
             if (string.IsNullOrEmpty(command.Password))
@@ -37,7 +38,7 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserAlreadyExists, new object[] { userEntity.Username });
                 }
 
-                if (!context.Reinstate)
+                if (context.Mode == ClientContextMode.Client || context.Mode == ClientContextMode.Init)
                 {
                     await context.Storage.PersistentStorage.SaveUserAsync(userEntity, cancellationToken);
                 }

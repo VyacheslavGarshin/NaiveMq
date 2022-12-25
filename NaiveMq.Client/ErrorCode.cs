@@ -163,8 +163,8 @@ namespace NaiveMq.Client
         [Description("You are already logged in. In case of changing user send Logout command first.")]
         AlreadyLoggedIn = 136,
 
-        [Description("Queue is stopped.")]
-        QueueStopped = 137,
+        [Description("Queue is not started.")]
+        QueueNotStarted = 137,
 
         [Description("Discovering cluster server ClusterKey do not match with the current one.")]
         ClusterKeysDontMatch = 138,

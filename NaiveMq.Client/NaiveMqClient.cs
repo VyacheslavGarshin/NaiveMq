@@ -177,14 +177,20 @@ namespace NaiveMq.Client
             {
                 if (Started)
                 {
-                    TcpClient.Close();
-                    TcpClient.Dispose();
-                    TcpClient = null;
-
-                    _readSemaphore.Dispose();
-                    _readSemaphore = null;
-
                     Started = false;
+
+                    if (TcpClient != null)
+                    {
+                        TcpClient.Close();
+                        TcpClient.Dispose();
+                        TcpClient = null;
+                    }
+
+                    if (_readSemaphore != null)
+                    {
+                        _readSemaphore.Dispose();
+                        _readSemaphore = null;
+                    }
 
                     OnStop?.Invoke(this);
                 }
@@ -233,7 +239,7 @@ namespace NaiveMq.Client
 
                 await WriteCommandAsync(request, cancellationToken);
 
-                if (request is Commands.Message message && OnSendMessageAsync != null)
+                if (request is Message message && OnSendMessageAsync != null)
                 {
                     Counters.Write.Add();
                     await OnSendMessageAsync.Invoke(this, message);
@@ -424,11 +430,12 @@ namespace NaiveMq.Client
                     await OnSendCommandAsync.Invoke(this, command);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 Stop();
                 Restart();
-                throw;
+
+                throw new ClientException(ErrorCode.ClientStopped, ex);
             }
             finally
             {
@@ -437,7 +444,7 @@ namespace NaiveMq.Client
                     ArrayPool<byte>.Shared.Return(package.Buffer);
                 }
             }
-        }        
+        }
 
         private async Task WriteBytesAsync(Memory<byte> bytes, CancellationToken cancellationToken)
         {
@@ -453,13 +460,13 @@ namespace NaiveMq.Client
                 semaphoreEntered = await _writeSemaphore.WaitAsync(Options.SendTimeout, cancellationToken);
 
                 var stream = TcpClient?.GetStream();
-                
+
                 if (!Started || stream == null)
                 {
                     throw new ClientException(ErrorCode.ClientStopped);
                 }
 
-                await stream.WriteAsync(bytes, cancellationToken);                
+                await stream.WriteAsync(bytes, cancellationToken);
             }
             finally
             {

@@ -9,26 +9,25 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, ClearQueue command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             if (context.User.Queues.TryGetValue(command.Name, out var queue))
             {
-                queue.Status = QueueStatus.Clearing;
-
-                if (queue.Entity.Durable)
-                {
-                    await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
-                }
-
-                queue.Clear();
-
-                queue.Status = QueueStatus.Started;
+                queue.SetStatus(QueueStatus.Clearing);
             }
             else
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
-
             }
+
+            if (queue.Entity.Durable)
+            {
+                await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
+            }
+
+            queue.Clear();
+
+            queue.SetStatus(QueueStatus.Started);
 
             return Confirmation.Ok(command);
         }

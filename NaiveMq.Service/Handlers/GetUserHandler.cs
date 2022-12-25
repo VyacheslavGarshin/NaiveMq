@@ -9,7 +9,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<GetUserResponse> ExecuteAsync(ClientContext context, GetUser command, CancellationToken cancellationToken)
         {
-            context.CheckAdmin(context);
+            context.CheckAdmin();
             
             if (context.Storage.Users.TryGetValue(command.Username, out var user) || command.Try)
             {

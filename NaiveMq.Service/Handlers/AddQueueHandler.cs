@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -9,7 +10,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddQueue command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             var queueEnity = QueueEntity.FromCommand(command);
             queueEnity.User = context.User.Entity.Username;
@@ -30,10 +31,12 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.QueueAlreadyExists, new object[] { queueEntity.Name });
                 }
 
-                if (!context.Reinstate && queueEntity.Durable)
+                if (context.Mode == ClientContextMode.Client && queueEntity.Durable)
                 {
                     await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, cancellationToken);
                 }
+
+                queue.SetStatus(QueueStatus.Started);
             }
             catch
             {

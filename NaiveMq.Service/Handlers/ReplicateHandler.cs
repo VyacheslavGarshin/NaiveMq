@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Commands;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -8,17 +9,17 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, Replicate command, CancellationToken cancellationToken)
         {
-            context.CheckClusterAdmin(context);
+            context.CheckClusterAdmin();
 
             if (context.Storage.Users.TryGetValue(command.User, out var user))
             {
-                var replicaContext = new ClientContext
+                using var replicaContext = new ClientContext
                 {
+                    Storage = context.Storage,
                     Client = context.Client,
                     Logger = context.Logger,
-                    Reinstate = true,
-                    Storage = context.Storage,
                     User = user,
+                    Mode = ClientContextMode.Replicate,
                 };
 
                 await context.Storage.Service.ExecuteCommandAsync(command.Request, replicaContext);

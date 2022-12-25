@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<TrackResponse> ExecuteAsync(ClientContext context, Track command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             TrackResponse result = null;
 

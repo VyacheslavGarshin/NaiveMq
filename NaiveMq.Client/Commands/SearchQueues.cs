@@ -1,4 +1,6 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using NaiveMq.Service.Enums;
+
+namespace NaiveMq.Client.Commands
 {
     public class SearchQueues : AbstractSearchRequest<SearchQueuesResponse>
     {
@@ -10,14 +12,17 @@
 
         public string Name { get; set; }
 
+        public QueueStatus? Status { get; set; }
+
         public SearchQueues()
         {
         }
 
-        public SearchQueues(string user, string name)
+        public SearchQueues(string user = null, string name = null, QueueStatus? status = null)
         {
             User = user;
             Name = name;
+            Status = status;
         }
     }
 }

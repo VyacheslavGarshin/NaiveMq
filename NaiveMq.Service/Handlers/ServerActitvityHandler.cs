@@ -9,7 +9,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<Confirmation> ExecuteAsync(ClientContext context, ServerActitvity command, CancellationToken cancellationToken)
         {
-            context.CheckClusterAdmin(context);
+            context.CheckClusterAdmin();
 
             var server = context.Storage.Cluster.Servers.Values.FirstOrDefault(x => x.Name == command.Name);
 

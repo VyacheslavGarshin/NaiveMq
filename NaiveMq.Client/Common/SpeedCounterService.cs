@@ -76,16 +76,13 @@ namespace NaiveMq.Client.Common
 
             public void Delete(SpeedCounter counter)
             {
-                if (_counters != null && !_counters.TryRemove(counter.GetHashCode(), out var _))
-                {
-                    throw new ArgumentOutOfRangeException(nameof(counter));
-                }
+                _counters.TryRemove(counter.GetHashCode(), out var _);
             }
 
             public void Dispose()
             {
                 _timer.Dispose();
-                _counters = null;
+                _counters.Clear();
             }
 
             private void Timer_OnTimer(object state)

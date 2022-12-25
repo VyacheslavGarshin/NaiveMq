@@ -9,35 +9,37 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteQueue command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
-            if (context.User.Queues.TryRemove(command.Name, out var queue))
+            if (context.User.Queues.TryGetValue(command.Name, out var queue))
             {
-                queue.Status = QueueStatus.Deleting;
-
-                try
-                {
-                    await DeleteBindingsAsync(context, command, cancellationToken);
-
-                    if (!context.Reinstate && queue.Entity.Durable)
-                    {
-                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
-                    }
-
-                    queue.Dispose();
-
-                    queue.Status = QueueStatus.Deleted;
-                }
-                catch
-                {
-                    context.User.Queues.TryAdd(command.Name, queue);
-                    throw;
-                }
+                queue.SetStatus(QueueStatus.Deleting);
             }
             else
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
             }
+
+            await DeleteBindingsAsync(context, command, cancellationToken);
+
+            if (queue.Entity.Durable)
+            {
+                switch (context.Mode)
+                {
+                    case ClientContextMode.Client:
+                        await context.Storage.PersistentStorage.DeleteQueueAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
+                        break;
+                    case ClientContextMode.Replicate:
+                        await context.Storage.PersistentStorage.DeleteMessagesAsync(queue.Entity.User, queue.Entity.Name, cancellationToken);
+                        break;
+                    case ClientContextMode.Reinstate:
+                        break;
+                }
+            }
+
+            queue.Dispose();
+            queue.SetStatus(QueueStatus.Deleted);
+            context.User.Queues.TryRemove(command.Name, out var _);
 
             return Confirmation.Ok(command);
         }

@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -8,7 +9,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, DeleteBinding command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             if (!(context.User.Bindings.TryGetValue(command.Exchange, out var exchangeBindings)
                 && exchangeBindings.TryRemove(command.Queue, out var binding)))
@@ -22,7 +23,7 @@ namespace NaiveMq.Service.Handlers
                 // todo not clear what to do
             }
 
-            if (!context.Reinstate && binding.Entity.Durable)
+            if (context.Mode == ClientContextMode.Client && binding.Entity.Durable)
             {
                 try
                 {

@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<SearchUsersResponse> ExecuteAsync(ClientContext context, SearchUsers command, CancellationToken cancellationToken)
         {
-            context.CheckAdmin(context);
+            context.CheckAdmin();
 
             var expression = context.Storage.Users.Values
                 .Where(x => string.IsNullOrEmpty(command.Username) || x.Entity.Username.Contains(command.Username))

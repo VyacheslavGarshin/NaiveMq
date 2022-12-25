@@ -8,7 +8,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<GetProfileResponse> ExecuteAsync(ClientContext context, GetProfile command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             return Task.FromResult(GetProfileResponse.Ok(command, (response) =>
             {

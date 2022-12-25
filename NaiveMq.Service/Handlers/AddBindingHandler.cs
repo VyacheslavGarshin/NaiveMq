@@ -3,6 +3,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client;
 using System.Collections.Concurrent;
 using NaiveMq.Service.Entities;
+using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -10,7 +11,7 @@ namespace NaiveMq.Service.Handlers
     {
         public override async Task<Confirmation> ExecuteAsync(ClientContext context, AddBinding command, CancellationToken cancellationToken)
         {
-            context.CheckUser(context);
+            context.CheckUser();
 
             var bindingEnity = BindingEntity.FromCommand(command);
             
@@ -27,7 +28,7 @@ namespace NaiveMq.Service.Handlers
 
             Bind(context, binding, out var exchangeBindings, out var queueBindings);
 
-            if (!context.Reinstate && bindingEntity.Durable)
+            if (context.Mode == ClientContextMode.Client && bindingEntity.Durable)
             {
                 try
                 {
