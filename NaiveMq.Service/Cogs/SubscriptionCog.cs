@@ -129,6 +129,8 @@ namespace NaiveMq.Service.Cogs
                         if (_context.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
                             _queue != newQueue && newQueue.Status == QueueStatus.Started)
                         {
+                            _queue.Counters.Subscriptions.Add(-1);
+                            newQueue.Counters.Subscriptions.Add();
                             _queue = newQueue;
                             break;
                         }
