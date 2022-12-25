@@ -303,9 +303,9 @@ namespace NaiveMq.Service
                 {
                     var result = await ExecuteCommandAsync(request, clientContext);
 
-                    if (Storage.Cluster.Started)
+                    if (Storage.Cluster.Started && request is IReplicable)
                     {
-                        Storage.Cluster.HandleRequest(request, clientContext);
+                        await Storage.Cluster.ReplicateRequestAsync(request, clientContext.User.Entity.Username);
                     }
 
                     return result;

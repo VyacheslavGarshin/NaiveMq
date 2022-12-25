@@ -48,9 +48,9 @@ namespace NaiveMq.Service.Cogs
                 && !string.IsNullOrWhiteSpace(_options.ClusterAdminUsername) 
                 && !string.IsNullOrWhiteSpace(_options.ClusterAdminPassword))
             {
-                _discoveryTimer = new Timer(async (state) => { await DiscoverHosts(); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
+                _discoveryTimer = new Timer(async (state) => { await DiscoverHostsAsync(); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
 
-                _statsTimer = new Timer(async (state) => { await SendServerStats(); }, null, TimeSpan.Zero, _options.ClusterStatsInterval);
+                _statsTimer = new Timer(async (state) => { await SendServerStatsAsync(); }, null, TimeSpan.Zero, _options.ClusterStatsInterval);
 
                 Started = true;
                 _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
@@ -84,13 +84,16 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        public void HandleRequest(IRequest request, ClientContext clientContext)
+        public async Task ReplicateRequestAsync(IRequest request, string username)
         {
-            if (request is IReplicable)
+            var tasks = new List<Task>();
+
+            foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
             {
-                // todo implement in a queue
-                _ = Task.Run(async () => { await ReplicateRequest(request, clientContext); });
-            };
+                tasks.Add(ReplicateRequestAync(request, username, server));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
         public void Dispose()
@@ -98,7 +101,7 @@ namespace NaiveMq.Service.Cogs
             Stop();
         }
 
-        private async Task DiscoverHosts()
+        private async Task DiscoverHostsAsync()
         {
             try
             {
@@ -110,7 +113,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     if (!Servers.TryGetValue(host.ToString(), out var server) || !server.Self && server.Client == null)
                     {
-                        tasks.Add(Task.Run(async () => { await DiscoverHost(host); }));
+                        tasks.Add(Task.Run(async () => { await DiscoverHostAsync(host); }));
                     }
                 }
 
@@ -126,7 +129,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task DiscoverHost(Host host)
+        private async Task DiscoverHostAsync(Host host)
         {
             NaiveMqClient client = null;
 
@@ -196,7 +199,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task SendServerStats()
+        private async Task SendServerStatsAsync()
         {
             try
             {
@@ -222,7 +225,7 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
                 {
-                    tasks.Add(Task.Run(async () => { await SendServerStats(server, queues); }));
+                    tasks.Add(Task.Run(async () => { await SendServerStatsAsync(server, queues); }));
                 }
 
                 await Task.WhenAll(tasks);
@@ -237,7 +240,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task SendServerStats(ClusterServer server, IEnumerable<QueueCog> queues)
+        private async Task SendServerStatsAsync(ClusterServer server, IEnumerable<QueueCog> queues)
         {
             try
             {
@@ -297,26 +300,23 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task ReplicateRequest(IRequest request, ClientContext clientContext)
+        private async Task ReplicateRequestAync(IRequest request, string username, ClusterServer server)
         {
-            foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
+            try
             {
-                try
+                await server.Client.SendAsync(new Replicate(username, request));
+            }
+            catch (ClientException ex)
+            {
+                // we expect not all data where replicated, especially not Durable things.
+                if (!_goodErrors.Any(x => (ex?.Response?.ErrorCode ?? string.Empty).Contains(x, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    await server.Client.SendAsync(new Replicate(clientContext.User.Entity.Username, request));
+                    _logger.LogError(ex, "Unexpected client error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
                 }
-                catch (ClientException ex)
-                {
-                    // we expect not all data where replicated, especially not Durable things.
-                    if (!_goodErrors.Any(x => (ex?.Response?.ErrorCode ?? string.Empty).Contains(x, StringComparison.InvariantCultureIgnoreCase)))
-                    {
-                        _logger.LogError(ex, "Unexpected client error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unexpected error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while replicating {CommandType} request with Id {Id}.", request.GetType().Name, request.Id);
             }
         }
     }
