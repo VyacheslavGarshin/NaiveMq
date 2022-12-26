@@ -22,7 +22,7 @@
 
         public int TrackFailedRequestsLimit = 1000;
 
-        public string ClusterKey { get; set; }
+        public string ClusterKey { get; set; } = "default";
 
         /// <summary>
         /// Comma/semicolon separated list of host:port values.
@@ -35,8 +35,8 @@
 
         public string ClusterAdminPassword { get; set; }
 
-        public TimeSpan ClusterStatsInterval { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan ClusterActivityInterval { get; set; } = TimeSpan.FromSeconds(10);
 
-        public int ClusterStatsBatchSize { get; set; } = 100;
+        public int ClusterActivityBatchSize { get; set; } = 100;
     }
 }

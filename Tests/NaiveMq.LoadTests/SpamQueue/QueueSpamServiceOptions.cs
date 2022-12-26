@@ -110,6 +110,8 @@ namespace NaiveMq.LoadTests.SpamQueue
         
         public ClusterStrategy ClusterStrategy { get; set; }
 
+        public TimeSpan ClusterIdleTimout { get; set; } = TimeSpan.FromSeconds(10);
+
         public bool Track { get; set; }
     }
 }

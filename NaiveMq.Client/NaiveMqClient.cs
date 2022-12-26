@@ -72,8 +72,18 @@ namespace NaiveMq.Client
 
         public event OnSendMessageHandler OnSendMessageAsync;
 
-        private SemaphoreSlim _readSemaphore;
+        private static readonly StringEnumConverter _stringEnumConverter = new();
 
+        private SemaphoreSlim _readSemaphore;
+        
+        private string _host;
+        
+        private bool _redirecting;
+
+        private Task _receivingTask;
+
+        private CancellationTokenSource _receivingTaskCancellationTokenSource;
+        
         private readonly ILogger<NaiveMqClient> _logger;
 
         private readonly CancellationToken _stoppingToken;
@@ -85,8 +95,6 @@ namespace NaiveMq.Client
         private readonly ICommandConverter _converter = new JsonCommandConverter();
 
         private readonly object _startLocker = new();
-
-        private readonly StringEnumConverter _stringEnumConverter = new();
 
         private readonly CommandPacker _commandPacker;
 
@@ -133,7 +141,7 @@ namespace NaiveMq.Client
             }
         }
 
-        public void Start(bool login = false)
+        public void Start(bool login = false, string host = null)
         {
             lock (_startLocker)
             {
@@ -142,26 +150,40 @@ namespace NaiveMq.Client
                     if (Options.TcpClient != null)
                     {
                         TcpClient = Options.TcpClient;
+                        _host = TcpClient.Client.RemoteEndPoint.ToString();
                     }
                     else
                     {
-                        CreateTcpClient();
+                        _host = CreateTcpClient(host);
                     }
 
                     if (TcpClient != null)
                     {
                         _readSemaphore = new(Options.Parallelism, Options.Parallelism);
 
-                        Task.Run(ReceiveAsync);
-
                         Started = true;
 
-                        if (login)
-                        {
-                            SendAsync(new Login(Options.Username, Options.Password)).Wait();
-                        }
+                        _receivingTaskCancellationTokenSource = new CancellationTokenSource();
+                        var token = _receivingTaskCancellationTokenSource.Token;
+                        _receivingTask = Task.Run(() => ReceiveAsync(TcpClient, _receivingTaskCancellationTokenSource), token);
 
-                        OnStart?.Invoke(this);
+                        Trace("..", () => $"Connected to {_host}");
+
+                        try
+                        {
+                            if (login)
+                            {
+                                SendAsync(new Login(Options.Username, Options.Password)).Wait();
+                            }
+
+                            OnStart?.Invoke(this);
+                        }
+                        catch
+                        {
+                            StopTcpClientAndReceiving();
+
+                            throw;
+                        }
                     }
                     else
                     {
@@ -177,22 +199,11 @@ namespace NaiveMq.Client
             {
                 if (Started)
                 {
-                    Started = false;
-
-                    if (TcpClient != null)
-                    {
-                        TcpClient.Close();
-                        TcpClient.Dispose();
-                        TcpClient = null;
-                    }
-
-                    if (_readSemaphore != null)
-                    {
-                        _readSemaphore.Dispose();
-                        _readSemaphore = null;
-                    }
+                    StopTcpClientAndReceiving();
 
                     OnStop?.Invoke(this);
+
+                    Trace("..", () => $"Stopped connection to {_host}");
                 }
             }
         }
@@ -296,17 +307,43 @@ namespace NaiveMq.Client
             Counters.Dispose();
         }
 
-        private void Restart()
+        private void StopTcpClientAndReceiving()
+        {
+            Started = false;
+
+            if (_receivingTaskCancellationTokenSource != null)
+            {
+                _receivingTaskCancellationTokenSource.Cancel();
+            }
+
+            if (TcpClient != null)
+            {
+                // todo other side doesn't get that we disconected on redirection.
+                TcpClient.Dispose();
+                TcpClient = null;
+            }
+
+            if (_readSemaphore != null)
+            {
+                _readSemaphore.Dispose();
+                _readSemaphore = null;
+            }            
+
+            _receivingTaskCancellationTokenSource = null;
+            _receivingTask = null;
+        }
+
+        private void AutoRestart()
         {
             if (Options.AutoRestart)
             {
                 Task.Run(async () =>
                 {
-                    do
+                    while (!Started)
                     {
                         await Task.Delay(Options.RestartInterval);
 
-                        Trace("..", () => "Trying to reconnect");
+                        Trace("..", () => $"Trying to reconnect");
 
                         try
                         {
@@ -314,16 +351,16 @@ namespace NaiveMq.Client
                         }
                         catch
                         {
-
+                            // insist until success
                         }
-                    } while (!Started);
+                    };
                 });
             }
         }
 
-        private void CreateTcpClient()
+        private string CreateTcpClient(string host = null)
         {
-            var hosts = Host.Parse(Options.Hosts).ToList();
+            var hosts = Host.Parse(host ?? Options.Hosts).ToList();
 
             if (!hosts.Any())
             {
@@ -333,16 +370,16 @@ namespace NaiveMq.Client
             do
             {
                 var randomHostIndex = hosts.Count == 1 ? 0 : RandomNumberGenerator.GetInt32(0, hosts.Count);
-                var host = hosts[randomHostIndex];
+                var randomHost = hosts[randomHostIndex];
 
                 try
                 {
                     var tcpClient = new TcpClient();
 
-                    if (tcpClient.ConnectAsync(host.Name, host.Port ?? DefaultPort).Wait(Options.ConnectionTimeout))
+                    if (tcpClient.ConnectAsync(randomHost.Name, randomHost.Port ?? DefaultPort).Wait(Options.ConnectionTimeout))
                     {
                         TcpClient = tcpClient;
-                        return;
+                        return randomHost.ToString();
                     }
                     else
                     {
@@ -432,8 +469,11 @@ namespace NaiveMq.Client
             }
             catch (Exception ex)
             {
-                Stop();
-                Restart();
+                if (!_redirecting && Started)
+                {
+                    Stop();
+                    AutoRestart();
+                }
 
                 throw new ClientException(ErrorCode.ClientStopped, ex);
             }
@@ -477,34 +517,41 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task ReceiveAsync()
+        private async Task ReceiveAsync(TcpClient tcpClient, CancellationTokenSource cancellationTokenSource)
         {
-            while (!_stoppingToken.IsCancellationRequested && Started)
+            try
             {
-                try
+                while (!cancellationTokenSource.Token.IsCancellationRequested && Started)
                 {
-                    var stream = TcpClient?.GetStream();
-
-                    if (stream == null)
+                    try
                     {
-                        throw new IOException("TcpClient is closed.");
+                        var stream = tcpClient.GetStream();
+
+                        if (stream == null)
+                        {
+                            throw new IOException("TcpClient is closed.");
+                        }
+
+                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token, ArrayPool<byte>.Shared);
+
+                        Counters.ReadCommand.Add();
+
+                        await _readSemaphore.WaitAsync(cancellationTokenSource.Token);
+
+                        _ = Task.Run(async () => await HandleReceivedDataAsync(tcpClient, unpackResult, cancellationTokenSource.Token), cancellationTokenSource.Token);
                     }
-
-                    var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, _stoppingToken, ArrayPool<byte>.Shared);
-
-                    Counters.ReadCommand.Add();
-
-                    await _readSemaphore.WaitAsync(_stoppingToken);
-
-                    _ = Task.Run(async () => await HandleReceivedDataAsync(unpackResult), _stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    await HandleReceiveErrorAsync(ex);
-                    throw;
-                }
-            };
-        }       
+                    catch (Exception ex)
+                    {
+                        await HandleReceiveErrorAsync(tcpClient, ex);
+                        throw;
+                    }
+                };
+            }
+            finally
+            {
+                cancellationTokenSource.Dispose();
+            }
+        }
 
         private void CheckCommandLengths(UnpackResult unpackResult)
         {
@@ -529,7 +576,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceivedDataAsync(UnpackResult unpackResult)
+        private async Task HandleReceivedDataAsync(TcpClient tcpClient, UnpackResult unpackResult, CancellationToken cancellationToken)
         {
             try
             {
@@ -537,14 +584,14 @@ namespace NaiveMq.Client
 
                 TraceCommand("<<", command);
 
-                await command.RestoreAsync(_stoppingToken);
+                await command.RestoreAsync(cancellationToken);
                 command.Validate();
 
                 await HandleReceiveCommandAsync(command);
             }
             catch (Exception ex)
             {
-                await HandleReceiveErrorAsync(ex);
+                await HandleReceiveErrorAsync(tcpClient, ex);
                 throw;
             }
             finally
@@ -555,22 +602,25 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceiveErrorAsync(Exception ex)
+        private async Task HandleReceiveErrorAsync(TcpClient tcpClient, Exception ex)
         {
-            Stop();
-            Restart();
-
-            if (ex is TaskCanceledException || ex is IOException || ex is OperationCanceledException
-                || ex is ObjectDisposedException)
+            if (tcpClient == TcpClient && !_redirecting && Started)
             {
-                return;
-            }
+                Stop();
+                AutoRestart();
 
-            _logger.LogError(ex, "Error occured during handling an incoming command.");
+                if (ex is TaskCanceledException || ex is IOException || ex is OperationCanceledException
+                    || ex is ObjectDisposedException)
+                {
+                    return;
+                }
 
-            if (OnReceiveErrorAsync != null)
-            {
-                await OnReceiveErrorAsync.Invoke(this, ex);
+                _logger.LogError(ex, "Error occured during handling an incoming command.");
+
+                if (OnReceiveErrorAsync != null)
+                {
+                    await OnReceiveErrorAsync.Invoke(this, ex);
+                }
             }
         }
 
@@ -581,12 +631,14 @@ namespace NaiveMq.Client
                 await OnReceiveCommandAsync.Invoke(this, command);
             }
 
-            if (command is IRequest request && OnReceiveRequestAsync != null)
+            if (command is IRequest request)
             {
-                await OnReceiveRequestAsync.Invoke(this, request);
+                if (OnReceiveRequestAsync != null)
+                {
+                    await OnReceiveRequestAsync.Invoke(this, request);
+                }
             }
-
-            if (command is IResponse response)
+            else if (command is IResponse response)
             {
                 HandleResponse(response);
 
@@ -596,10 +648,18 @@ namespace NaiveMq.Client
                 }
             }
 
-            if (command is Message message && OnReceiveMessageAsync != null)
+            if (command is Message message)
             {
                 Counters.Read.Add();
-                await OnReceiveMessageAsync.Invoke(this, message);
+
+                if (OnReceiveMessageAsync != null)
+                {
+                    await OnReceiveMessageAsync.Invoke(this, message);
+                }
+            }
+            else if (command is ClusterRedirect clusterRedirect)
+            {
+                ClusterRedirect(clusterRedirect);
             }
         }
 
@@ -615,6 +675,37 @@ namespace NaiveMq.Client
 
                 responseItem.Response = response;
                 responseItem.SemaphoreSlim.Release();
+            }
+        }
+
+        private void ClusterRedirect(ClusterRedirect clusterRedirect)
+        {
+            if (Options.AutoClusterRedirect)
+            {
+                // stop will wait ReceiveAsync task to end. we need to run it in other task
+                Task.Run(() =>
+                {
+                    _redirecting = true;
+
+                    try
+                    {
+                        Stop();
+                        Start(true, clusterRedirect.Host);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error during cluster redirection.");
+                    }
+                    finally
+                    {
+                        _redirecting = false;
+                    }
+
+                    if (!Started)
+                    {
+                        AutoRestart();
+                    }
+                });
             }
         }
 

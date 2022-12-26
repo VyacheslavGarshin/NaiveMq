@@ -50,7 +50,7 @@ namespace NaiveMq.Service.Cogs
             {
                 _discoveryTimer = new Timer(async (state) => { await DiscoverHostsAsync(); }, null, TimeSpan.Zero, _options.ClusterDiscoveryInterval);
 
-                _statsTimer = new Timer(async (state) => { await SendServerStatsAsync(); }, null, TimeSpan.Zero, _options.ClusterStatsInterval);
+                _statsTimer = new Timer(async (state) => { await SendServerActivityAsync(); }, null, TimeSpan.Zero, _options.ClusterActivityInterval);
 
                 Started = true;
                 _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
@@ -199,7 +199,7 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task SendServerStatsAsync()
+        private async Task SendServerActivityAsync()
         {
             try
             {
@@ -225,7 +225,7 @@ namespace NaiveMq.Service.Cogs
 
                 foreach (var server in Servers.Values.Where(x => !x.Self && x.Client != null))
                 {
-                    tasks.Add(Task.Run(async () => { await SendServerStatsAsync(server, queues); }));
+                    tasks.Add(Task.Run(async () => { await SendServerActivityAsync(server, queues); }));
                 }
 
                 await Task.WhenAll(tasks);
@@ -236,43 +236,50 @@ namespace NaiveMq.Service.Cogs
             }
             finally
             {
-                _discoveryTimer.Change(_options.ClusterStatsInterval, _options.ClusterStatsInterval);
+                _discoveryTimer.Change(_options.ClusterActivityInterval, _options.ClusterActivityInterval);
             }
         }
 
-        private async Task SendServerStatsAsync(ClusterServer server, IEnumerable<QueueCog> queues)
+        private async Task SendServerActivityAsync(ClusterServer server, QueueCog[] queues)
         {
             try
             {
-                await server.Client.SendAsync(new ServerActitvity(Self.Name, true, false));
-
-                ServerActitvity serverStats = null;
-
-                foreach (var queue in queues)
+                if (queues.Any())
                 {
-                    serverStats ??= new ServerActitvity(Self.Name, false, false, new());
+                    ServerActitvity serverStats = null;
+                    var firstCommand = true;
 
-                    if (serverStats.ActiveQueues.Count < _storage.Service.Options.ClusterStatsBatchSize)
+                    foreach (var queue in queues)
                     {
-                        serverStats.ActiveQueues.Add(new ActiveQueue(
-                            queue.Entity.User,
-                            queue.Entity.Name,
-                            queue.Length,
-                            queue.Counters.Subscriptions.Value));
+                        serverStats ??= new ServerActitvity(Self.Name, firstCommand, false, new());
+
+                        if (serverStats.ActiveQueues.Count < _storage.Service.Options.ClusterActivityBatchSize)
+                        {
+                            serverStats.ActiveQueues.Add(new ActiveQueue(queue.Entity.User, queue.Entity.Name, queue.Length, queue.Counters.Subscriptions.Value));
+                        }
+                        else
+                        {
+                            await server.Client.SendAsync(serverStats);
+                            serverStats = null;
+                        }
+
+                        firstCommand = false;
+                    }
+
+                    if (serverStats != null)
+                    {
+                        serverStats.Finish = true;
+                        await server.Client.SendAsync(serverStats);
                     }
                     else
                     {
-                        await server.Client.SendAsync(serverStats);
-                        serverStats = null;
+                        await server.Client.SendAsync(new ServerActitvity(Self.Name, false, true));
                     }
                 }
-
-                if (serverStats != null)
+                else
                 {
-                    await server.Client.SendAsync(serverStats);
+                    await server.Client.SendAsync(new ServerActitvity(Self.Name, true, true));
                 }
-
-                await server.Client.SendAsync(new ServerActitvity(Self.Name, false, true));
             }
             catch (ClientException ex)
             {

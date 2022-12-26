@@ -13,8 +13,16 @@ namespace NaiveMq.Client
         /// <remarks>Default port is 8506.</remarks>
         public string Hosts { get; set; } = "localhost";
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Default is "guest".</remarks>
         public string Username { get; set; } = "guest";
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Default is "guest".</remarks>
         public string Password { get; set; } = "guest";
 
         /// <summary>
@@ -27,6 +35,11 @@ namespace NaiveMq.Client
         /// Auto restart on connection lost.
         /// </summary>
         public bool AutoRestart { get; set; } = true;
+
+        /// <summary>
+        /// Auto reconnect to another cluster server.
+        /// </summary>
+        public bool AutoClusterRedirect { get; set; } = true;
 
         public TimeSpan RestartInterval { get; set; } = TimeSpan.FromSeconds(5);
 

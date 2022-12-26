@@ -307,7 +307,7 @@ namespace NaiveMq.Service.Cogs
             if (hints.Any())
             {
                 var hint = hints.OrderBy(x => x.Subscriptions).ThenByDescending(x => x.Length).First();
-                await _context.Client.SendAsync(new ClusterRedirect(hint.Host));
+                await _context.Client.SendAsync(new ClusterRedirect(hint.Host) { Confirm = false });
             }
         }
 
@@ -317,7 +317,7 @@ namespace NaiveMq.Service.Cogs
 
             if (hints.Any())
             {
-                await _context.Client.SendAsync(new ClusterHint(hints));
+                await _context.Client.SendAsync(new ClusterHint(hints) { Confirm = false });
             }
         }
 

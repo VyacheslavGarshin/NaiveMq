@@ -291,7 +291,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 {
                                     Task.Run(async () =>
                                     {
-                                        await sender.SendAsync(new Subscribe(queueName, _options.ConfirmSubscription, _options.ConfirmMessageTimeout, _options.ClusterStrategy), _stoppingToken);
+                                        await sender.SendAsync(new Subscribe(queueName, _options.ConfirmSubscription, _options.ConfirmMessageTimeout, _options.ClusterStrategy, _options.ClusterIdleTimout), _stoppingToken);
                                     });
                                 };
 
