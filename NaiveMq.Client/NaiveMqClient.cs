@@ -167,7 +167,7 @@ namespace NaiveMq.Client
                         var token = _receivingTaskCancellationTokenSource.Token;
                         _receivingTask = Task.Run(() => ReceiveAsync(TcpClient, _receivingTaskCancellationTokenSource), token);
 
-                        Trace("..", () => $"Connected to {_host}");
+                        Trace("..", () => $"Connected {(Options.TcpClient != null ? "from" : "to")} {_host}");
 
                         try
                         {
@@ -203,7 +203,7 @@ namespace NaiveMq.Client
 
                     OnStop?.Invoke(this);
 
-                    Trace("..", () => $"Stopped connection to {_host}");
+                    Trace("..", () => $"Stopped connection {(Options.TcpClient != null ? "from" : "to")} {_host}");
                 }
             }
         }
@@ -682,30 +682,26 @@ namespace NaiveMq.Client
         {
             if (Options.AutoClusterRedirect)
             {
-                // stop will wait ReceiveAsync task to end. we need to run it in other task
-                Task.Run(() =>
+                _redirecting = true;
+
+                try
                 {
-                    _redirecting = true;
+                    Stop();
+                    Start(true, clusterRedirect.Host);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during cluster redirection.");
+                }
+                finally
+                {
+                    _redirecting = false;
+                }
 
-                    try
-                    {
-                        Stop();
-                        Start(true, clusterRedirect.Host);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error during cluster redirection.");
-                    }
-                    finally
-                    {
-                        _redirecting = false;
-                    }
-
-                    if (!Started)
-                    {
-                        AutoRestart();
-                    }
-                });
+                if (!Started)
+                {
+                    AutoRestart();
+                }
             }
         }
 
