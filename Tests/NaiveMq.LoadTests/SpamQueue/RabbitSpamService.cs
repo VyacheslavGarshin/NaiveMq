@@ -78,7 +78,7 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 Consume(queueName, channel);
 
                                 if (_options.Value.Confirm)
-                                    channel.ConfirmSelect();
+                                    producersChannel.ConfirmSelect();
 
                                 var number = 1;
 
