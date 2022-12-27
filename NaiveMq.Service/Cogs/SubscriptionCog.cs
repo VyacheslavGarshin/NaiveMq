@@ -324,7 +324,7 @@ namespace NaiveMq.Service.Cogs
 
         private void ProxyClient_OnStart(NaiveMqClient sender)
         {
-            _proxyClient.OnReceiveMessageAsync += ProxyClient_OnReceiveMessageAsync;
+            sender.OnReceiveMessageAsync += ProxyClient_OnReceiveMessageAsync;
             
             var subscribe = new Subscribe(
                 _queue.Entity.Name,
@@ -332,8 +332,8 @@ namespace NaiveMq.Service.Cogs
                 _confirmTimeout,
                 clusterStrategy: ClusterStrategy.Wait,
                 user: _queue.Entity.User);
-            
-            _proxyClient.SendAsync(subscribe);
+
+            sender.SendAsync(subscribe);
         }
 
         private async Task ProxyClient_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
@@ -342,7 +342,7 @@ namespace NaiveMq.Service.Cogs
 
             if (message.Confirm)
             {
-                await _proxyClient.SendAsync(result);
+                await sender.SendAsync(result);
             }
         }
 

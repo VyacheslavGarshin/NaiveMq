@@ -222,7 +222,7 @@ namespace NaiveMq.Client
         public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
             where TResponse : IResponse
         {
-            return SendAsync(request, CancellationToken.None);
+            return SendAsync(request, true, true, CancellationToken.None);
         }
 
         /// <summary>
@@ -235,7 +235,7 @@ namespace NaiveMq.Client
         public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
             where TResponse : IResponse
         { 
-            return SendAsync(request, cancellationToken);
+            return SendAsync(request, true, true, cancellationToken);
         }
 
         /// <summary>
