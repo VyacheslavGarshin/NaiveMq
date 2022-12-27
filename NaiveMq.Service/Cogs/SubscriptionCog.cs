@@ -66,11 +66,11 @@ namespace NaiveMq.Service.Cogs
         public void Dispose()
         {
             _queue.Counters.Subscriptions.Add(-1);
+            StopProxyClient();
+            _timerService.Remove(this);
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource = null;
             _task = null;
-            _timerService.Remove(this);
-            StopProxyClient();
         }
 
         private async Task SendAsync(CancellationTokenSource cancellationTokenSource)
@@ -139,6 +139,7 @@ namespace NaiveMq.Service.Cogs
                             _queue.Counters.Subscriptions.Add(-1);
                             newQueue.Counters.Subscriptions.Add();
                             _queue = newQueue;
+
                             break;
                         }
                     }
@@ -176,7 +177,7 @@ namespace NaiveMq.Service.Cogs
                 }
                 else
                 {
-                    await ReEnqueueMessageAsync(messageEntity);
+                    _queue.Enqueue(messageEntity);
                 }
 
                 await SendRequestResponseAsync(messageEntity, response, cancellationToken);                
@@ -237,16 +238,9 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private async Task ReEnqueueMessageAsync(MessageEntity messageEntity)
-        {
-            var handler = new MessageHandler();
-            await handler.ExecuteEntityAsync(_context, messageEntity, null, CancellationToken.None); // none cancellation to ensure operation is not interrupted
-        }
-
         private async Task<MessageResponse> SendMessageAsync(Message message, CancellationToken cancellationToken)
         {
-            var result = await _context.Client.SendAsync(message, true, cancellationToken);
-            return result;
+            return await _context.Client.SendAsync(message, true, cancellationToken);
         }
 
         private async Task SendRequestResponseAsync(MessageEntity messageEntity, MessageResponse result, CancellationToken cancellationToken)
