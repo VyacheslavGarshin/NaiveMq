@@ -70,11 +70,7 @@ namespace NaiveMq.Service.Cogs
             _cancellationTokenSource = null;
             _task = null;
             _timerService.Remove(this);
-
-            if (_proxyClient != null)
-            {
-                ProxyClient_OnStop(_proxyClient);
-            }
+            StopProxyClient();
         }
 
         private async Task SendAsync(CancellationTokenSource cancellationTokenSource)
@@ -104,6 +100,7 @@ namespace NaiveMq.Service.Cogs
                         await ProcessMessageAsync(messageEntity, cancellationTokenSource.Token);
 
                         _lastSendDate = DateTime.UtcNow;
+                        StopProxyClient();
                     }
                 }
             }
@@ -339,9 +336,17 @@ namespace NaiveMq.Service.Cogs
 
         private void ProxyClient_OnStop(NaiveMqClient sender)
         {
-            _proxyClient.Dispose();
-            _proxyClient = null;
-            _proxyStarted = false;
+            StopProxyClient();
+        }
+
+        private void StopProxyClient()
+        {
+            if (_proxyClient != null)
+            {
+                _proxyClient.Dispose();
+                _proxyClient = null;
+                _proxyStarted = false;
+            }
         }
 
         private async Task SendRedirectCommandAsync()
