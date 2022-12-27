@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
 
@@ -31,14 +32,14 @@ namespace NaiveMq.Service.Cogs
 
         public void CheckUser()
         {
-            if (User == null || string.IsNullOrWhiteSpace(User.Entity.Username))
+            if (User == null)
             {
                 throw new ServerException(ErrorCode.UserNotAuthenticated);
             }
 
-            if (!Storage.Users.TryGetValue(User.Entity.Username, out var _))
+            if (User.Status != UserStatus.Started)
             {
-                throw new ServerException(ErrorCode.UserNotFound, new object[] { User.Entity.Username });
+                throw new ServerException(ErrorCode.UserNotStarted, new object[] { User.Entity.Username });
             }
         }
 

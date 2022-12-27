@@ -192,5 +192,8 @@ namespace NaiveMq.Client
 
         [Description("Tracking requests has been already started.")]
         TrackingAlreadyStarted = 146,
+
+        [Description("User '{0}' is not started.")]
+        UserNotStarted = 147,
     }
 }

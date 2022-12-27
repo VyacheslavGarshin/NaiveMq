@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Cogs
         
         private readonly ConcurrentQueue<MessageEntity> _messages = new();
 
-        private readonly object _locker = new object();
+        private readonly object _statusLocker = new object();
 
         public QueueCog(QueueEntity entity, UserCog userCog, SpeedCounterService speedCounterService)
         {
@@ -108,7 +108,7 @@ namespace NaiveMq.Service.Cogs
 
         public void SetStatus(QueueStatus status)
         {
-            lock (_locker)
+            lock (_statusLocker)
             {
                 if (_constantStatuses.Contains(status) || Status == QueueStatus.Started)
                 {

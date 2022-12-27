@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
 using NaiveMq.Service.Enums;
+using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -11,32 +12,28 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin();
 
-            UserCog user = null;
-
-            try
+            if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    throw new ServerException(ErrorCode.UserDeleteSelf);
-                }
-
-                if (!context.Storage.Users.TryRemove(command.Username, out user))
-                {
-                    throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
-                }
-
-                if (context.Mode == ClientContextMode.Client)
-                {
-                    await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, cancellationToken);
-                }
-
-                user.Dispose();
+                throw new ServerException(ErrorCode.UserDeleteSelf);
             }
-            catch
+
+            if (context.Storage.Users.TryGetValue(command.Username, out var user))
             {
-                context.Storage.Users.TryAdd(command.Username, user);
-                throw;
+                user.SetStatus(UserStatus.Deleting);
             }
+            else
+            {
+                throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
+            }
+
+            if (context.Mode == ClientContextMode.Client)
+            {
+                await context.Storage.PersistentStorage.DeleteUserAsync(command.Username, cancellationToken);
+            }
+
+            user.Dispose();
+            user.SetStatus(UserStatus.Deleted);
+            context.Storage.Users.TryRemove(command.Username, out var _);
 
             return Confirmation.Ok(command);
         }

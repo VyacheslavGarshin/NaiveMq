@@ -1,5 +1,4 @@
 ﻿using NaiveMq.Client.Enums;
-using NaiveMq.Service.Enums;
 
 namespace NaiveMq.Client.Dto
 {

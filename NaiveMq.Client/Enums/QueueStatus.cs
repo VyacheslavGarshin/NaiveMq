@@ -1,4 +1,4 @@
-﻿namespace NaiveMq.Service.Enums
+﻿namespace NaiveMq.Client.Enums
 {
     public enum QueueStatus
     {

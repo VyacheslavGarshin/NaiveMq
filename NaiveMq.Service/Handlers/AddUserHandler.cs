@@ -3,6 +3,7 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Service.Entities;
 using NaiveMq.Client;
 using NaiveMq.Service.Enums;
+using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -29,11 +30,11 @@ namespace NaiveMq.Service.Handlers
 
         public async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity, CancellationToken cancellationToken)
         {
-            var userCog = new UserCog(userEntity, context.Storage.Counters, context.Storage.Service.SpeedCounterService);
+            var user = new UserCog(userEntity, context.Storage.Counters, context.Storage.Service.SpeedCounterService);
 
             try
             {
-                if (!context.Storage.Users.TryAdd(userEntity.Username, userCog))
+                if (!context.Storage.Users.TryAdd(userEntity.Username, user))
                 {
                     throw new ServerException(ErrorCode.UserAlreadyExists, new object[] { userEntity.Username });
                 }
@@ -42,11 +43,13 @@ namespace NaiveMq.Service.Handlers
                 {
                     await context.Storage.PersistentStorage.SaveUserAsync(userEntity, cancellationToken);
                 }
+
+                user.SetStatus(UserStatus.Started);
             }
             catch
             {
                 context.Storage.Users.TryRemove(userEntity.Username, out var _);
-                userCog.Dispose();
+                user.Dispose();
                 throw;
             }
         }

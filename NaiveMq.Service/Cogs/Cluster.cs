@@ -2,9 +2,9 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;
+using NaiveMq.Client.Enums;
 using NaiveMq.Service.Commands;
 using NaiveMq.Service.Dto;
-using NaiveMq.Service.Enums;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs

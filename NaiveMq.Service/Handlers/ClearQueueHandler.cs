@@ -1,7 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
-using NaiveMq.Service.Enums;
+using NaiveMq.Client.Enums;
 
 namespace NaiveMq.Service.Handlers
 {

@@ -2,7 +2,6 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
-using NaiveMq.Service.Enums;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Data;
