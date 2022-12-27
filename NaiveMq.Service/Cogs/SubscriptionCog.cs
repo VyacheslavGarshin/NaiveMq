@@ -73,7 +73,7 @@ namespace NaiveMq.Service.Cogs
 
             if (_proxyClient != null)
             {
-                ProxyClient_OnStop();
+                ProxyClient_OnStop(_proxyClient);
             }
         }
 
