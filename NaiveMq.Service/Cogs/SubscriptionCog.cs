@@ -311,6 +311,7 @@ namespace NaiveMq.Service.Cogs
                 var options = new NaiveMqClientOptions
                 {
                     AutoRestart = false,
+                    Hosts = hint.Host,
                     Username = service.Options.ClusterAdminUsername,
                     Password = service.Options.ClusterAdminPassword,
                     OnStart = ProxyClient_OnStart,
