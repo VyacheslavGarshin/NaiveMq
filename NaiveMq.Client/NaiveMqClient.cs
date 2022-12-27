@@ -180,7 +180,7 @@ namespace NaiveMq.Client
                         }
                         catch
                         {
-                            StopTcpClientAndReceiving();
+                            DisposeTcpClientAndCancelReceivingTask();
 
                             throw;
                         }
@@ -199,7 +199,7 @@ namespace NaiveMq.Client
             {
                 if (Started)
                 {
-                    StopTcpClientAndReceiving();
+                    DisposeTcpClientAndCancelReceivingTask();
 
                     OnStop?.Invoke(this);
 
@@ -307,14 +307,9 @@ namespace NaiveMq.Client
             Counters.Dispose();
         }
 
-        private void StopTcpClientAndReceiving()
+        private void DisposeTcpClientAndCancelReceivingTask()
         {
             Started = false;
-
-            if (_receivingTaskCancellationTokenSource != null)
-            {
-                _receivingTaskCancellationTokenSource.Cancel();
-            }
 
             if (TcpClient != null)
             {
@@ -327,9 +322,14 @@ namespace NaiveMq.Client
             {
                 _readSemaphore.Dispose();
                 _readSemaphore = null;
-            }            
+            }
 
-            _receivingTaskCancellationTokenSource = null;
+            if (_receivingTaskCancellationTokenSource != null)
+            {
+                _receivingTaskCancellationTokenSource.Cancel();
+                _receivingTaskCancellationTokenSource = null;
+            }
+
             _receivingTask = null;
         }
 
@@ -604,23 +604,31 @@ namespace NaiveMq.Client
 
         private async Task HandleReceiveErrorAsync(TcpClient tcpClient, Exception ex)
         {
-            if (tcpClient == TcpClient && !_redirecting && Started)
+            try
             {
-                Stop();
-                AutoRestart();
-
-                if (ex is TaskCanceledException || ex is IOException || ex is OperationCanceledException
-                    || ex is ObjectDisposedException)
+                if (tcpClient == TcpClient && !_redirecting && Started)
                 {
-                    return;
-                }
+                    Stop();
+                    AutoRestart();
 
-                _logger.LogError(ex, "Error occured during handling an incoming command.");
+                    if (ex is TaskCanceledException || ex is IOException || ex is OperationCanceledException
+                        || ex is ObjectDisposedException)
+                    {
+                        return;
+                    }
 
-                if (OnReceiveErrorAsync != null)
-                {
-                    await OnReceiveErrorAsync.Invoke(this, ex);
+                    _logger.LogError(ex, "Error occured during handling an incoming command.");
+
+                    if (OnReceiveErrorAsync != null)
+                    {
+                        await OnReceiveErrorAsync.Invoke(this, ex);
+                    }
                 }
+            }
+            catch (Exception handlingEx)
+            {
+                _logger.LogError(handlingEx, "Error handling receiving error.");
+                throw;
             }
         }
 

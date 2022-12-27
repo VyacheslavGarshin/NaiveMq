@@ -82,14 +82,14 @@ namespace NaiveMq.Service.Cogs
 
         public bool TryAddClient(NaiveMqClient client)
         {
-            var clientContex = new ClientContext
+            var clientContext = new ClientContext
             {
                 Storage = this,
                 Client = client,
                 Logger = _logger
             };
 
-            var result = _clientContexts.TryAdd(client.Id, clientContex);
+            var result = _clientContexts.TryAdd(client.Id, clientContext);
 
             _logger.LogInformation("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
 

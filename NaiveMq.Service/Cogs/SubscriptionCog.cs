@@ -55,7 +55,7 @@ namespace NaiveMq.Service.Cogs
             _cancellationTokenSource = new CancellationTokenSource();
             _timerService.Add(this, OnTimer);
 
-            _task = Task.Run(() => SendAsync(_cancellationTokenSource.Token), CancellationToken.None); // do not cancel this task or messages will be lost
+            _task = Task.Run(() => SendAsync(_cancellationTokenSource), CancellationToken.None); // do not cancel this task or messages will be lost
 
             _queue.Counters.Subscriptions.Add();
         }
@@ -63,27 +63,25 @@ namespace NaiveMq.Service.Cogs
         public void Dispose()
         {
             _queue.Counters.Subscriptions.Add(-1);
-
             _cancellationTokenSource.Cancel();
-            _task.Wait();
-            _cancellationTokenSource.Dispose();
-
+            _cancellationTokenSource = null;
+            _task = null;
             _timerService.Remove(this);
         }
 
-        private async Task SendAsync(CancellationToken cancellationToken)
+        private async Task SendAsync(CancellationTokenSource cancellationTokenSource)
         {
             try
             {
-                while (!cancellationToken.IsCancellationRequested)
+                while (!cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    await WaitQueueStartAsync(cancellationToken);
+                    await WaitQueueStartAsync(cancellationTokenSource.Token);
 
                     MessageEntity messageEntity = null;
                     
                     try
                     {
-                        messageEntity = await _queue.TryDequeueAsync(cancellationToken);
+                        messageEntity = await _queue.TryDequeueAsync(cancellationTokenSource.Token);
                     }
                     catch (ServerException ex)
                     {
@@ -95,7 +93,7 @@ namespace NaiveMq.Service.Cogs
 
                     if (messageEntity != null)
                     {
-                        await ProcessMessageAsync(messageEntity, cancellationToken);
+                        await ProcessMessageAsync(messageEntity, cancellationTokenSource.Token);
 
                         _lastSendDate = DateTime.UtcNow;
                     }
@@ -103,12 +101,16 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                if (!cancellationToken.IsCancellationRequested)
+                if (!cancellationTokenSource.IsCancellationRequested)
                 {
                     _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
                 }
 
                 throw;
+            }
+            finally
+            {
+                cancellationTokenSource.Dispose();
             }
         }
 
