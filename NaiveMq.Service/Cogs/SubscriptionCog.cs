@@ -238,7 +238,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task<MessageResponse> SendMessageAsync(Message message, CancellationToken cancellationToken)
         {
-            return await _context.Client.SendAsync(message, true, cancellationToken);
+            return await _context.Client.SendAsync(message, cancellationToken);
         }
 
         private async Task SendRequestResponseAsync(MessageEntity messageEntity, MessageResponse result, CancellationToken cancellationToken)
@@ -257,39 +257,46 @@ namespace NaiveMq.Service.Cogs
 
         private void OnTimer()
         {
-            if (_lastSendDate != null)
+            try
             {
-                IdleTime = DateTime.UtcNow.Subtract(_lastSendDate.Value);
-            }
-
-            if (_queue.Length == 0 && _context.Storage.Cluster.Started 
-                && (IdleTime == null || IdleTime > _clusterIdleTimout))
-            {
-                switch (_clusterStrategy)
+                if (_lastSendDate != null)
                 {
-                    case ClusterStrategy.Proxy:
-                        if (!_proxyStarted)
-                        {
-                            StartProxyAsync();
-                        }
-                        break;
-                    case ClusterStrategy.Redirect:
-                        if (_lastRedirectSendDate == null || DateTime.UtcNow.Subtract(_lastRedirectSendDate.Value) > _clusterIdleTimout)
-                        {
-                            Task.Run(SendRedirectCommandAsync);
-                            _lastRedirectSendDate = DateTime.UtcNow;
-                        }
-                        break;
-                    case ClusterStrategy.Hint:
-                        if (_lastHintSendDate == null || DateTime.UtcNow.Subtract(_lastHintSendDate.Value) > _clusterIdleTimout)
-                        {
-                            Task.Run(SendHintCommandAsync);
-                            _lastHintSendDate = DateTime.UtcNow;
-                        }
-                        break;
-                    case ClusterStrategy.Wait:
-                        break;
+                    IdleTime = DateTime.UtcNow.Subtract(_lastSendDate.Value);
                 }
+
+                if (_queue.Length == 0 && _context.Storage.Cluster.Started
+                    && (IdleTime == null || IdleTime > _clusterIdleTimout))
+                {
+                    switch (_clusterStrategy)
+                    {
+                        case ClusterStrategy.Proxy:
+                            if (!_proxyStarted)
+                            {
+                                StartProxyAsync();
+                            }
+                            break;
+                        case ClusterStrategy.Redirect:
+                            if (_lastRedirectSendDate == null || DateTime.UtcNow.Subtract(_lastRedirectSendDate.Value) > _clusterIdleTimout)
+                            {
+                                Task.Run(SendRedirectCommandAsync);
+                                _lastRedirectSendDate = DateTime.UtcNow;
+                            }
+                            break;
+                        case ClusterStrategy.Hint:
+                            if (_lastHintSendDate == null || DateTime.UtcNow.Subtract(_lastHintSendDate.Value) > _clusterIdleTimout)
+                            {
+                                Task.Run(SendHintCommandAsync);
+                                _lastHintSendDate = DateTime.UtcNow;
+                            }
+                            break;
+                        case ClusterStrategy.Wait:
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _context.Logger.LogError(ex, "Error on subscription idlness timer.");
             }
         }
 
@@ -331,7 +338,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task ProxyClient_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
         {
-            var result = await _context.Client.SendAsync(message, true, _cancellationTokenSource.Token);
+            var result = await _context.Client.SendAsync(message, true, false, _cancellationTokenSource.Token);
 
             if (message.Confirm)
             {

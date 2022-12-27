@@ -334,11 +334,11 @@ namespace NaiveMq.LoadTests.SpamQueue
                         Requests = Enumerable.Range(0, _options.BatchSize).Select(x => CreateMessage(bytes, queueName) as IRequest).ToList()
                     };
 
-                    var response = await c.SendAsync(batch, _options.Wait, _stoppingToken);
+                    var response = await c.SendAsync(batch, _options.Wait, true, _stoppingToken);
                 }
                 else
                 {
-                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _options.Wait, _stoppingToken);
+                    var response = await c.SendAsync(CreateMessage(bytes, queueName), _options.Wait, true, _stoppingToken);
                 }
 
                 if (_options.SendDelay != null)

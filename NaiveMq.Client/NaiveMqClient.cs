@@ -213,29 +213,43 @@ namespace NaiveMq.Client
             }
         }
 
+        /// <summary>
+        /// Send request with wait and throwIfError parameters set to true.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request)
             where TResponse : IResponse
         {
-            return SendAsync(request, true, CancellationToken.None);
+            return SendAsync(request, CancellationToken.None);
         }
 
+        /// <summary>
+        /// Send request with wait and throwIfError parameters set to true.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken)
             where TResponse : IResponse
         { 
-            return SendAsync(request, true, cancellationToken);
+            return SendAsync(request, cancellationToken);
         }
 
         /// <summary>
         /// Send request.
         /// </summary>
         /// <param name="request"></param>
-        /// <param name="wait"></param>
+        /// <param name="wait">Wait for response if requsest.Confirm is set.</param>
+        /// <param name="throwIfError">Throw exception if response.Success is false.</param>
         /// <param name="cancellationToken"></param>
         /// <exception cref="ConnectionException"></exception>
         /// <exception cref="ConfirmationException<TResponse>"></exception>
         /// <exception cref="TimeoutException"></exception>
         /// <returns></returns>
-        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, CancellationToken cancellationToken)
+        public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, bool throwIfError, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
             await PrepareCommandAsync(request, cancellationToken);
@@ -263,7 +277,7 @@ namespace NaiveMq.Client
 
                 if (confirmAndWait)
                 {
-                    response = await WaitForConfirmationAsync(request, responseItem, cancellationToken);
+                    response = await WaitForConfirmationAsync(request, responseItem, throwIfError, cancellationToken);
                 }
             }
             finally
@@ -414,7 +428,7 @@ namespace NaiveMq.Client
             await command.PrepareAsync(cancellationToken);
         }
 
-        private async Task<IResponse> WaitForConfirmationAsync<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, CancellationToken cancellationToken)
+        private async Task<IResponse> WaitForConfirmationAsync<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, bool throwIfError, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
             IResponse response;
@@ -427,7 +441,7 @@ namespace NaiveMq.Client
             }   
             else
             {
-                if (!responseItem.Response.Success)
+                if (!responseItem.Response.Success && throwIfError)
                 {
                     ErrorCode errorCode;
                     var parsed = Enum.TryParse(responseItem.Response.ErrorCode, true, out errorCode);
