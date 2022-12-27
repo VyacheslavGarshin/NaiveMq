@@ -6,8 +6,6 @@ using NaiveMq.Client.Enums;
 using NaiveMq.Service.Dto;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
-using NaiveMq.Service.Handlers;
-using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {

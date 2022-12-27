@@ -3,7 +3,6 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Diagnostics;
 using System.Text;
-using System.Threading.Channels;
 
 namespace NaiveMq.LoadTests.SpamQueue
 {
