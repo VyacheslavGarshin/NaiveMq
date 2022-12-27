@@ -64,5 +64,7 @@ namespace NaiveMq.Client
         /// Add this event before connect and login in constructor.
         /// </summary>
         public NaiveMqClient.OnStartHandler OnStart { get; set; }
+        
+        public NaiveMqClient.OnStopHandler OnStop { get; set; }
     }
 }

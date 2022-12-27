@@ -117,6 +117,11 @@ namespace NaiveMq.Client
                 OnStart += Options.OnStart;
             }
 
+            if (Options.OnStop != null)
+            {
+                OnStop += Options.OnStop;
+            }
+
             if (Options.AutoStart)
             {
                 Start(true);

@@ -7,6 +7,7 @@ using NaiveMq.Service.Dto;
 using NaiveMq.Service.Entities;
 using NaiveMq.Service.Enums;
 using NaiveMq.Service.Handlers;
+using System.Threading;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -40,6 +41,8 @@ namespace NaiveMq.Service.Cogs
 
         private Task _task;
 
+        private NaiveMqClient _proxyClient;
+
         public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy, TimeSpan clusterIdleTimout)
         {
             _context = context;
@@ -67,6 +70,11 @@ namespace NaiveMq.Service.Cogs
             _cancellationTokenSource = null;
             _task = null;
             _timerService.Remove(this);
+
+            if (_proxyClient != null)
+            {
+                ProxyClient_OnStop();
+            }
         }
 
         private async Task SendAsync(CancellationTokenSource cancellationTokenSource)
@@ -128,7 +136,7 @@ namespace NaiveMq.Service.Cogs
 
                     if (_queue.Status == QueueStatus.Deleted)
                     {
-                        if (_context.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
+                        if (_queue.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
                             _queue != newQueue && newQueue.Status == QueueStatus.Started)
                         {
                             _queue.Counters.Subscriptions.Add(-1);
@@ -273,8 +281,7 @@ namespace NaiveMq.Service.Cogs
                     case ClusterStrategy.Proxy:
                         if (!_proxyStarted)
                         {
-                            Task.Run(StartProxyAsync);
-                            _proxyStarted = true;
+                            StartProxyAsync();
                         }
                         break;
                     case ClusterStrategy.Redirect:
@@ -297,18 +304,52 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        private Task StartProxyAsync()
+        private void StartProxyAsync()
         {
-            throw new NotImplementedException();
+            var hint = FindRedirectHint();
+
+            if (hint != null)
+            {
+                var service = _context.Storage.Service;
+
+                var options = new NaiveMqClientOptions
+                {
+                    AutoRestart = false,
+                    Username = service.Options.ClusterAdminUsername,
+                    Password = service.Options.ClusterAdminPassword,
+                    OnStart = ProxyClient_OnStart,
+                    OnStop = ProxyClient_OnStop,
+                };
+
+                _proxyClient = new NaiveMqClient(options, service.ClientLogger, _cancellationTokenSource.Token);
+                _proxyStarted = true;
+            }
+        }
+
+        private void ProxyClient_OnStart(NaiveMqClient sender)
+        {
+            _proxyClient.OnReceiveMessageAsync += ProxyClient_OnReceiveMessageAsync;
+            _proxyClient.SendAsync(new Subscribe(_queue.Entity.Name, clusterStrategy: ClusterStrategy.Wait));
+        }
+
+        private async Task ProxyClient_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
+        {
+            await _context.Client.SendAsync(message, true, _cancellationTokenSource.Token);
+        }
+
+        private void ProxyClient_OnStop(NaiveMqClient sender)
+        {
+            _proxyClient.Dispose();
+            _proxyClient = null;
+            _proxyStarted = false;
         }
 
         private async Task SendRedirectCommandAsync()
         {
-            var hints = GetQueueHints().Where(x => x.Subscriptions < _queue.Counters.Subscriptions.Value).ToList();
+            var hint = FindRedirectHint();
 
-            if (hints.Any())
+            if (hint != null)
             {
-                var hint = hints.OrderBy(x => x.Subscriptions).ThenByDescending(x => x.Length).First();
                 await _context.Client.SendAsync(new ClusterRedirect(hint.Host) { Confirm = false });
             }
         }
@@ -338,6 +379,20 @@ namespace NaiveMq.Service.Cogs
                         Subscriptions = activeQueue.Subscriptions,
                     };
                 }
+            }
+        }
+
+        private QueueHint FindRedirectHint()
+        {
+            var hints = GetQueueHints().Where(x => x.Subscriptions < _queue.Counters.Subscriptions.Value).ToList();
+
+            if (hints.Any())
+            {
+                return hints.OrderBy(x => x.Subscriptions).ThenByDescending(x => x.Length).First();
+            }
+            else
+            {
+                return null;
             }
         }
     }

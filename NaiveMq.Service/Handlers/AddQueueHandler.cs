@@ -22,7 +22,7 @@ namespace NaiveMq.Service.Handlers
 
         public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity, CancellationToken cancellationToken)
         {
-            var queue = new QueueCog(queueEntity, context.User.Counters, context.Storage.Service.SpeedCounterService);
+            var queue = new QueueCog(queueEntity, context.User, context.Storage.Service.SpeedCounterService);
 
             try
             {

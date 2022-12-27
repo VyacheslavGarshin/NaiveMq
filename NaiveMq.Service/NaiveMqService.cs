@@ -30,14 +30,14 @@ namespace NaiveMq.Service
 
         public ServiceCounters Counters { get; }
 
+        public ILogger<NaiveMqClient> ClientLogger { get; set; }
+        
         private CancellationToken _stoppingToken;
         
         private TcpListener _listener;
 
         private readonly ILogger<NaiveMqService> _logger;
-        
-        private readonly ILogger<NaiveMqClient> _clientLogger;
-        
+                
         private readonly IPersistentStorage _persistentStorage;
 
         static NaiveMqService()
@@ -51,9 +51,9 @@ namespace NaiveMq.Service
             IPersistentStorage persistentStorage)
         {
             _logger = loggerFactory.CreateLogger<NaiveMqService>();
-            _clientLogger = loggerFactory.CreateLogger<NaiveMqClient>();
             _persistentStorage = persistentStorage;
 
+            ClientLogger = loggerFactory.CreateLogger<NaiveMqClient>();
             Options = options.Value;
             Counters = new(SpeedCounterService);
 
@@ -64,7 +64,7 @@ namespace NaiveMq.Service
         {
             _stoppingToken = stoppingToken;
 
-            Storage = new Storage(this, _persistentStorage, _logger, _clientLogger, _stoppingToken);
+            Storage = new Storage(this, _persistentStorage, _logger, ClientLogger, _stoppingToken);
             await new PersistentStorageLoader(Storage, _logger, _stoppingToken).LoadAsync();
 
             Loaded = true;
@@ -172,7 +172,7 @@ namespace NaiveMq.Service
                     AutoRestart = false,
                 };
 
-                client = new NaiveMqClient(options, _clientLogger, _stoppingToken);
+                client = new NaiveMqClient(options, ClientLogger, _stoppingToken);
                 client.OnStop += Client_OnStop;
                 client.OnReceiveErrorAsync += Client_OnReceiveErrorAsync;
                 client.OnReceiveRequestAsync += Client_OnReceiveRequestAsync;

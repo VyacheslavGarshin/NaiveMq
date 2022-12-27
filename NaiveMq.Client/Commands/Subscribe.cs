@@ -29,6 +29,11 @@ namespace NaiveMq.Client.Commands
         /// <remarks>Default is 10 seconds.</remarks>
         public TimeSpan ClusterIdleTimout { get; set; } = TimeSpan.FromSeconds(10);
 
+        /// <summary>
+        /// Administrator can subscribe to any user.
+        /// </summary>
+        public string User { get; set; }
+
         public Subscribe()
         {
         }
@@ -38,7 +43,8 @@ namespace NaiveMq.Client.Commands
             bool confirmMessage = true, 
             TimeSpan? confirmMessageTimeout = null, 
             ClusterStrategy clusterStrategy = ClusterStrategy.Proxy,
-            TimeSpan? clusterIdleTimout = null)
+            TimeSpan? clusterIdleTimout = null,
+            string user = null)
         {
             Queue = queue;
             ConfirmMessage = confirmMessage;
@@ -49,6 +55,8 @@ namespace NaiveMq.Client.Commands
             {
                 ClusterIdleTimout = clusterIdleTimout.Value;
             }
+
+            User = user;
         }
 
         public override void Validate()

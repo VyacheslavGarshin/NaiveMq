@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Service.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client;
+using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -10,14 +11,16 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser();
 
-            if (context.User.Queues.TryGetValue(command.Queue, out var queue))
+            var queues = FindQueues(context, command);
+
+            if (queues.TryGetValue(command.Queue, out var queue))
             {
                 if (!queue.Entity.Exchange)
                 {
                     var subscription = new SubscriptionCog(
-                        context, 
-                        queue, 
-                        command.ConfirmMessage, 
+                        context,
+                        queue,
+                        command.ConfirmMessage,
                         command.ConfirmMessageTimeout,
                         command.ClusterStrategy,
                         command.ClusterIdleTimout);
@@ -43,6 +46,27 @@ namespace NaiveMq.Service.Handlers
             }
 
             return Task.FromResult(Confirmation.Ok(command));
+        }
+
+        private static ConcurrentDictionary<string, QueueCog> FindQueues(ClientContext context, Subscribe command)
+        {
+            var queues = context.User.Queues;
+
+            if (!string.IsNullOrEmpty(command.User))
+            {
+                context.CheckAdmin();
+
+                if (!context.Storage.Users.TryGetValue(command.User, out var user))
+                {
+                    queues = user.Queues;
+                }
+                else
+                {
+                    throw new ClientException(ErrorCode.UserNotFound, new object[] { command.User });
+                }
+            }
+
+            return queues;
         }
     }
 }

@@ -10,6 +10,8 @@ namespace NaiveMq.Service.Cogs
 {
     public class QueueCog : IDisposable
     {
+        public UserCog User { get; set; }
+
         public QueueEntity Entity { get; set; }
 
         public QueueStatus Status { get; private set; }
@@ -32,11 +34,11 @@ namespace NaiveMq.Service.Cogs
 
         private readonly object _locker = new object();
 
-        public QueueCog(QueueEntity entity, UserCounters userCounters, SpeedCounterService speedCounterService)
+        public QueueCog(QueueEntity entity, UserCog userCog, SpeedCounterService speedCounterService)
         {
             Entity = entity;
             CreateSemaphores();
-            Counters = new(speedCounterService, userCounters);
+            Counters = new(speedCounterService, userCog.Counters);
         }
 
         public async Task<MessageEntity> TryDequeueAsync(CancellationToken cancellationToken)
@@ -131,6 +133,7 @@ namespace NaiveMq.Service.Cogs
             DisposeSemaphores();
             ClearData();
             Counters.Dispose();
+            User = null;
         }
 
         private void ClearData()
