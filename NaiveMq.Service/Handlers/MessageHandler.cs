@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Handlers
             context.CheckUser();
 
             var message = MessageEntity.FromCommand(command);
-            message.ClientId = context.Client?.Id;
+            message.ClientId = context.Client.Id;
 
             return await ExecuteEntityAsync(context, message, command, cancellationToken);
         }
@@ -66,11 +66,14 @@ namespace NaiveMq.Service.Handlers
 
         private static void CkeckMessage(MessageEntity message, QueueCog initialQueue, List<QueueCog> queues)
         {
-            foreach (var queue in queues)
+            if (!initialQueue.Entity.Exchange)
             {
-                if (!initialQueue.Entity.Exchange && !queue.Entity.Durable && message.Persistent != Persistence.No)
+                foreach (var queue in queues)
                 {
-                    throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
+                    if (!queue.Entity.Durable && message.Persistent != Persistence.No)
+                    {
+                        throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
+                    }
                 }
             }
         }
@@ -80,19 +83,10 @@ namespace NaiveMq.Service.Handlers
             if (context.Mode == ClientContextMode.Client && command != null) {
                 foreach (var queue in queues)
                 {
-                    if (context.Storage.MemoryLimitExceeded && queue.ForcedLengthLimit == null && queue.Length > 1)
-                    {
-                        var limit = (long)(queue.Length * (0.01 * context.Storage.Service.Options.AutoQueueLimitPercent));
-
-                        if (limit == 0)
-                        {
-                            limit = 1;
-                        }
-
-                        queue.ForcedLengthLimit = limit;
-                    }
+                    SetForcedQueueLimit(context, queue);
 
                     var limitType = queue.LimitExceeded(command.Data.Length);
+
                     if (limitType != LimitType.None)
                     {
                         switch (queue.Entity.LimitStrategy)
@@ -124,6 +118,21 @@ namespace NaiveMq.Service.Handlers
             }
 
             return false;
+        }
+
+        private static void SetForcedQueueLimit(ClientContext context, QueueCog queue)
+        {
+            if (context.Storage.MemoryLimitExceeded && queue.ForcedLengthLimit == null && queue.Length > 1)
+            {
+                var limit = (long)(queue.Length * (0.01 * context.Storage.Service.Options.AutoQueueLimitPercent));
+
+                if (limit == 0)
+                {
+                    limit = 1;
+                }
+
+                queue.ForcedLengthLimit = limit;
+            }
         }
 
         private static List<QueueCog> MatchBoundQueues(ClientContext context, MessageEntity message, QueueCog exchange)
