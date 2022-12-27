@@ -56,7 +56,7 @@ namespace NaiveMq.Service.Handlers
             {
                 context.CheckAdmin();
 
-                if (!context.Storage.Users.TryGetValue(command.User, out var user))
+                if (context.Storage.Users.TryGetValue(command.User, out var user))
                 {
                     queues = user.Queues;
                 }
