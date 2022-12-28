@@ -84,7 +84,7 @@ namespace NaiveMq.Client
 
         private CancellationTokenSource _receivingTaskCancellationTokenSource;
 
-        private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Create();
+        private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
         
         private readonly ILogger<NaiveMqClient> _logger;
 
@@ -94,6 +94,7 @@ namespace NaiveMq.Client
 
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
+        // todo make it in command pack maybe
         private readonly ICommandConverter _converter = new JsonCommandConverter();
 
         private readonly object _startLocker = new();
@@ -614,7 +615,10 @@ namespace NaiveMq.Client
             {
                 _arrayPool.Return(unpackResult.Buffer);
 
-                _readSemaphore.Release();
+                if (_readSemaphore != null)
+                {
+                    _readSemaphore.Release();
+                }
             }
         }
 
