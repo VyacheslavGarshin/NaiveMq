@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
+using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service;
 using Newtonsoft.Json;
@@ -17,6 +18,7 @@ namespace NaiveMq.LoadTests.SpamQueue
         private readonly NaiveMqService _queueService;
         private readonly IServiceProvider _serviceProvider;
         private Timer _timer;
+        private ClientCounters _clientCounters = new();
 
         public QueueSpamService(ILogger<QueueSpamService> logger, IServiceProvider serviceProvider, IOptions<QueueSpamServiceOptions> options, NaiveMqService queueService)
         {
@@ -43,21 +45,28 @@ namespace NaiveMq.LoadTests.SpamQueue
                     await Task.Delay(1000, _stoppingToken);
                 }
 
-                if (_options.LogServerActivity)
-                {
-                    _timer = new Timer((s) =>
-                    {
-                        _queueService.Storage.Users[_options.Username].Queues.TryGetValue(_options.QueueName + "1", out var queue);
 
-                        _logger.LogInformation($"{DateTime.Now:O};Read message/s;{_queueService.Counters.Read.Second.Value};" +
+                _timer = new Timer((s) =>
+                {
+                    if (_options.LogServerActivity)
+                    {
+                        _logger.LogInformation($"Server counters;Read message/s;{_queueService.Counters.Read.Second.Value};" +
                             $"Write message/s;{_queueService.Counters.Write.Second.Value};" +
                             $"Read/s;{_queueService.Counters.ReadCommand.Second.Value};" +
                             $"Write/s;{_queueService.Counters.WriteCommand.Second.Value};" +
                             $"QueuesLength;{_queueService.Counters.Length.Value};" +
                             $"QueuesVolume;{_queueService.Counters.Volume.Value};" +
                             $"Subscriptions;{_queueService.Counters.Subscriptions.Value};");
-                    }, null, 0, 1000);
-                }
+                    }
+
+                    if (_options.LogClientCounters)
+                    {
+                        _logger.LogInformation($"Client counters;Read message/s;{_clientCounters.Read.Second.Value};" +
+                           $"Write message/s;{_clientCounters.Write.Second.Value};" +
+                           $"Read/s;{_clientCounters.ReadCommand.Second.Value};" +
+                           $"Write/s;{_clientCounters.WriteCommand.Second.Value};");
+                    }
+                }, null, 0, 1000);                
 
                 await QueueSpamAsync();
             }
@@ -335,10 +344,14 @@ namespace NaiveMq.LoadTests.SpamQueue
                     };
 
                     var response = await c.SendAsync(batch, _options.Wait, true, _stoppingToken);
+                    
+                    _clientCounters.Write.Add(_options.BatchSize);
                 }
                 else
                 {
                     var response = await c.SendAsync(CreateMessage(bytes, queueName), _options.Wait, true, _stoppingToken);
+
+                    _clientCounters.Write.Add();
                 }
 
                 if (_options.SendDelay != null)
@@ -383,6 +396,8 @@ namespace NaiveMq.LoadTests.SpamQueue
         {
             c.OnReceiveMessageAsync += async (client, message) =>
             {
+                _clientCounters.Read.Add();
+
                 if (_options.ReadBody)
                 {
                     var body = message.Data.ToArray();
