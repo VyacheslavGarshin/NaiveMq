@@ -542,17 +542,12 @@ namespace NaiveMq.Client
         {
             try
             {
+                var stream = tcpClient.GetStream();
+
                 while (!cancellationTokenSource.Token.IsCancellationRequested && Started)
                 {
                     try
                     {
-                        var stream = tcpClient.GetStream();
-
-                        if (stream == null)
-                        {
-                            throw new IOException("TcpClient is closed.");
-                        }
-
                         var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token, _arrayPool);
 
                         Counters.ReadCommand.Add();

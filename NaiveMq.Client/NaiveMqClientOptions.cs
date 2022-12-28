@@ -52,12 +52,25 @@ namespace NaiveMq.Client
         /// <summary>
         /// Number of parallel tasks processing the incoming command.
         /// </summary>
+        /// <remarks>Default value is 8.</remarks>
         public int Parallelism { get; set; } = 8;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Default value is 1024.</remarks>
         public int MaxCommandNameSize { get; set; } = 1024;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Default value is 1024 * 1024.</remarks>
         public int MaxCommandSize { get; set; } = 1024 * 1024;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <remarks>Default value is 100 * 1024 * 1024.</remarks>
         public int MaxDataSize { get; set; } = 100 * 1024 * 1024;
 
         /// <summary>
