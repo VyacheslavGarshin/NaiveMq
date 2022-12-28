@@ -2,7 +2,6 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Enums;
-using NaiveMq.Service.Handlers;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs

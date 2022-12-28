@@ -24,30 +24,44 @@ namespace NaiveMq.Service.Handlers
 
             if (queue != null)
             {
-                var queues = new List<QueueCog>();
+                var targetQueues = FindTargetQueues(context, messageEntity, queue);
 
-                if (queue.Entity.Exchange)
+                CkeckMessage(messageEntity, queue, targetQueues);
+
+                foreach (var limitedQueue in GetLimitedQueues(context, targetQueues, command))
                 {
-                    queues.AddRange(MatchBoundQueues(context, messageEntity, queue));
-
-                    if (!queues.Any())
+                    switch (limitedQueue.Queue.Entity.LimitStrategy)
                     {
-                        throw new ServerException(ErrorCode.ExchangeCannotRouteMessage);
-                    }
+                        case LimitStrategy.Delay:
+                            if (!await limitedQueue.Queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, cancellationToken))
+                            {
+                                // Client side will fire it's own confirmation timeout and abandon request. 
+                                // We need to discard the message.
+                                return MessageResponse.Ok(command);
+                            }
+
+                            break;
+                        case LimitStrategy.Reject:
+                            switch (limitedQueue.LimitType)
+                            {
+                                case LimitType.Length:
+                                    throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { limitedQueue.Queue.Entity.LengthLimit });
+                                case LimitType.Volume:
+                                    throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { limitedQueue.Queue.Entity.VolumeLimit });
+                            }
+
+                            break;
+                        case LimitStrategy.Discard:
+                            return MessageResponse.Ok(command);
+                    }                   
                 }
-                else
+
+                var messageEntitiesToSave = EnqueueAndGetEntitiesToSave(context, messageEntity, targetQueues);
+
+                if (messageEntitiesToSave.Any())
                 {
-                    queues.Add(queue);
+                    await SaveAsync(context, messageEntitiesToSave, cancellationToken);
                 }
-
-                CkeckMessage(messageEntity, queue, queues);
-
-                if (await CheckLimitsAndDiscardAsync(context, queues, command, cancellationToken))
-                {
-                    return MessageResponse.Ok(command);
-                }
-
-                await EnqueueAsync(context, messageEntity, queues, cancellationToken);
 
                 if (messageEntity.Request)
                 {
@@ -80,22 +94,43 @@ namespace NaiveMq.Service.Handlers
                     {
                         queue = null;
                     }
-                }                
+                }
             }
 
             if (queue == null && context.User.Queues.TryGetValue(queueName, out queue))
             {
                 context.LastQueue = queue;
-            }            
+            }
 
             return queue;
         }
 
-        private static void CkeckMessage(MessageEntity message, QueueCog initialQueue, List<QueueCog> queues)
+        private static List<QueueCog> FindTargetQueues(ClientContext context, MessageEntity messageEntity, QueueCog queue)
+        {
+            var queues = new List<QueueCog>();
+
+            if (queue.Entity.Exchange)
+            {
+                queues.AddRange(MatchBoundQueues(context, messageEntity, queue));
+
+                if (!queues.Any())
+                {
+                    throw new ServerException(ErrorCode.ExchangeCannotRouteMessage);
+                }
+            }
+            else
+            {
+                queues.Add(queue);
+            }
+
+            return queues;
+        }
+
+        private static void CkeckMessage(MessageEntity message, QueueCog initialQueue, List<QueueCog> targetQueues)
         {
             if (!initialQueue.Entity.Exchange)
             {
-                foreach (var queue in queues)
+                foreach (var queue in targetQueues)
                 {
                     if (!queue.Entity.Durable && message.Persistent != Persistence.No)
                     {
@@ -105,9 +140,12 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private static async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command, CancellationToken cancellationToken)
+        private static List<LimitedQueue> GetLimitedQueues(ClientContext context, List<QueueCog> queues, Message command)
         {
-            if (context.Mode == ClientContextMode.Client && command != null) {
+            var result = new List<LimitedQueue>();
+
+            if (context.Mode == ClientContextMode.Client && command != null)
+            {
                 foreach (var queue in queues)
                 {
                     SetForcedQueueLimit(context, queue);
@@ -116,35 +154,12 @@ namespace NaiveMq.Service.Handlers
 
                     if (limitType != LimitType.None)
                     {
-                        switch (queue.Entity.LimitStrategy)
-                        {
-                            case LimitStrategy.Delay:
-                                if (!await queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, cancellationToken))
-                                {
-                                    // Client side will fire it's own confirmation timeout and abandon request. 
-                                    // We need to discard the message.
-                                    return true;
-                                }
-
-                                break;
-                            case LimitStrategy.Reject:
-                                switch (limitType)
-                                {
-                                    case LimitType.Length:
-                                        throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { queue.Entity.LengthLimit });
-                                    case LimitType.Volume:
-                                        throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { queue.Entity.VolumeLimit });
-                                }
-
-                                break;
-                            case LimitStrategy.Discard:
-                                return true;
-                        }
+                        result.Add(new LimitedQueue { Queue = queue, LimitType = limitType });
                     }
                 }
             }
 
-            return false;
+            return result;
         }
 
         private static void SetForcedQueueLimit(ClientContext context, QueueCog queue)
@@ -181,8 +196,10 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
-        private static async Task EnqueueAsync(ClientContext context, MessageEntity messageEntity, List<QueueCog> queues, CancellationToken cancellationToken)
+        private static List<QueueAndMessage> EnqueueAndGetEntitiesToSave(ClientContext context, MessageEntity messageEntity, List<QueueCog> queues)
         {
+            var result = new List<QueueAndMessage>();
+
             var entities = queues.Select(x => queues.Count == 1 ? messageEntity : messageEntity.Copy()).ToArray();
 
             for (var i = 0; i < queues.Count; i++)
@@ -199,15 +216,43 @@ namespace NaiveMq.Service.Handlers
 
                     if (queue.Entity.Durable)
                     {
-                        await context.Storage.PersistentStorage.SaveMessageAsync(context.User.Entity.Username, queue.Entity.Name, entity, cancellationToken);
-                    }
-                 
-                    if (entity.Persistent == Persistence.DiskOnly)
-                    {
-                        entity.Data = null;
+                        result.Add(new QueueAndMessage { Queue = queue, Message = entity });
                     }
                 }
             }
+
+            return result;
+        }
+
+        private static async Task SaveAsync(ClientContext context, List<QueueAndMessage> queueAndMessages, CancellationToken cancellationToken)
+        {
+            foreach (var queueAndMessage in queueAndMessages)
+            {
+                await context.Storage.PersistentStorage.SaveMessageAsync(
+                    context.User.Entity.Username,
+                    queueAndMessage.Queue.Entity.Name,
+                    queueAndMessage.Message,
+                    cancellationToken);
+
+                if (queueAndMessage.Message.Persistent == Persistence.DiskOnly)
+                {
+                    queueAndMessage.Message.Data = null;
+                }
+            }
+        }
+
+        private class QueueAndMessage
+        {
+            public QueueCog Queue { get; set; }
+
+            public MessageEntity Message { get; set; }
+        }
+
+        private class LimitedQueue
+        {
+            public QueueCog Queue { get; set; }
+
+            public LimitType LimitType { get; set; }
         }
     }
 }
