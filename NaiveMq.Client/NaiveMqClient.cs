@@ -83,6 +83,8 @@ namespace NaiveMq.Client
         private Task _receivingTask;
 
         private CancellationTokenSource _receivingTaskCancellationTokenSource;
+
+        private readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Create();
         
         private readonly ILogger<NaiveMqClient> _logger;
 
@@ -473,7 +475,7 @@ namespace NaiveMq.Client
 
             try
             {
-                package = _commandPacker.Pack(command, ArrayPool<byte>.Shared);
+                package = _commandPacker.Pack(command, _arrayPool);
 
                 await WriteBytesAsync(package.Buffer.AsMemory(0, package.Length), cancellationToken);
 
@@ -500,7 +502,7 @@ namespace NaiveMq.Client
             {
                 if (package != null)
                 {
-                    ArrayPool<byte>.Shared.Return(package.Buffer);
+                    _arrayPool.Return(package.Buffer);
                 }
             }
         }
@@ -551,7 +553,7 @@ namespace NaiveMq.Client
                             throw new IOException("TcpClient is closed.");
                         }
 
-                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token, ArrayPool<byte>.Shared);
+                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token, _arrayPool);
 
                         Counters.ReadCommand.Add();
 
@@ -615,7 +617,7 @@ namespace NaiveMq.Client
             }
             finally
             {
-                ArrayPool<byte>.Shared.Return(unpackResult.Buffer);
+                _arrayPool.Return(unpackResult.Buffer);
 
                 _readSemaphore.Release();
             }
