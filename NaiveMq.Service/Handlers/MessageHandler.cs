@@ -42,18 +42,10 @@ namespace NaiveMq.Service.Handlers
 
                             break;
                         case LimitStrategy.Reject:
-                            switch (limitedQueue.LimitType)
-                            {
-                                case LimitType.Length:
-                                    throw new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { limitedQueue.Queue.Entity.LengthLimit });
-                                case LimitType.Volume:
-                                    throw new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { limitedQueue.Queue.Entity.VolumeLimit });
-                            }
-
-                            break;
+                            throw GetLimitException(limitedQueue);
                         case LimitStrategy.Discard:
                             return MessageResponse.Ok(command);
-                    }                   
+                    }
                 }
 
                 var messageEntitiesToSave = EnqueueAndGetEntitiesToSave(context, messageEntity, targetQueues);
@@ -63,15 +55,8 @@ namespace NaiveMq.Service.Handlers
                     await SaveAsync(context, messageEntitiesToSave, cancellationToken);
                 }
 
-                if (messageEntity.Request)
-                {
-                    // confirmation will be redirected from subscriber to this client
-                    return null;
-                }
-                else
-                {
-                    return MessageResponse.Ok(command);
-                }
+                // confirmation will be redirected from subscriber to this client in case of Request
+                return messageEntity.Request ? null : MessageResponse.Ok(command);
             }
             else
             {
@@ -162,6 +147,19 @@ namespace NaiveMq.Service.Handlers
             return result;
         }
 
+        private static Exception GetLimitException(LimitedQueue limitedQueue)
+        {
+            switch (limitedQueue.LimitType)
+            {
+                case LimitType.Length:
+                    return new ServerException(ErrorCode.QueueLengthLimitExceeded, new object[] { limitedQueue.Queue.Entity.LengthLimit });
+                case LimitType.Volume:
+                    return new ServerException(ErrorCode.QueueVolumeLimitExceeded, new object[] { limitedQueue.Queue.Entity.VolumeLimit });
+                default:
+                    return new NotSupportedException($"Limit type exception is not supported {limitedQueue.LimitType}.");
+            }
+        }
+
         private static void SetForcedQueueLimit(ClientContext context, QueueCog queue)
         {
             if (context.Storage.MemoryLimitExceeded && queue.ForcedLengthLimit == null && queue.Length > 1)
@@ -216,7 +214,7 @@ namespace NaiveMq.Service.Handlers
 
                     if (queue.Entity.Durable)
                     {
-                        result.Add(new QueueAndMessage { Queue = queue, Message = entity });
+                        result.Add(new QueueAndMessage { Queue = queue, MessageEntity = entity });
                     }
                 }
             }
@@ -231,12 +229,12 @@ namespace NaiveMq.Service.Handlers
                 await context.Storage.PersistentStorage.SaveMessageAsync(
                     context.User.Entity.Username,
                     queueAndMessage.Queue.Entity.Name,
-                    queueAndMessage.Message,
+                    queueAndMessage.MessageEntity,
                     cancellationToken);
 
-                if (queueAndMessage.Message.Persistent == Persistence.DiskOnly)
+                if (queueAndMessage.MessageEntity.Persistent == Persistence.DiskOnly)
                 {
-                    queueAndMessage.Message.Data = null;
+                    queueAndMessage.MessageEntity.Data = null;
                 }
             }
         }
@@ -245,7 +243,7 @@ namespace NaiveMq.Service.Handlers
         {
             public QueueCog Queue { get; set; }
 
-            public MessageEntity Message { get; set; }
+            public MessageEntity MessageEntity { get; set; }
         }
 
         private class LimitedQueue
