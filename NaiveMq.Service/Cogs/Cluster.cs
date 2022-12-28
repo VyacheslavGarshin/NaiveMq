@@ -11,13 +11,13 @@ namespace NaiveMq.Service.Cogs
 {
     public class Cluster : IDisposable
     {
-        private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
-
         public bool Started { get; private set; }
 
         public ConcurrentDictionary<string, ClusterServer> Servers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         public ClusterServer Self { get; private set; }
+
+        private static readonly string[] _goodErrors = new[] { "AlreadyExists", "NotFound" };
 
         private Timer _discoveryTimer;
 

@@ -8,11 +8,11 @@ namespace NaiveMq.Service.Cogs
 {
     public class PersistentStorageLoader
     {
-        private Storage _storage;
+        private readonly Storage _storage;
         
-        private ILogger _logger;
+        private readonly ILogger _logger;
 
-        private CancellationToken _cancellationToken;
+        private readonly CancellationToken _cancellationToken;
 
         public PersistentStorageLoader(Storage storage, ILogger logger, CancellationToken cancellationToken)
         {
@@ -141,7 +141,7 @@ namespace NaiveMq.Service.Cogs
                         if (message != null)
                         {
                             var handler = new MessageHandler();
-                            await handler.ExecuteEntityAsync(context, message, null, _cancellationToken);
+                            await handler.ExecuteEntityAsync(context, queue.Entity.Name, message, null, _cancellationToken);
 
                             messageCount++;
                         }

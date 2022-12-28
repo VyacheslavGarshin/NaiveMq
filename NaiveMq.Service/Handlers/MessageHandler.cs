@@ -13,15 +13,14 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser();
 
-            var message = MessageEntity.FromCommand(command);
-            message.ClientId = context.Client.Id;
+            var message = MessageEntity.FromCommand(command, context.Client.Id);
 
-            return await ExecuteEntityAsync(context, message, command, cancellationToken);
+            return await ExecuteEntityAsync(context, command.Queue, message, command, cancellationToken);
         }
 
-        public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command, CancellationToken cancellationToken)
+        public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, string queueName, MessageEntity messageEntity, Message command, CancellationToken cancellationToken)
         {
-            var queue = FindQueue(context, messageEntity);
+            var queue = FindQueue(context, queueName);
 
             if (queue != null)
             {
@@ -62,29 +61,29 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, new object[] { messageEntity.Queue });
+                throw new ServerException(ErrorCode.QueueNotFound, new object[] { queueName });
             }
         }
 
-        private static QueueCog FindQueue(ClientContext context, MessageEntity messageEntity)
+        private static QueueCog FindQueue(ClientContext context, string queueName)
         {
             QueueCog queue = null;
 
             if (context.LastQueue != null)
             {
                 // non blocking check last queue the same
-                if (context.LastQueue.Entity.Name.Equals(messageEntity.Queue, StringComparison.InvariantCultureIgnoreCase))
+                if (context.LastQueue.Entity.Name.Equals(queueName, StringComparison.InvariantCultureIgnoreCase))
                 {
                     queue = context.LastQueue;
 
-                    if (!queue.Entity.Name.Equals(messageEntity.Queue, StringComparison.InvariantCultureIgnoreCase))
+                    if (!queue.Entity.Name.Equals(queueName, StringComparison.InvariantCultureIgnoreCase))
                     {
                         queue = null;
                     }
                 }                
             }
 
-            if (queue == null && context.User.Queues.TryGetValue(messageEntity.Queue, out queue))
+            if (queue == null && context.User.Queues.TryGetValue(queueName, out queue))
             {
                 context.LastQueue = queue;
             }            
@@ -106,7 +105,7 @@ namespace NaiveMq.Service.Handlers
             }
         }
 
-        private async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command, CancellationToken cancellationToken)
+        private static async Task<bool> CheckLimitsAndDiscardAsync(ClientContext context, List<QueueCog> queues, Message command, CancellationToken cancellationToken)
         {
             if (context.Mode == ClientContextMode.Client && command != null) {
                 foreach (var queue in queues)

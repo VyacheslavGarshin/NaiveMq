@@ -10,9 +10,9 @@ namespace NaiveMq.Service.Cogs
 {
     public class SubscriptionCog : IDisposable
     {
-        private static readonly TimerService _timerService = new(TimeSpan.FromSeconds(1));
-
         public TimeSpan? IdleTime { get; private set; }
+
+        private static readonly TimerService _timerService = new(TimeSpan.FromSeconds(1));
 
         private DateTime? _lastSendDate;
 
@@ -217,7 +217,7 @@ namespace NaiveMq.Service.Cogs
 
         private Message CreateMessage(MessageEntity messageEntity, ReadOnlyMemory<byte> data)
         {
-            var result = messageEntity.ToCommand();
+            var result = messageEntity.ToCommand(_queue.Entity.Name);
 
             result.Confirm = _confirm;
             result.ConfirmTimeout = _confirmTimeout;

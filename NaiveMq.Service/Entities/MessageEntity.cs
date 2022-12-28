@@ -10,10 +10,6 @@ namespace NaiveMq.Service.Entities
 
         public string Tag { get; set; }
 
-        public int? ClientId { get; set; }
-
-        public string Queue { get; set; }
-
         public bool Request { get; set; }
 
         public Persistence Persistent { get; set; }
@@ -26,20 +22,23 @@ namespace NaiveMq.Service.Entities
         public int DataLength { get; set; }
 
         [JsonIgnore]
+        public int? ClientId { get; set; }
+
+        [JsonIgnore]
         public bool Delivered { get; set; }
 
-        public static MessageEntity FromCommand(Message command)
+        public static MessageEntity FromCommand(Message command, int clientId)
         {
             return new MessageEntity
             {
                 Id = command.Id,
                 Tag = command.Tag,
-                Queue = command.Queue,
                 Request = command.Request,
                 Persistent = command.Persistent,
                 RoutingKey = command.RoutingKey,
                 Data = command.Data.ToArray(), // materialize data from buffer
                 DataLength = command.Data.Length,
+                ClientId = clientId,
             };
         }
 
@@ -49,22 +48,21 @@ namespace NaiveMq.Service.Entities
             {
                 Id = Id,
                 Tag = Tag,
-                ClientId = ClientId,
-                Queue = Queue,
                 Request = Request,
                 Persistent = Persistent,
                 RoutingKey = RoutingKey,
                 Data = Data,
                 DataLength = Data.Length,
+                ClientId = ClientId,
             };
         }
 
-        public Message ToCommand()
+        public Message ToCommand(string queue)
         {
             return new Message
             {
                 Tag = Tag,
-                Queue = Queue,
+                Queue = queue,
                 Request = Request,
                 Persistent = Persistent,
                 RoutingKey = RoutingKey,
