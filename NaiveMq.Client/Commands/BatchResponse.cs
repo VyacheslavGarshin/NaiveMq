@@ -31,15 +31,15 @@ namespace NaiveMq.Client.Commands
             Responses = responses;
         }
 
-        public async override Task PrepareAsync(CancellationToken cancellationToken)
+        public override void Prepare()
         {
-            await base.PrepareAsync(cancellationToken);
+            base.Prepare();
 
             if (Responses != null && Responses.Count > 0)
             {
                 foreach (var request in Responses)
                 {
-                    await request.PrepareAsync(cancellationToken);
+                    request.Prepare();
                 }
 
                 Data = new CommandPacker(new JsonCommandConverter()).Pack(Responses);
@@ -61,14 +61,16 @@ namespace NaiveMq.Client.Commands
             }
         }
 
-        public override async Task RestoreAsync(CancellationToken cancellationToken)
+        public override void Restore()
         {
-            await base.RestoreAsync(cancellationToken);
+            base.Restore();
 
             using var stream = Data.AsStream();
 
-            Responses = (await new CommandPacker(new JsonCommandConverter()).Unpack(stream, cancellationToken)).
-               Cast<IResponse>().ToList();
+            var task = new CommandPacker(new JsonCommandConverter()).Unpack(stream, CancellationToken.None);
+            task.Wait();
+
+            Responses = task.Result.Cast<IResponse>().ToList();
 
             Data = new ReadOnlyMemory<byte>();
         }

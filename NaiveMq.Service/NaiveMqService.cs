@@ -183,8 +183,6 @@ namespace NaiveMq.Service
                 client.OnReceiveRequestAsync += Client_OnReceiveRequestAsync;
                 client.OnReceiveCommandAsync += Client_OnReceiveCommandAsync;
                 client.OnSendCommandAsync += Client_OnSendCommandAsync;
-                client.OnSendMessageAsync += Client_OnSendMessageAsync;
-                client.OnReceiveMessageAsync += Client_OnReceiveMessageAsync;
                 client.Start(false);
                 
                 Storage.TryAddClient(client);
@@ -211,19 +209,9 @@ namespace NaiveMq.Service
             return Task.CompletedTask;
         }
 
-        private Task Client_OnSendMessageAsync(NaiveMqClient sender, Message command)
-        {
-            return Task.CompletedTask;
-        }
-
         private Task Client_OnReceiveCommandAsync(NaiveMqClient sender, ICommand command)
         {
             Counters.ReadCommand.Add();
-            return Task.CompletedTask;
-        }
-
-        private Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Message command)
-        {
             return Task.CompletedTask;
         }
 
@@ -240,51 +228,33 @@ namespace NaiveMq.Service
 
             try
             {
-                response = await HandleRequestAsync(senderWithContext, request);
-
-                if (response != null)
-                {
-                    await SendAsync(senderWithContext, response);
-                }
-            }
-            catch (ClientException ex)
-            {
-                await SendErrorAsync(senderWithContext, request, ex.ErrorCode.ToString(), ex.Message);
+                response = await HandleRequestAsync(senderWithContext, request);                
             }
             catch (ServerException ex)
             {
-                await SendErrorAsync(senderWithContext, request, ex.ErrorCode.ToString(), ex.Message);
+                response = Confirmation.Error(request, ex.ErrorCode.ToString(), ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Client receive request error.");
+                _logger.LogError(ex, "Unexpected exception on handling request.");
+                response = Confirmation.Error(request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.Message);
+            }
 
-                await SendErrorAsync(senderWithContext, request, ErrorCode.UnexpectedCommandHandlerExecutionError.ToString(), ex.Message);
-            }
-        }
-
-        private async Task SendErrorAsync(NaiveMqClientWithContext sender, IRequest request, string errorCode, string errorMessage)
-        {
-            if (request.Confirm)
+            if (response != null)
             {
-                await SendAsync(sender, Confirmation.Error(request, errorCode, errorMessage));
-            }
-        }
-
-        private async Task SendAsync(NaiveMqClientWithContext client, IResponse response)
-        {
-            try
-            {
-                await client.SendAsync(response, _stoppingToken);
-            }
-            catch (ClientException)
-            {
-                Storage.TryRemoveClient(client);
-            }
-            catch (Exception ex)
-            {
-                Storage.TryRemoveClient(client);
-                _logger.LogError(ex, "Unexpected error on sending response.");
+                try
+                {
+                    await senderWithContext.SendAsync(response, _stoppingToken);
+                }
+                catch (ClientException)
+                {
+                    Storage.TryRemoveClient(senderWithContext);
+                }
+                catch (Exception ex)
+                {
+                    Storage.TryRemoveClient(senderWithContext);
+                    _logger.LogError(ex, "Unexpected error on sending response.");
+                }
             }
         }
 

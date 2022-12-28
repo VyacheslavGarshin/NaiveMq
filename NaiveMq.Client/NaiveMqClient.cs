@@ -256,7 +256,7 @@ namespace NaiveMq.Client
         public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, bool throwIfError, CancellationToken cancellationToken)
             where TResponse : IResponse
         {
-            await PrepareCommandAsync(request, cancellationToken);
+            PrepareCommand(request);
             request.Validate();
 
             IResponse response = null;
@@ -309,7 +309,7 @@ namespace NaiveMq.Client
         /// <returns></returns>
         public async Task SendAsync(IResponse response, CancellationToken cancellationToken)
         {
-            await PrepareCommandAsync(response, cancellationToken);
+            PrepareCommand(response);
             response.Validate();
             await WriteCommandAsync(response, cancellationToken);
         }
@@ -422,14 +422,14 @@ namespace NaiveMq.Client
             throw new ClientException(ErrorCode.HostsUnavailable);
         }
 
-        private async Task PrepareCommandAsync(ICommand command, CancellationToken cancellationToken)
+        private void PrepareCommand(ICommand command)
         {
             if (command is IRequest request && request.Confirm && request.ConfirmTimeout == null)
             {
                 request.ConfirmTimeout = Options.ConfirmTimeout;
             }
 
-            await command.PrepareAsync(cancellationToken);
+            command.Prepare();
         }
 
         private async Task<IResponse> WaitForConfirmationAsync<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, bool throwIfError, CancellationToken cancellationToken)
@@ -601,7 +601,7 @@ namespace NaiveMq.Client
 
                 TraceCommand("<<", command);
 
-                await command.RestoreAsync(cancellationToken);
+                command.Restore();
                 command.Validate();
 
                 await HandleReceiveCommandAsync(command);

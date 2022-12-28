@@ -76,7 +76,10 @@ namespace NaiveMq.Service.Cogs
             {
                 while (!cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    await WaitQueueStartAsync(cancellationTokenSource.Token);
+                    if (_queue.Status != QueueStatus.Started)
+                    {
+                        await WaitQueueStartAsync(cancellationTokenSource.Token);
+                    }
 
                     MessageEntity messageEntity = null;
                     
@@ -120,25 +123,18 @@ namespace NaiveMq.Service.Cogs
         {
             do
             {
-                if (_queue.Status == QueueStatus.Started)
-                {
-                    break;
-                }
-                else
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
 
-                    if (_queue.Status == QueueStatus.Deleted)
+                if (_queue.Status == QueueStatus.Deleted)
+                {
+                    if (_queue.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
+                        _queue != newQueue && newQueue.Status == QueueStatus.Started)
                     {
-                        if (_queue.User.Queues.TryGetValue(_queue.Entity.Name, out var newQueue) &&
-                            _queue != newQueue && newQueue.Status == QueueStatus.Started)
-                        {
-                            _queue.Counters.Subscriptions.Add(-1);
-                            newQueue.Counters.Subscriptions.Add();
-                            _queue = newQueue;
+                        _queue.Counters.Subscriptions.Add(-1);
+                        newQueue.Counters.Subscriptions.Add();
+                        _queue = newQueue;
 
-                            break;
-                        }
+                        break;
                     }
                 }
             } while (!cancellationToken.IsCancellationRequested);
@@ -158,7 +154,7 @@ namespace NaiveMq.Service.Cogs
                 }
 
                 var message = CreateMessage(messageEntity, data);
-                response = await SendMessageAsync(message, cancellationToken);
+                response = await _client.SendAsync(message, cancellationToken);                 
 
                 messageEntity.Delivered = true;
             }
@@ -170,14 +166,20 @@ namespace NaiveMq.Service.Cogs
             {
                 if (messageEntity.Delivered)
                 {
-                    await DeletePersistentMessageAsync(messageEntity);
+                    if (messageEntity.Persistent != Persistence.No)
+                    {
+                        await DeletePersistentMessageAsync(messageEntity);
+                    }
                 }
                 else
                 {
                     _queue.Enqueue(messageEntity);
                 }
 
-                await SendRequestResponseAsync(messageEntity, response, cancellationToken);                
+                if (messageEntity.Request && response != null && response.Response)
+                {
+                    await SendRequestResponseAsync(messageEntity, response, cancellationToken);
+                }
             }
         }
 
@@ -228,22 +230,13 @@ namespace NaiveMq.Service.Cogs
 
         private async Task DeletePersistentMessageAsync(MessageEntity messageEntity)
         {
-            if (messageEntity.Persistent != Persistence.No)
-            {
-                await _client.Context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
+            await _client.Context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, CancellationToken.None); // none cancellation to ensure operation is not interrupted
-            }
-        }
-
-        private async Task<MessageResponse> SendMessageAsync(Message message, CancellationToken cancellationToken)
-        {
-            return await _client.SendAsync(message, cancellationToken);
         }
 
         private async Task SendRequestResponseAsync(MessageEntity messageEntity, MessageResponse result, CancellationToken cancellationToken)
         {
-            if (messageEntity.Request && result != null && result.Response &&
-                messageEntity.ClientId != null && _client.Context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverClient))
+            if (messageEntity.ClientId != null && _client.Context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverClient))
             {
                 var response = result.Copy();
 
