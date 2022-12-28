@@ -217,9 +217,9 @@ namespace NaiveMq.LoadTests.SpamQueue
                                     await ProducerStart(options, ctry);
                                     c = ctry;
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    _logger.LogWarning($"Producer creation error {queueName}. Still trying.");
+                                    _logger.LogWarning($"Producer creation error {queueName}. Still trying. Message: {ex.GetBaseException().Message}");
 
                                     if (ctry != null)
                                     {

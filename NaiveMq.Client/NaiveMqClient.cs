@@ -390,6 +390,8 @@ namespace NaiveMq.Client
                 throw new ClientException(ErrorCode.HostsNotSet);
             }
 
+            Exception lastException = null;
+
             do
             {
                 var randomHostIndex = hosts.Count == 1 ? 0 : RandomNumberGenerator.GetInt32(0, hosts.Count);
@@ -407,11 +409,13 @@ namespace NaiveMq.Client
                     else
                     {
                         tcpClient.Dispose();
+                        lastException = new TimeoutException($"Cannot connect to {randomHost} with timeout {Options.ConnectionTimeout}.");
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     // ok, taking the next one
+                    lastException = ex;
                 }
                 finally
                 {
@@ -419,7 +423,7 @@ namespace NaiveMq.Client
                 }
             } while (hosts.Any());
 
-            throw new ClientException(ErrorCode.HostsUnavailable);
+            throw new ClientException(ErrorCode.HostsUnavailable, lastException);
         }
 
         private void PrepareCommand(ICommand command)
