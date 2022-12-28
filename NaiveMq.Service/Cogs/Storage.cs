@@ -3,6 +3,7 @@ using NaiveMq.Client;
 using NaiveMq.Service.Counters;
 using NaiveMq.Service.PersistentStorage;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace NaiveMq.Service.Cogs
 {
@@ -22,7 +23,7 @@ namespace NaiveMq.Service.Cogs
 
         private readonly NaiveMqServiceOptions _options;
         
-        private readonly ConcurrentDictionary<int, ClientContext> _clientContexts = new();
+        private readonly ConcurrentDictionary<int, NaiveMqClientWithContext> _clients = new();
 
         private readonly CancellationToken _stoppingToken;
 
@@ -61,12 +62,12 @@ namespace NaiveMq.Service.Cogs
 
             Users.Clear();
 
-            foreach (var context in _clientContexts.Values)
+            foreach (var context in _clients.Values)
             {
                 context.Dispose();
             }
 
-            _clientContexts.Clear();
+            _clients.Clear();
 
             if (PersistentStorage != null)
             {
@@ -75,35 +76,35 @@ namespace NaiveMq.Service.Cogs
             }
         }
 
-        public bool TryGetClientContext(int id, out ClientContext clientContext)
+        public bool TryGetClient(int id, out NaiveMqClientWithContext client)
         {
-            return _clientContexts.TryGetValue(id, out clientContext);
+            return _clients.TryGetValue(id, out client);
         }
 
-        public bool TryAddClient(NaiveMqClient client)
+        public bool TryAddClient(NaiveMqClientWithContext client)
         {
-            var clientContext = new ClientContext
-            {
-                Storage = this,
-                Client = client,
-                Logger = _logger
-            };
-
-            var result = _clientContexts.TryAdd(client.Id, clientContext);
+            var result = _clients.TryAdd(client.Id, client);
 
             _logger.LogInformation("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
 
             return result;
         }
 
-        public bool TryRemoveClient(NaiveMqClient client)
+        public bool TryRemoveClient(NaiveMqClientWithContext client)
         {
-            var result = _clientContexts.TryRemove(client.Id, out var clientContext);
+            var result = _clients.TryRemove(client.Id, out _);
 
             if (result)
             {
-                clientContext.Dispose();
-                _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);
+                try
+                {
+                    client.Dispose();
+                    _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while deleting client '{ClientId}'.", client.Id);
+                }
             }
 
             return result;

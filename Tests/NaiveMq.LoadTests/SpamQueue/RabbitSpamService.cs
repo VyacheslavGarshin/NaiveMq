@@ -49,6 +49,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             using var connection = factory.CreateConnection();
             using var producersConnection = factory.CreateConnection();
+            using var consumersConnection = factory.CreateConnection();
 
             using var channel = connection.CreateModel();
 
@@ -73,18 +74,19 @@ namespace NaiveMq.LoadTests.SpamQueue
                         {
                             try
                             {
-                                using var producersChannel = producersConnection.CreateModel();
+                                using var producerChannel = producersConnection.CreateModel();
+                                using var consumerChannel = consumersConnection.CreateModel();
 
-                                Consume(queueName, channel);
+                                Consume(queueName, consumerChannel);
 
                                 if (_options.Value.Confirm)
-                                    producersChannel.ConfirmSelect();
+                                    producerChannel.ConfirmSelect();
 
                                 var number = 1;
 
                                 for (var j = 1; j <= _options.Value.MessageCount; j++)
                                 {
-                                    Publish(body, queueName, producersChannel, number);
+                                    Publish(body, queueName, producerChannel, number);
 
                                     if (number < _options.Value.BatchSize)
                                     {

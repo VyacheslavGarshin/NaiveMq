@@ -10,13 +10,15 @@ namespace NaiveMq.Service.Cogs
     {
         public Storage Storage { get; set; }
 
-        public NaiveMqClient Client { get; set; }
+        public NaiveMqClientWithContext Client { get; set; }
 
         public ILogger Logger { get; set; }
 
         public UserCog User { get; set; }
 
         public ConcurrentDictionary<QueueCog, SubscriptionCog> Subscriptions { get; } = new();
+
+        public QueueCog LastQueue { get; set; }
 
         public bool Tracking { get; set; }
 
@@ -37,7 +39,11 @@ namespace NaiveMq.Service.Cogs
                 throw new ServerException(ErrorCode.UserNotAuthenticated);
             }
 
-            if (User.Status != UserStatus.Started)
+            if (User.Status == UserStatus.Deleted)
+            {
+                throw new ServerException(ErrorCode.UserNotFound, new object[] { User.Entity.Username });
+            }
+            else if (User.Status != UserStatus.Started)
             {
                 throw new ServerException(ErrorCode.UserNotStarted, new object[] { User.Entity.Username });
             }
@@ -73,9 +79,10 @@ namespace NaiveMq.Service.Cogs
                 }
 
                 Subscriptions.Clear();
-
-                Client.Dispose();
             }
+
+            Client = null;
+            LastQueue = null;
         }
     }
 }

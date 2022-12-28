@@ -18,7 +18,7 @@ namespace NaiveMq.Service.Handlers
                 if (!queue.Entity.Exchange)
                 {
                     var subscription = new SubscriptionCog(
-                        context,
+                        context.Client,
                         queue,
                         command.ConfirmMessage,
                         command.ConfirmMessageTimeout,

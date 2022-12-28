@@ -21,7 +21,9 @@ namespace NaiveMq.Service.Handlers
 
         public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, MessageEntity messageEntity, Message command, CancellationToken cancellationToken)
         {
-            if (context.User.Queues.TryGetValue(messageEntity.Queue, out var queue))
+            var queue = FindQueue(context, messageEntity);
+
+            if (queue != null)
             {
                 var queues = new List<QueueCog>();
 
@@ -62,6 +64,32 @@ namespace NaiveMq.Service.Handlers
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new object[] { messageEntity.Queue });
             }
+        }
+
+        private static QueueCog FindQueue(ClientContext context, MessageEntity messageEntity)
+        {
+            QueueCog queue = null;
+
+            if (context.LastQueue != null)
+            {
+                // non blocking check last queue the same
+                if (context.LastQueue.Entity.Name.Equals(messageEntity.Queue, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    queue = context.LastQueue;
+
+                    if (!queue.Entity.Name.Equals(messageEntity.Queue, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        queue = null;
+                    }
+                }                
+            }
+
+            if (queue == null && context.User.Queues.TryGetValue(messageEntity.Queue, out queue))
+            {
+                context.LastQueue = queue;
+            }            
+
+            return queue;
         }
 
         private static void CkeckMessage(MessageEntity message, QueueCog initialQueue, List<QueueCog> queues)

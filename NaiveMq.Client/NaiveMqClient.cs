@@ -26,7 +26,7 @@ namespace NaiveMq.Client
 
         public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
-        public int Id => GetHashCode();
+        public int Id { get; }
 
         public TcpClient TcpClient { get; private set; }
 
@@ -105,6 +105,7 @@ namespace NaiveMq.Client
 
         public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
         {
+            Id = GetHashCode();
             Options = options;
             Counters = new();
 
@@ -168,7 +169,7 @@ namespace NaiveMq.Client
 
                         Started = true;
 
-                        _receivingTaskCancellationTokenSource = new CancellationTokenSource();
+                        _receivingTaskCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken);
                         var token = _receivingTaskCancellationTokenSource.Token;
                         _receivingTask = Task.Run(() => ReceiveAsync(TcpClient, _receivingTaskCancellationTokenSource), token);
 
@@ -310,7 +311,7 @@ namespace NaiveMq.Client
             await WriteCommandAsync(response, cancellationToken);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             Stop();
 
@@ -443,8 +444,7 @@ namespace NaiveMq.Client
             {
                 if (!responseItem.Response.Success && throwIfError)
                 {
-                    ErrorCode errorCode;
-                    var parsed = Enum.TryParse(responseItem.Response.ErrorCode, true, out errorCode);
+                    var parsed = Enum.TryParse(responseItem.Response.ErrorCode, true, out ErrorCode errorCode);
                     throw new ClientException(parsed ? errorCode : ErrorCode.ConfirmationError, responseItem.Response.ErrorMessage)
                     {
                         Response = responseItem.Response
@@ -744,8 +744,7 @@ namespace NaiveMq.Client
         {
             if (_logger.IsEnabled(LogLevel.Trace))
             {
-                var dataCommand = command as IDataCommand;
-                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
+                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(command is IDataCommand dataCommand ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
             }
         }
 

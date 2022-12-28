@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Cogs
 
         private readonly TimeSpan _clusterIdleTimout;
 
-        private readonly ClientContext _context;
+        private readonly NaiveMqClientWithContext _client;
 
         private CancellationTokenSource _cancellationTokenSource;
 
@@ -40,9 +40,9 @@ namespace NaiveMq.Service.Cogs
 
         private NaiveMqClient _proxyClient;
 
-        public SubscriptionCog(ClientContext context, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy, TimeSpan clusterIdleTimout)
+        public SubscriptionCog(NaiveMqClientWithContext client, QueueCog queue, bool confirm, TimeSpan? confirmTimeout, ClusterStrategy clusterStrategy, TimeSpan clusterIdleTimout)
         {
-            _context = context;
+            _client = client;
             _queue = queue;
             _confirm = confirm;
             _confirmTimeout = confirmTimeout;
@@ -105,7 +105,7 @@ namespace NaiveMq.Service.Cogs
             {
                 if (!cancellationTokenSource.IsCancellationRequested)
                 {
-                    _context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
+                    _client.Context.Logger.LogError(ex, "Unexpected error during sending messages from subscription.");
                 }
 
                 throw;
@@ -187,7 +187,7 @@ namespace NaiveMq.Service.Cogs
 
             if (data.Length == 0)
             {
-                var diskEntity = await _context.Storage.PersistentStorage.LoadMessageAsync(_queue.Entity.User,
+                var diskEntity = await _client.Context.Storage.PersistentStorage.LoadMessageAsync(_queue.Entity.User,
                     _queue.Entity.Name, messageEntity.Id, true, cancellationToken);
                 data = diskEntity.Data;
             }
@@ -230,27 +230,27 @@ namespace NaiveMq.Service.Cogs
         {
             if (messageEntity.Persistent != Persistence.No)
             {
-                await _context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
+                await _client.Context.Storage.PersistentStorage.DeleteMessageAsync(_queue.Entity.User,
                 _queue.Entity.Name, messageEntity.Id, CancellationToken.None); // none cancellation to ensure operation is not interrupted
             }
         }
 
         private async Task<MessageResponse> SendMessageAsync(Message message, CancellationToken cancellationToken)
         {
-            return await _context.Client.SendAsync(message, cancellationToken);
+            return await _client.SendAsync(message, cancellationToken);
         }
 
         private async Task SendRequestResponseAsync(MessageEntity messageEntity, MessageResponse result, CancellationToken cancellationToken)
         {
             if (messageEntity.Request && result != null && result.Response &&
-                messageEntity.ClientId != null && _context.Storage.TryGetClientContext(messageEntity.ClientId.Value, out var receiverContext))
+                messageEntity.ClientId != null && _client.Context.Storage.TryGetClient(messageEntity.ClientId.Value, out var receiverClient))
             {
                 var response = result.Copy();
 
                 response.RequestId = messageEntity.Id;
                 response.RequestTag = messageEntity.Tag;
 
-                await receiverContext.Client.SendAsync(response, cancellationToken);
+                await receiverClient.SendAsync(response, cancellationToken);
             }
         }
 
@@ -263,7 +263,7 @@ namespace NaiveMq.Service.Cogs
                     IdleTime = DateTime.UtcNow.Subtract(_lastSendDate.Value);
                 }
 
-                if (_queue.Length == 0 && _context.Storage.Cluster.Started
+                if (_queue.Length == 0 && _client.Context.Storage.Cluster.Started
                     && (IdleTime == null || IdleTime > _clusterIdleTimout))
                 {
                     switch (_clusterStrategy)
@@ -295,7 +295,7 @@ namespace NaiveMq.Service.Cogs
             }
             catch (Exception ex)
             {
-                _context.Logger.LogError(ex, "Error on subscription idlness timer.");
+                _client.Context.Logger.LogError(ex, "Error on subscription idlness timer.");
             }
         }
 
@@ -305,7 +305,7 @@ namespace NaiveMq.Service.Cogs
 
             if (hint != null)
             {
-                var service = _context.Storage.Service;
+                var service = _client.Context.Storage.Service;
 
                 var options = new NaiveMqClientOptions
                 {
@@ -338,7 +338,7 @@ namespace NaiveMq.Service.Cogs
 
         private async Task ProxyClient_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
         {
-            var result = await _context.Client.SendAsync(message, true, false, _cancellationTokenSource.Token);
+            var result = await _client.SendAsync(message, true, false, _cancellationTokenSource.Token);
 
             if (message.Confirm)
             {
@@ -367,7 +367,7 @@ namespace NaiveMq.Service.Cogs
 
             if (hint != null)
             {
-                await _context.Client.SendAsync(new ClusterRedirect(hint.Host) { Confirm = false });
+                await _client.SendAsync(new ClusterRedirect(hint.Host) { Confirm = false });
             }
         }
 
@@ -377,15 +377,15 @@ namespace NaiveMq.Service.Cogs
 
             if (hints.Any())
             {
-                await _context.Client.SendAsync(new ClusterHint(hints) { Confirm = false });
+                await _client.SendAsync(new ClusterHint(hints) { Confirm = false });
             }
         }
 
         private IEnumerable<QueueHint> GetQueueHints()
         {
-            foreach (var server in _context.Storage.Cluster.Servers.Values)
+            foreach (var server in _client.Context.Storage.Cluster.Servers.Values)
             {
-                if (server.Name != _context.Storage.Cluster.Self.Name
+                if (server.Name != _client.Context.Storage.Cluster.Self.Name
                     && server.ActiveQueues.TryGetValue(ActiveQueue.CreateKey(_queue.Entity.User, _queue.Entity.Name), out var activeQueue))
                 {
                     yield return new QueueHint
