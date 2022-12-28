@@ -17,7 +17,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Name });
+                throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Name });
             }
 
             if (queue.Entity.Durable)

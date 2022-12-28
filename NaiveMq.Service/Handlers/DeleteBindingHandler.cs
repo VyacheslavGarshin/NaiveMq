@@ -14,7 +14,7 @@ namespace NaiveMq.Service.Handlers
             if (!(context.User.Bindings.TryGetValue(command.Exchange, out var exchangeBindings)
                 && exchangeBindings.TryRemove(command.Queue, out var binding)))
             {
-                throw new ServerException(ErrorCode.BindingNotFound, new object[] { command.Exchange, command.Queue });
+                throw new ServerException(ErrorCode.BindingNotFound, new[] { command.Exchange, command.Queue });
             }
 
             if (!(context.User.Bindings.TryGetValue(command.Queue, out var queueBindings)

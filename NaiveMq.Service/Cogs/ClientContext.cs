@@ -2,6 +2,7 @@
 using NaiveMq.Client;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Enums;
+using NaiveMq.Service.Handlers;
 using System.Collections.Concurrent;
 
 namespace NaiveMq.Service.Cogs
@@ -19,6 +20,8 @@ namespace NaiveMq.Service.Cogs
         public ConcurrentDictionary<QueueCog, SubscriptionCog> Subscriptions { get; } = new();
 
         public QueueCog LastQueue { get; set; }
+
+        public Type LastHandlerType { get; set; }
 
         public bool Tracking { get; set; }
 
@@ -41,11 +44,11 @@ namespace NaiveMq.Service.Cogs
 
             if (User.Status == UserStatus.Deleted)
             {
-                throw new ServerException(ErrorCode.UserNotFound, new object[] { User.Entity.Username });
+                throw new ServerException(ErrorCode.UserNotFound, new[] { User.Entity.Username });
             }
             else if (User.Status != UserStatus.Started)
             {
-                throw new ServerException(ErrorCode.UserNotStarted, new object[] { User.Entity.Username });
+                throw new ServerException(ErrorCode.UserNotStarted, new[] { User.Entity.Username });
             }
         }
 

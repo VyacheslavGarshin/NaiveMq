@@ -20,7 +20,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.Storage.Users.TryGetValue(command.Username, out user))
                 {
-                    throw new ServerException(ErrorCode.UserNotFound, new object[] { command.Username });
+                    throw new ServerException(ErrorCode.UserNotFound, new[] { command.Username });
                 }
 
                 oldEntity = JsonConvert.DeserializeObject<UserEntity>(JsonConvert.SerializeObject(user.Entity));

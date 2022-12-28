@@ -44,7 +44,7 @@ namespace NaiveMq.Service.Cogs
                 }
                 else
                 {
-                    throw new ServerException(ErrorCode.UserNotStarted, new object[] { Entity.Username });
+                    throw new ServerException(ErrorCode.UserNotStarted, new[] { Entity.Username });
                 }
             }
         }

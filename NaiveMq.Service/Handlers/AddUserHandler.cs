@@ -36,7 +36,7 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.Storage.Users.TryAdd(userEntity.Username, user))
                 {
-                    throw new ServerException(ErrorCode.UserAlreadyExists, new object[] { userEntity.Username });
+                    throw new ServerException(ErrorCode.UserAlreadyExists, new[] { userEntity.Username });
                 }
 
                 if (context.Mode == ClientContextMode.Client || context.Mode == ClientContextMode.Init)

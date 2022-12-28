@@ -111,14 +111,13 @@ namespace NaiveMq.Service
 
         public async Task<IResponse> ExecuteCommandAsync(IRequest command, ClientContext clientContext)
         {
-            if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandler))
+            if (CommandHandlers.TryGetValue(command.GetType(), out var commandHandlerType))
             {
-                return await ((IHandler)Activator.CreateInstance(commandHandler)).ExecuteAsync(clientContext, command, _stoppingToken);
+                return await ((IHandler)Activator.CreateInstance(commandHandlerType)).ExecuteAsync(clientContext, command, _stoppingToken);
             }
             else
             {
-                throw new ServerException(ErrorCode.CommandHandlerNotFound,
-                    string.Format(ErrorCode.CommandHandlerNotFound.GetDescription(), command.GetType().Name));
+                throw new ServerException(ErrorCode.CommandHandlerNotFound, new[] { command.GetType().Name });
             }
         }
 

@@ -32,7 +32,7 @@ namespace NaiveMq.Service.Handlers
                     else
                     {
                         subscription.Dispose();
-                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new object[] { queue.Entity.Name });
+                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new[] { queue.Entity.Name });
                     }
                 }
                 else
@@ -42,7 +42,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, new object[] { command.Queue });
+                throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Queue });
             }
 
             return Task.FromResult(Confirmation.Ok(command));

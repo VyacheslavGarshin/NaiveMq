@@ -61,7 +61,7 @@ namespace NaiveMq.Service.Handlers
             }
             else
             {
-                throw new ServerException(ErrorCode.QueueNotFound, new object[] { queueName });
+                throw new ServerException(ErrorCode.QueueNotFound, new[] { queueName });
             }
         }
 
@@ -99,7 +99,7 @@ namespace NaiveMq.Service.Handlers
                 {
                     if (!queue.Entity.Durable && message.Persistent != Persistence.No)
                     {
-                        throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new object[] { queue.Entity.Name });
+                        throw new ServerException(ErrorCode.PersistentMessageInNotDurableQueue, new[] { queue.Entity.Name });
                     }
                 }
             }
