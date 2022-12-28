@@ -5,8 +5,10 @@ using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NaiveMq.LoadTests.SpamQueue
 {
@@ -117,7 +119,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             var message = Encoding.UTF8.GetBytes(string.Join("", Enumerable.Range(0, _options.MessageLength).Select(x => "*")));
 
-            var consumers = new List<NaiveMqClient>();
+            var consumers = new ConcurrentBag<NaiveMqClient>();
 
             await CreateConsumersAsync(clientLogger, taskCount, options, consumers);
 
@@ -146,7 +148,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             }
         }
 
-        private async Task UnsubscribeAsync(NaiveMqClient c, List<NaiveMqClient> consumers)
+        private async Task UnsubscribeAsync(NaiveMqClient c, ConcurrentBag<NaiveMqClient> consumers)
         {
             if (_options.Subscribe)
             {
@@ -170,7 +172,9 @@ namespace NaiveMq.LoadTests.SpamQueue
 
         private async Task RunProducersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, int max, NaiveMqClientOptions options, byte[] message)
         {
-            var tasks = new List<Task>();
+            var locker = new object();
+            var tasks = new ConcurrentBag<Task>();
+            var allTasks = new ConcurrentBag<Task>();
 
             for (var queue = 1; queue <= _options.QueueCount; queue++)
             {
@@ -180,6 +184,18 @@ namespace NaiveMq.LoadTests.SpamQueue
                 {
                     var t = Task.Run(async () =>
                     {
+                        var started = false;
+
+                        var startT = Task.Run(async () =>
+                        {
+                            while (!started)
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(1));
+                            }
+                        });
+
+                        tasks.Add(startT);
+
                         try
                         {
                             var opts = JsonConvert.DeserializeObject<NaiveMqClientOptions>(JsonConvert.SerializeObject(options));
@@ -189,17 +205,34 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 opts.Hosts = _options.ProducerHosts;
                             }
 
-                            using var c = new NaiveMqClient(opts, clientLogger, _stoppingToken);
+                            NaiveMqClient c = null;
 
-                            if (!options.AutoStart)
+                            do
                             {
-                                c.Start(false);
+                                NaiveMqClient ctry = null;
 
-                                if (!string.IsNullOrEmpty(_options.Username))
+                                try
                                 {
-                                    await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                                    ctry = new NaiveMqClient(opts, clientLogger, _stoppingToken);
+                                    await ProducerStart(options, ctry);
+                                    c = ctry;
                                 }
-                            }
+                                catch
+                                {
+                                    _logger.LogWarning($"Producer creation error {queueName}. Still trying.");
+
+                                    if (ctry != null)
+                                    {
+                                        ctry.Dispose();
+                                    }
+
+                                    await Task.Delay(TimeSpan.FromSeconds(10));
+                                }
+                            } while (c == null);
+
+                            started = true;
+
+                            _logger.LogInformation($"Producer created {queueName}");
 
                             if (_options.Track)
                             {
@@ -210,41 +243,11 @@ namespace NaiveMq.LoadTests.SpamQueue
 
                             for (var j = 0; j < max; j++)
                             {
-                                try
-                                {
-                                    if (c.Started)
-                                    {
-                                        await Produce(message, queueName, c);
-                                    }
-                                    else
-                                    {
-                                        await Task.Delay(1000);
-                                        j--;
-                                    }
-                                }
-                                catch (ClientException ex)
-                                {
-                                    if (ex.ErrorCode == ErrorCode.ClientStopped)
-                                    {
-                                        await Task.Delay(1000);
-                                    }
-                                    else
-                                    {
-                                        throw;
-                                    }
-                                }
+                                j = await ProduceAndCatch(message, queueName, c, j);
 
                                 if (_options.Track)
                                 {
-                                    if (batchMessageNumber == _options.BatchSize)
-                                    {
-                                        await c.SendAsync(new Track(true, true));
-                                        batchMessageNumber = 1;
-                                    }
-                                    else
-                                    {
-                                        batchMessageNumber++;
-                                    }
+                                    batchMessageNumber = await SendTrack(c, batchMessageNumber);
                                 }
                             }
 
@@ -259,25 +262,86 @@ namespace NaiveMq.LoadTests.SpamQueue
                         }
                     });
 
-                    tasks.Add(t);
+                    lock (locker)
+                    {
+                        if (tasks.Count > 199)
+                        {
+                            Task.WaitAll(tasks.ToArray());
+                            tasks.Clear();
+                        }
+                    }
+
+                    allTasks.Add(t);
                 }
             }
 
-            try
+            await Task.WhenAll(tasks.ToArray());
+            await Task.WhenAll(allTasks);
+        }
+
+        private async Task<int> SendTrack(NaiveMqClient c, int batchMessageNumber)
+        {
+            if (batchMessageNumber == _options.BatchSize)
             {
-                await Task.WhenAll(tasks.ToArray());
+                await c.SendAsync(new Track(true, true));
+                batchMessageNumber = 1;
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning($"Not all ended well: {ex.GetBaseException().Message}");
+                batchMessageNumber++;
+            }
+
+            return batchMessageNumber;
+        }
+
+        private async Task ProducerStart(NaiveMqClientOptions options, NaiveMqClient c)
+        {
+            if (!options.AutoStart)
+            {
+                c.Start(false);
+
+                if (!string.IsNullOrEmpty(_options.Username))
+                {
+                    await c.SendAsync(new Login { Username = _options.Username, Password = _options.Password }, _stoppingToken);
+                }
             }
         }
 
-        private async Task CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, List<NaiveMqClient> consumers)
+        private async Task<int> ProduceAndCatch(byte[] message, string queueName, NaiveMqClient c, int j)
+        {
+            try
+            {
+                if (c.Started)
+                {
+                    await Produce(message, queueName, c);
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                    j--;
+                }
+            }
+            catch (ClientException ex)
+            {
+                if (ex.ErrorCode == ErrorCode.ClientStopped)
+                {
+                    await Task.Delay(1000);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return j;
+        }
+
+        private async Task CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, ConcurrentBag<NaiveMqClient> consumers)
         {
             if (_options.Subscribe)
             {
-                var tasks = new List<Task>();
+                var locker = new object();
+                var tasks = new ConcurrentBag<Task>();
 
                 for (var queue = 1; queue <= _options.QueueCount; queue++)
                 {
@@ -319,16 +383,27 @@ namespace NaiveMq.LoadTests.SpamQueue
                                 Consume(client);
 
                                 consumers.Add(client);
+
+                                _logger.LogInformation($"Consumer created {queueName}.");
                             }
                             catch (Exception ex)
                             {
                                 _logger.LogError(ex, "Error in creating consumer.");
                             }
                         }));
+
+                        lock (locker)
+                        {
+                            if (tasks.Count > 199)
+                            {
+                                Task.WaitAll(tasks.ToArray());
+                                tasks.Clear();
+                            }
+                        }
                     }
                 }
 
-                await Task.WhenAll(tasks.ToArray());
+                Task.WaitAll(tasks.ToArray());
             }
         }
 
