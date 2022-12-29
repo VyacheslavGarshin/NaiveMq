@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading;
 
 namespace NaiveMq.Client.Commands
@@ -11,6 +12,7 @@ namespace NaiveMq.Client.Commands
     public class Batch : AbstractRequest<BatchResponse>, IDataCommand
     {
         [JsonIgnore]
+        [IgnoreDataMember]
         public List<IRequest> Requests { get; set; }
 
         /// <summary>
@@ -18,6 +20,7 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to Requests. Then cleared.</remarks>
         [JsonIgnore]
+        [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public Batch()

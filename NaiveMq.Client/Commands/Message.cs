@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
 using System;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
@@ -13,6 +14,7 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         /// <remarks>When receive message data is available only during handling in event.</remarks>
         [JsonIgnore]
+        [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public bool Request { get; set; }

@@ -3,6 +3,7 @@ using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Service.Commands
 {
@@ -11,6 +12,7 @@ namespace NaiveMq.Service.Commands
         public string User { get; set; }
 
         [JsonIgnore]
+        [IgnoreDataMember]
         public IRequest Request { get; set; }
 
         /// <summary>
@@ -18,6 +20,7 @@ namespace NaiveMq.Service.Commands
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to <see cref="Request"/>. Then cleared.</remarks>
         [JsonIgnore]
+        [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public Replicate()

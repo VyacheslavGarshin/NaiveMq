@@ -1,6 +1,7 @@
 ﻿using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Service.Entities
 {
@@ -17,14 +18,17 @@ namespace NaiveMq.Service.Entities
         public string RoutingKey { get; set; }
 
         [JsonIgnore]
+        [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public int DataLength { get; set; }
 
         [JsonIgnore]
+        [IgnoreDataMember]
         public int? ClientId { get; set; }
 
         [JsonIgnore]
+        [IgnoreDataMember]
         public bool Delivered { get; set; }
 
         public static MessageEntity FromCommand(Message command, int clientId)

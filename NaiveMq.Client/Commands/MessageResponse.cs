@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
@@ -8,6 +9,7 @@ namespace NaiveMq.Client.Commands
         public bool Response { get; set; }
 
         [JsonIgnore]
+        [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         public MessageResponse()

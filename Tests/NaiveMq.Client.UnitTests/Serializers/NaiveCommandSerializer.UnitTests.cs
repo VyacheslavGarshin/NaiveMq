@@ -20,13 +20,13 @@ namespace NaiveMq.Client.UnitTests
         [SetUp]
         public void Setup()
         {
-            _serializer = new NaiveCommandSerializer();
-            _jSerializer = new JsonCommandSerializer();
+            _serializer = new();
+            _jSerializer = new();
             _commandPacker = new(_serializer, ArrayPool<byte>.Shared);
         }
 
         [Test]
-        public void SerializeSimpleCommand()
+        public void SerializeCommand()
         {
             foreach (var type in NaiveMqClient.CommandTypes.Values)
             {
@@ -46,20 +46,20 @@ namespace NaiveMq.Client.UnitTests
 
                 Console.WriteLine(type.FullName);
 
-                foreach (var property in properties)
+                foreach (var property in properties.Values)
                 {
                     var value = property.PropertyInfo.GetValue(command);
                     var valueD = property.PropertyInfo.GetValue(commandD);
 
-                    value.Should().Be(valueD);
+                    value.Should().BeEquivalentTo(valueD);
                 }
             }
         }
 
         [Test]
-        public void SimpleCommandSpeed()
+        public void CommandSpeed()
         {
-            var command = PrepareCommand(new Login());
+            var command = PrepareCommand(new Message());
             command.Prepare(_commandPacker);
             var type = command.GetType();
 
@@ -88,6 +88,7 @@ namespace NaiveMq.Client.UnitTests
             Console.WriteLine($"Serialize pool: {timeS} ticks");
             Console.WriteLine($"Json Serialize: {jTime} ticks");
             Console.WriteLine($"Serialize: {result?.Length} bytes, Json Serialize: {jResult?.Length} bytes.");
+            Console.WriteLine($"Serialize: {Encoding.ASCII.GetString(result)} bytes.");
             Console.WriteLine($"Json Serialize: {Encoding.UTF8.GetString(jResult)} bytes.");
             time.Should().BeLessThan(jTime);
 
@@ -138,7 +139,7 @@ namespace NaiveMq.Client.UnitTests
 
         [TestCase(10)]
         [TestCase(100)]
-        public async Task SimpleCommandSpeedParallel(int threads)
+        public async Task CommandSpeedParallel(int threads)
         {
             var command = PrepareCommand(new Login());
             command.Prepare(_commandPacker);
@@ -192,7 +193,7 @@ namespace NaiveMq.Client.UnitTests
             }
             else if (command is Message message)
             {
-                message.Data = new byte[10];
+                message.Data = new byte[100];
             }
             else if (command is AddQueue addQueue)
             {
@@ -201,6 +202,10 @@ namespace NaiveMq.Client.UnitTests
             else if (command is GetQueueResponse getQueueResponse)
             {
                 getQueueResponse.Entity = new Queue { Name = "test" };
+            }
+            else if (command is SearchQueuesResponse searchQueuesResponse)
+            {
+                searchQueuesResponse.Entities = new List<Queue> { new Queue { Name = "test" }, new Queue { Name = "test2" } };
             }
 
             return command;

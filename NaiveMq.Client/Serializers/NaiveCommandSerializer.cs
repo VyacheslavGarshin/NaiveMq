@@ -9,13 +9,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
+using System.Xml.Linq;
 
 namespace NaiveMq.Client.Converters
 {
     public class NaiveCommandSerializer : ICommandSerializer
     {
-        public static ConcurrentDictionary<Type, List<PropertyDefinition>> TypeDefinitions { get; } = new();
+        public static ConcurrentDictionary<Type, Dictionary<string, PropertyDefinition>> TypeDefinitions { get; } = new();
 
         public byte[] Serialize(ICommand command)
         {
@@ -40,10 +42,25 @@ namespace NaiveMq.Client.Converters
 
         public ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type)
         {
-            return (ICommand)DeserializeObject(bytes.Span, type);
+            return (ICommand)DeserializeObject(bytes, type).obj;
         }
 
-        private void SerializeObject(object obj, Stream stream)
+        private static Dictionary<string, PropertyDefinition> GetTypeDefinition(Type type)
+        {
+            if (!TypeDefinitions.TryGetValue(type, out var properties))
+            {
+                properties = type.GetProperties().
+                    Where(x => x.CanRead && x.CanWrite &&
+                        !x.CustomAttributes.Any(y => x.GetType() != typeof(JsonIgnoreAttribute) || x.GetType() != typeof(IgnoreDataMemberAttribute))).
+                    Select(x => new PropertyDefinition { PropertyInfo = x }).
+                    ToDictionary(x => x.PropertyInfo.Name, x => x);
+                TypeDefinitions.TryAdd(type, properties);
+            }
+
+            return properties;
+        }
+
+        private static void SerializeObject(object obj, Stream stream)
         {
             if (obj == null)
             {
@@ -57,43 +74,30 @@ namespace NaiveMq.Client.Converters
 
             var type = obj.GetType();
 
-            if (!TypeDefinitions.TryGetValue(type, out var properties))
-            {
-                properties = type.GetProperties().
-                    Where(x => x.CanRead && x.CanWrite && !x.CustomAttributes.Any(y => x.GetType() != typeof(JsonIgnoreAttribute))).
-                    Select(x => new PropertyDefinition { PropertyInfo = x }).
-                    ToList();
-                TypeDefinitions.TryAdd(type, properties);
-            }
+            var properties = GetTypeDefinition(type);
 
-            //var properties = type.GetProperties().
-            //    Where(x => x.CanRead && x.CanWrite && !x.CustomAttributes.Any(y => x.GetType() != typeof(JsonIgnoreAttribute))).ToList();
-
-            foreach (var property in properties)
+            foreach (var property in properties.Values)
             {
-                var value = property.PropertyInfo.GetValue(obj, null);
+                var value = property.PropertyInfo.GetValue(obj);
 
                 if (value != null)
                 {
-                    var nameBytes = Encoding.UTF8.GetBytes(property.PropertyInfo.Name);
-                    stream.Write(BitConverter.GetBytes(nameBytes.Length));
-                    stream.Write(nameBytes);
+                    property.NameBytes ??= Encoding.UTF8.GetBytes(property.PropertyInfo.Name);
 
-                    var data = SerializeProperty(property, value);
+                    stream.WriteByte((byte)property.NameBytes.Length);
+                    stream.Write(property.NameBytes);
 
-                    stream.Write(BitConverter.GetBytes(data != null ? data.Length : 0));
-
-                    if (data?.Length > 0)
-                    {
-                        stream.Write(data);
-                    }
+                    SerializeProperty(property, value, stream);                    
                 }
             }
+
+            stream.WriteByte(0);
         }
 
-        private static byte[] SerializeProperty(PropertyDefinition definition, object value)
+        private static void SerializeProperty(PropertyDefinition definition, object value, Stream stream)
         {
             Func<object, byte[]> func;
+            var dataLengthLength = 1;
 
             if (definition.SerializeFunc == null)
             {
@@ -133,6 +137,11 @@ namespace NaiveMq.Client.Converters
                 else if (propertyInfo.PropertyType == typeof(string))
                 {
                     func = (object v) => { return Encoding.UTF8.GetBytes(v as string); };
+                    dataLengthLength = 4;
+                }
+                else if (propertyInfo.PropertyType.IsClass)
+                {
+                    func = (object v) => { SerializeObject(v, stream); return null; };
                 }
                 else
                 {
@@ -140,100 +149,156 @@ namespace NaiveMq.Client.Converters
                 }
 
                 definition.SerializeFunc = func;
+                definition.DataLengthLength = dataLengthLength;
             }
             else
             {
                 func = definition.SerializeFunc;
+                dataLengthLength = definition.DataLengthLength;
             }
 
-            return func(value);
+            var data = func(value);
+
+            if (data != null)
+            {
+                stream.Write(dataLengthLength == 4 ? BitConverter.GetBytes(data.Length) : new byte[] { (byte)data.Length });
+
+                if (data.Length > 0)
+                {
+                    stream.Write(data);
+                }
+            }
         }
 
-        private object DeserializeObject(ReadOnlySpan<byte> bytes, Type type)
+        private static (object obj, int index) DeserializeObject(ReadOnlyMemory<byte> bytes, Type type, int index = 0)
         {
-            var index = 0;
-            var isNotNull = BitConverter.ToBoolean(bytes.Slice(index, 1));
+            var isNotNull = BitConverter.ToBoolean(bytes.Span.Slice(index, 1));
             index++;
 
             if (!isNotNull)
             {
-                return null;
+                return (null, index);
             }
 
             var result = Activator.CreateInstance(type);
 
+            var properties = GetTypeDefinition(type);
+
             do
             {
-                var propertyNameLength = BitConverter.ToInt32(bytes.Slice(index, 4));
-                index += 4;
+                var propertyNameLength = bytes.Span.Slice(index, 1)[0];
+                index += 1;
 
-                var propertyName = Encoding.UTF8.GetString(bytes.Slice(index, propertyNameLength));
+                if (propertyNameLength == 0)
+                {
+                    break;
+                }
+
+                var propertyName = Encoding.UTF8.GetString(bytes.Span.Slice(index, propertyNameLength));
                 index += propertyNameLength;
 
-                var dataLength = BitConverter.ToInt32(bytes.Slice(index, 4));
-                index += 4;
+                properties.TryGetValue(propertyName, out var property);
 
-                if (dataLength > 0)
-                {
-                    var data = bytes.Slice(index, dataLength);
-                    index += dataLength;
-
-                    var property = type.GetProperty(propertyName);
-                    
-                    var value = DeserializeProperty(data, property);
-
-                    property.SetValue(result, value, null);
-                }
+                index = DeserializeProperty(bytes, index, result, property);
             } while (index < bytes.Length);
 
-            return result;
+            return (result, index);
         }
 
-        private static object DeserializeProperty(ReadOnlySpan<byte> data, PropertyInfo property)
+        private static int DeserializeProperty(ReadOnlyMemory<byte> bytes, int index, object obj, PropertyDefinition definition)
         {
-            object value;
+            Func<ReadOnlyMemory<byte>, int, object> func;
+            var isObject = false;
+            var dataLengthLength = 1;
 
-            if (property.PropertyType.IsValueType)
+            if (definition.DeserializeFunc == null)
             {
-                if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?))
+                var property = definition.PropertyInfo;
+
+                if (property.PropertyType.IsValueType)
                 {
-                    value = BitConverter.ToBoolean(data);
+                    if (property.PropertyType == typeof(bool) || property.PropertyType == typeof(bool?))
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return BitConverter.ToBoolean(d.Span); };
+                    }
+                    else if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return new Guid(d.Span); };
+                    }
+                    else if (property.PropertyType == typeof(TimeSpan) || property.PropertyType == typeof(TimeSpan?))
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return TimeSpan.FromMilliseconds(BitConverter.ToDouble(d.Span)); };
+                    }
+                    else if (property.PropertyType.IsEnum)
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return BitConverter.ToInt32(d.Span); };
+                    }
+                    else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return BitConverter.ToInt32(d.Span); };
+                    }
+                    else if (property.PropertyType == typeof(long) || property.PropertyType == typeof(long?))
+                    {
+                        func = (ReadOnlyMemory<byte> d, int i) => { return BitConverter.ToInt64(d.Span); };
+                    }
+                    else
+                    {
+                        throw new NotSupportedException($"Type not supported '{property.PropertyType.FullName}'.");
+                    }
                 }
-                else if (property.PropertyType == typeof(Guid) || property.PropertyType == typeof(Guid?))
+                else if (property.PropertyType == typeof(string))
                 {
-                    value = new Guid(data);
+                    func = (ReadOnlyMemory<byte> d, int i) => { return Encoding.UTF8.GetString(d.Span); };
+                    dataLengthLength = 4;
                 }
-                else if (property.PropertyType == typeof(TimeSpan) || property.PropertyType == typeof(TimeSpan?))
+                else if (property.PropertyType.IsClass)
                 {
-                    value = TimeSpan.FromMilliseconds(BitConverter.ToDouble(data));
-                }
-                else if (property.PropertyType.IsEnum)
-                {
-                    value = BitConverter.ToInt32(data);
-                }
-                else if (property.PropertyType == typeof(int) || property.PropertyType == typeof(int?))
-                {
-                    value = BitConverter.ToInt32(data);
-                }
-                else if (property.PropertyType == typeof(long) || property.PropertyType == typeof(long?))
-                {
-                    value = BitConverter.ToInt64(data);
+                    func = (ReadOnlyMemory<byte> d, int i) => { return DeserializeObject(bytes, property.PropertyType, i); };
+                    isObject = true;
                 }
                 else
                 {
                     throw new NotSupportedException($"Type not supported '{property.PropertyType.FullName}'.");
                 }
-            }
-            else if (property.PropertyType == typeof(string))
-            {
-                value = Encoding.UTF8.GetString(data);
+
+                definition.DeserializeFunc = func;
+                definition.IsObject = isObject;
+                definition.DataLengthLength = dataLengthLength;
             }
             else
             {
-                throw new NotSupportedException($"Type not supported '{property.PropertyType.FullName}'.");
+                func = definition.DeserializeFunc;
+                isObject = definition.IsObject;
+                dataLengthLength = definition.DataLengthLength;
             }
 
-            return value;
+            object value = null;
+
+            if (!isObject)
+            {
+                var dataLength = dataLengthLength == 4 
+                    ? BitConverter.ToInt32(bytes.Span.Slice(index, 4))
+                    : bytes.Span.Slice(index, 1)[0];
+                index += dataLengthLength;
+
+                if (dataLength > 0)
+                {
+                    var valueData = bytes.Slice(index, dataLength);
+                    index += dataLength;
+
+                    value = func(valueData, index);
+                }
+            }
+            else
+            {
+                var propRes = (ValueTuple<object, int>)func(bytes, index);
+                value = propRes.Item1;
+                index = propRes.Item2;
+            }
+
+            definition.PropertyInfo.SetValue(obj, value);
+
+            return index;
         }
 
         public class PropertyDefinition
@@ -241,6 +306,14 @@ namespace NaiveMq.Client.Converters
             public PropertyInfo PropertyInfo { get; set; }
 
             public Func<object, byte[]> SerializeFunc { get; set; }
+
+            public Func<ReadOnlyMemory<byte>, int, object> DeserializeFunc { get; set; }
+
+            public bool IsObject { get; set; }
+
+            public byte[] NameBytes { get; set; }
+
+            public int DataLengthLength { get; set; }
         }
     }
 }
