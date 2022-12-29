@@ -95,7 +95,7 @@ namespace NaiveMq.Client
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
         // todo make it in command pack maybe
-        private readonly ICommandConverter _converter = new JsonCommandConverter();
+        private readonly ICommandSerializer _converter = new JsonCommandSerializer();
 
         private readonly object _startLocker = new();
 
@@ -114,7 +114,7 @@ namespace NaiveMq.Client
 
             _logger = logger;
             _stoppingToken = stoppingToken;
-            _commandPacker = new CommandPacker(_converter);
+            _commandPacker = new CommandPacker(_converter, _arrayPool);
 
             if (Options.OnStart != null)
             {
@@ -433,7 +433,7 @@ namespace NaiveMq.Client
                 request.ConfirmTimeout = Options.ConfirmTimeout;
             }
 
-            command.Prepare();
+            command.Prepare(_commandPacker);
         }
 
         private async Task<IResponse> WaitForConfirmationAsync<TResponse>(IRequest<TResponse> request, ResponseItem responseItem, bool throwIfError, CancellationToken cancellationToken)
@@ -480,7 +480,7 @@ namespace NaiveMq.Client
 
             try
             {
-                package = _commandPacker.Pack(command, _arrayPool);
+                package = _commandPacker.Pack(command);
 
                 await WriteBytesAsync(package.Buffer.AsMemory(0, package.Length), cancellationToken);
 
@@ -507,7 +507,7 @@ namespace NaiveMq.Client
             {
                 if (package != null)
                 {
-                    _arrayPool.Return(package.Buffer);
+                    _commandPacker.ArrayPool.Return(package.Buffer);
                 }
             }
         }
@@ -553,7 +553,7 @@ namespace NaiveMq.Client
                 {
                     try
                     {
-                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token, _arrayPool);
+                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token);
 
                         Counters.ReadCommand.Add();
 
@@ -605,7 +605,7 @@ namespace NaiveMq.Client
 
                 TraceCommand("<<", command);
 
-                command.Restore();
+                command.Restore(_commandPacker);
                 command.Validate();
 
                 await HandleReceiveCommandAsync(command);
@@ -617,7 +617,7 @@ namespace NaiveMq.Client
             }
             finally
             {
-                _arrayPool.Return(unpackResult.Buffer);
+                _commandPacker.ArrayPool.Return(unpackResult.Buffer);
 
                 if (_readSemaphore != null)
                 {

@@ -30,18 +30,18 @@ namespace NaiveMq.Client.Commands
             Responses = responses;
         }
 
-        public override void Prepare()
+        public override void Prepare(CommandPacker commandPacker)
         {
-            base.Prepare();
+            base.Prepare(commandPacker);
 
             if (Responses != null && Responses.Count > 0)
             {
                 foreach (var request in Responses)
                 {
-                    request.Prepare();
+                    request.Prepare(commandPacker);
                 }
 
-                Data = new CommandPacker(new JsonCommandConverter()).Pack(Responses);
+                Data = commandPacker.Pack(Responses);
             }
         }
 
@@ -60,13 +60,13 @@ namespace NaiveMq.Client.Commands
             }
         }
 
-        public override void Restore()
+        public override void Restore(CommandPacker commandPacker)
         {
-            base.Restore();
+            base.Restore(commandPacker);
 
             using var stream = Data.AsStream();
 
-            var task = new CommandPacker(new JsonCommandConverter()).Unpack(stream, CancellationToken.None);
+            var task = commandPacker.Unpack(stream, CancellationToken.None);
             task.Wait();
 
             Responses = task.Result.Cast<IResponse>().ToList();

@@ -121,7 +121,7 @@ namespace NaiveMq.LoadTests.SpamQueue
 
             var consumers = new ConcurrentBag<NaiveMqClient>();
 
-            await CreateConsumersAsync(clientLogger, taskCount, options, consumers);
+            CreateConsumersAsync(clientLogger, taskCount, options, consumers);
 
             for (var run = 0; run < _options.Runs; run++)
             {
@@ -336,7 +336,7 @@ namespace NaiveMq.LoadTests.SpamQueue
             return j;
         }
 
-        private async Task CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, ConcurrentBag<NaiveMqClient> consumers)
+        private void CreateConsumersAsync(ILogger<NaiveMqClient> clientLogger, int taskCount, NaiveMqClientOptions options, ConcurrentBag<NaiveMqClient> consumers)
         {
             if (_options.Subscribe)
             {

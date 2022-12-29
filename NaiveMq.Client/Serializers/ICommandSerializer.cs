@@ -3,7 +3,7 @@ using System;
 
 namespace NaiveMq.Client.Converters
 {
-    public interface ICommandConverter
+    public interface ICommandSerializer
     {
         byte[] Serialize(ICommand command);
 

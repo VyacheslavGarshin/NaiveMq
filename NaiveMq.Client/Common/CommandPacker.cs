@@ -8,19 +8,23 @@ using System.IO;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace NaiveMq.Client.Common
 {
-    public partial class CommandPacker
+    public class CommandPacker
     {
-        private readonly ICommandConverter _converter;
+        public ArrayPool<byte> ArrayPool { get; }
 
-        public CommandPacker(ICommandConverter converter)
+        private readonly ICommandSerializer _converter;        
+
+        public CommandPacker(ICommandSerializer converter, ArrayPool<byte> arrayPool)
         {
             _converter = converter;
+            ArrayPool = arrayPool;
         }
 
-        public PackResult Pack(ICommand command, ArrayPool<byte> arrayPool = null)
+        public PackResult Pack(ICommand command)
         {
             var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
             var commandBytes = _converter.Serialize(command);
@@ -34,7 +38,7 @@ namespace NaiveMq.Client.Common
             }
 
             var allLength = 4 * 3 + commandNameBytes.Length + commandBytes.Length + dataLength;
-            var buffer = arrayPool != null ? arrayPool.Rent(allLength) : new byte[allLength];
+            var buffer = ArrayPool.Rent(allLength);
 
             buffer.CopyFrom(new[] {
                     BitConverter.GetBytes(commandNameBytes.Length),
@@ -55,10 +59,9 @@ namespace NaiveMq.Client.Common
             {
                 foreach (var request in commands)
                 {
-                    packResults.Add(Pack(request, ArrayPool<byte>.Shared));
+                    packResults.Add(Pack(request));
                 }
 
-                // todo add after send function. use array pool here
                 var data = new byte[packResults.Sum(x => x.Length)];
                 data.CopyFrom(packResults.Select(x => new ReadOnlyMemory<byte>(x.Buffer, 0, x.Length)));
 
@@ -68,12 +71,12 @@ namespace NaiveMq.Client.Common
             {
                 foreach (var buffer in packResults.Select(x => x.Buffer))
                 {
-                    ArrayPool<byte>.Shared.Return(buffer);
+                    ArrayPool.Return(buffer);
                 }
             }
         }
 
-        public async Task<UnpackResult> Unpack(Stream stream, Action<UnpackResult> lengthCheckAction, CancellationToken cancellationToken, ArrayPool<byte> arrayPool = null)
+        public async Task<UnpackResult> Unpack(Stream stream, Action<UnpackResult> lengthCheckAction, CancellationToken cancellationToken)
         {
             byte[] lengthsBuffer = null;
 
@@ -81,7 +84,7 @@ namespace NaiveMq.Client.Common
             {
                 const int commandsBytesLength = 3 * 4;
 
-                lengthsBuffer = arrayPool != null ? arrayPool.Rent(commandsBytesLength) : new byte[commandsBytesLength];
+                lengthsBuffer = ArrayPool.Rent(commandsBytesLength);
                 await ReadStreamBytesAsync(stream, lengthsBuffer, commandsBytesLength, cancellationToken);
 
                 var commandNameLength = BitConverter.ToInt32(lengthsBuffer, 0);
@@ -93,7 +96,7 @@ namespace NaiveMq.Client.Common
                 lengthCheckAction?.Invoke(result);
 
                 var allLength = commandNameLength + commandLength + dataLength;
-                var dataBuffer = arrayPool != null ? arrayPool.Rent(allLength) : new byte[allLength];
+                var dataBuffer = ArrayPool.Rent(allLength);
                 await ReadStreamBytesAsync(stream, dataBuffer, allLength, cancellationToken);
 
                 result.Buffer = dataBuffer;
@@ -102,9 +105,9 @@ namespace NaiveMq.Client.Common
             }
             finally
             {
-                if (lengthsBuffer != null && arrayPool != null)
+                if (lengthsBuffer != null)
                 {
-                    arrayPool.Return(lengthsBuffer);
+                    ArrayPool.Return(lengthsBuffer);
                 }
             }
         }
@@ -118,7 +121,7 @@ namespace NaiveMq.Client.Common
             {
                 while (stream.Position < stream.Length)
                 {
-                    unpackResults.Add(await Unpack(stream, null, cancellationToken, ArrayPool<byte>.Shared));
+                    unpackResults.Add(await Unpack(stream, null, cancellationToken));
                 }
 
                 foreach (var unpackResult in unpackResults)
@@ -130,7 +133,7 @@ namespace NaiveMq.Client.Common
             {
                 foreach (var buffer in unpackResults.Select(x => x.Buffer))
                 {
-                    ArrayPool<byte>.Shared.Return(buffer);
+                    ArrayPool.Return(buffer);
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NaiveMq.Client.Common;
+using System;
 
 namespace NaiveMq.Client.Commands
 {
@@ -9,10 +10,10 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         public Guid Id { get; set; }
 
-        public void Prepare();
+        public void Prepare(CommandPacker commandPacker);
 
         public void Validate();
 
-        public void Restore();
+        public void Restore(CommandPacker commandPacker);
     }
 }

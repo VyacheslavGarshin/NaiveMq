@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NaiveMq.Client.Converters
 {
-    public class JsonCommandConverter : ICommandConverter
+    public class JsonCommandSerializer : ICommandSerializer
     {
         private static JsonSerializerSettings _jsonSerializerSettings = new()
         {
