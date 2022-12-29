@@ -8,7 +8,6 @@ using System.IO;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 
 namespace NaiveMq.Client.Common
 {

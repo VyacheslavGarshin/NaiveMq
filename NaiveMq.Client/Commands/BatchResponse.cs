@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.HighPerformance;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Converters;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;

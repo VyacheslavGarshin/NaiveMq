@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace NaiveMq.LoadTests.SpamQueue
 {
