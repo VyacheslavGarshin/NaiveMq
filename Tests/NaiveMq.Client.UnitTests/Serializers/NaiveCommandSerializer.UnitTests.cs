@@ -201,6 +201,7 @@ namespace NaiveMq.Client.UnitTests
             {
                 message.RoutingKey = string.Empty;
                 message.Data = new byte[100];
+                message.Persistent = Enums.Persistence.Yes;
             }
             else if (command is AddQueue addQueue)
             {
