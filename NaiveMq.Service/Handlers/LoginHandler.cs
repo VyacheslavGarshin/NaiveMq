@@ -9,22 +9,18 @@ namespace NaiveMq.Service.Handlers
     {
         public override Task<Confirmation> ExecuteAsync(ClientContext context, Login command, CancellationToken cancellationToken)
         {
-            if (context.User == null)
-            {
-                if (context.Storage.Users.TryGetValue(command.Username, out var user)
-                    && user.Entity.PasswordHash == command.Password.ComputeHash())
-                {
-                    context.User = user;
-                }
-                else
-                {
-                    throw new ServerException(ErrorCode.UserOrPasswordNotCorrect);
-                }
-            }
-            else
+            if (context.User != null)
             {
                 throw new ServerException(ErrorCode.AlreadyLoggedIn);
             }
+
+            if (!(context.Storage.Users.TryGetValue(command.Username, out var user)
+                    && user.Entity.PasswordHash == command.Password.ComputeHash()))
+            {
+                throw new ServerException(ErrorCode.UserOrPasswordNotCorrect);
+            }
+
+            context.User = user;
 
             return Task.FromResult(Confirmation.Ok(command));
         }

@@ -109,9 +109,5 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.BindingAlreadyExists, new[] { binding.Entity.Exchange, binding.Entity.Queue });
             }
         }
-
-        public void Dispose()
-        {
-        }
     }
 }

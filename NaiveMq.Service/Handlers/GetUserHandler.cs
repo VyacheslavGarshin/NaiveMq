@@ -11,23 +11,21 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckAdmin();
             
-            if (context.Storage.Users.TryGetValue(command.Username, out var user) || command.Try)
-            {
-                return Task.FromResult(GetUserResponse.Ok(command, (response) =>
-                {
-                    response.Entity = user != null
-                        ? new User
-                        {
-                            Username = user.Entity.Username,
-                            Administrator = user.Entity.Administrator
-                        }
-                        : null;
-                }));
-            }
-            else
+            if (!(context.Storage.Users.TryGetValue(command.Username, out var user) || command.Try))
             {
                 throw new ServerException(ErrorCode.UserNotFound, new[] { command.Username });
             }
+
+            return Task.FromResult(GetUserResponse.Ok(command, (response) =>
+            {
+                response.Entity = user != null
+                    ? new User
+                    {
+                        Username = user.Entity.Username,
+                        Administrator = user.Entity.Administrator
+                    }
+                    : null;
+            }));
         }
     }
 }

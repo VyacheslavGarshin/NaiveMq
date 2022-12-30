@@ -25,13 +25,13 @@ namespace NaiveMq.Service.Handlers
         {
             var queue = new QueueCog(queueEntity, context.User, context.Storage.Service.SpeedCounterService);
 
+            if (!context.User.Queues.TryAdd(queueEntity.Name, queue))
+            {
+                throw new ServerException(ErrorCode.QueueAlreadyExists, new[] { queueEntity.Name });
+            }
+
             try
             {
-                if (!context.User.Queues.TryAdd(queueEntity.Name, queue))
-                {
-                    throw new ServerException(ErrorCode.QueueAlreadyExists, new[] { queueEntity.Name });
-                }
-
                 if (context.Mode == ClientContextMode.Client && queueEntity.Durable)
                 {
                     await context.Storage.PersistentStorage.SaveQueueAsync(context.User.Entity.Username, queueEntity, cancellationToken);

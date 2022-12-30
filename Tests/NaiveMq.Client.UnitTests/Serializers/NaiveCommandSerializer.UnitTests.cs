@@ -3,11 +3,10 @@ using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
 using NaiveMq.Client.Converters;
 using NaiveMq.Client.Dto;
-using System;
+using NaiveMq.Service;
 using System.Buffers;
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json.Serialization;
 
 namespace NaiveMq.Client.UnitTests
 {
@@ -16,6 +15,11 @@ namespace NaiveMq.Client.UnitTests
         private NaiveCommandSerializer _serializer;
         private JsonCommandSerializer _jSerializer;
         private CommandPacker _commandPacker;
+
+        static NaiveCommandSerializerUnitTests()
+        {
+            NaiveMqClient.RegisterCommands(typeof(NaiveMqService).Assembly);
+        }
 
         [SetUp]
         public void Setup()
@@ -193,6 +197,7 @@ namespace NaiveMq.Client.UnitTests
             }
             else if (command is Message message)
             {
+                message.RoutingKey = string.Empty;
                 message.Data = new byte[100];
             }
             else if (command is AddQueue addQueue)

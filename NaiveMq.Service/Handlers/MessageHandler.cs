@@ -20,74 +20,44 @@ namespace NaiveMq.Service.Handlers
 
         public async Task<MessageResponse> ExecuteEntityAsync(ClientContext context, string queueName, MessageEntity messageEntity, Message command, CancellationToken cancellationToken)
         {
-            var queue = FindQueue(context, queueName);
-
-            if (queue != null)
-            {
-                var targetQueues = FindTargetQueues(context, messageEntity, queue);
-
-                CkeckMessage(messageEntity, queue, targetQueues);
-
-                foreach (var limitedQueue in GetLimitedQueues(context, targetQueues, command))
-                {
-                    switch (limitedQueue.Queue.Entity.LimitStrategy)
-                    {
-                        case LimitStrategy.Delay:
-                            if (!await limitedQueue.Queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, cancellationToken))
-                            {
-                                // Client side will fire it's own confirmation timeout and abandon request. 
-                                // We need to discard the message.
-                                return MessageResponse.Ok(command);
-                            }
-
-                            break;
-                        case LimitStrategy.Reject:
-                            throw GetLimitException(limitedQueue);
-                        case LimitStrategy.Discard:
-                            return MessageResponse.Ok(command);
-                    }
-                }
-
-                var messageEntitiesToSave = EnqueueAndGetEntitiesToSave(context, messageEntity, targetQueues);
-
-                if (messageEntitiesToSave.Any())
-                {
-                    await SaveAsync(context, messageEntitiesToSave, cancellationToken);
-                }
-
-                // confirmation will be redirected from subscriber to this client in case of Request
-                return messageEntity.Request ? null : MessageResponse.Ok(command);
-            }
-            else
+            if (!context.User.Queues.TryGetValue(queueName, out var queue))
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new[] { queueName });
             }
-        }
 
-        private static QueueCog FindQueue(ClientContext context, string queueName)
-        {
-            QueueCog queue = null;
+            var targetQueues = FindTargetQueues(context, messageEntity, queue);
 
-            if (context.LastQueue != null)
+            CkeckMessage(messageEntity, queue, targetQueues);
+
+            foreach (var limitedQueue in GetLimitedQueues(context, targetQueues, command))
             {
-                // non blocking check last queue the same
-                if (context.LastQueue.Entity.Name.Equals(queueName, StringComparison.InvariantCultureIgnoreCase))
+                switch (limitedQueue.Queue.Entity.LimitStrategy)
                 {
-                    queue = context.LastQueue;
+                    case LimitStrategy.Delay:
+                        if (!await limitedQueue.Queue.WaitLimitSemaphoreAsync(command.ConfirmTimeout.Value, cancellationToken))
+                        {
+                            // Client side will fire it's own confirmation timeout and abandon request. 
+                            // We need to discard the message.
+                            return MessageResponse.Ok(command);
+                        }
 
-                    if (!queue.Entity.Name.Equals(queueName, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        queue = null;
-                    }
+                        break;
+                    case LimitStrategy.Reject:
+                        throw GetLimitException(limitedQueue);
+                    case LimitStrategy.Discard:
+                        return MessageResponse.Ok(command);
                 }
             }
 
-            if (queue == null && context.User.Queues.TryGetValue(queueName, out queue))
+            var messageEntitiesToSave = EnqueueAndGetEntitiesToSave(context, messageEntity, targetQueues);
+
+            if (messageEntitiesToSave.Any())
             {
-                context.LastQueue = queue;
+                await SaveAsync(context, messageEntitiesToSave, cancellationToken);
             }
 
-            return queue;
+            // confirmation will be redirected from subscriber to this client in case of Request
+            return messageEntity.Request ? null : MessageResponse.Ok(command);
         }
 
         private static List<QueueCog> FindTargetQueues(ClientContext context, MessageEntity messageEntity, QueueCog queue)

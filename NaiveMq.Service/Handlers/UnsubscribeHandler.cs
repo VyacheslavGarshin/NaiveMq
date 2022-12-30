@@ -10,21 +10,17 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser();
 
-            if (context.User.Queues.TryGetValue(command.Queue, out var queue))
-            {
-                if (context.Subscriptions.TryRemove(queue, out var subscription))
-                {
-                    subscription.Dispose();
-                }
-                else
-                {
-                    throw new ServerException(ErrorCode.SubscriptionNotFound, new[] { command.Queue });
-                }
-            }
-            else
+            if (!context.User.Queues.TryGetValue(command.Queue, out var queue))
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Queue });
-            }          
+            }
+
+            if (!context.Subscriptions.TryRemove(queue, out var subscription))
+            {
+                throw new ServerException(ErrorCode.SubscriptionNotFound, new[] { command.Queue });
+            }
+
+            subscription.Dispose();
 
             return Task.FromResult(Confirmation.Ok(command));
         }

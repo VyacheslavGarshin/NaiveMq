@@ -2,6 +2,7 @@
 using NaiveMq.Client.Commands;
 using NaiveMq.Service.Commands;
 using NaiveMq.Service.Enums;
+using NaiveMq.Client;
 
 namespace NaiveMq.Service.Handlers
 {
@@ -11,23 +12,21 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckClusterAdmin();
 
-            if (context.Storage.Users.TryGetValue(command.User, out var user))
+            if (!context.Storage.Users.TryGetValue(command.User, out var user))
             {
-                using var replicaContext = new ClientContext
-                {
-                    Storage = context.Storage,
-                    Client = context.Client,
-                    Logger = context.Logger,
-                    User = user,
-                    Mode = ClientContextMode.Replicate,
-                };
-
-                await context.Storage.Service.ExecuteCommandAsync(command.Request, replicaContext);
-            }
-            else
-            {
-                throw new ServerException(Client.ErrorCode.UserNotFound);
+                throw new ServerException(ErrorCode.UserNotFound, new[] { command.User });
             };
+
+            using var replicaContext = new ClientContext
+            {
+                Storage = context.Storage,
+                Client = context.Client,
+                Logger = context.Logger,
+                User = user,
+                Mode = ClientContextMode.Replicate,
+            };
+
+            await context.Storage.Service.ExecuteCommandAsync(command.Request, replicaContext);
 
             return Confirmation.Ok(command);
         }

@@ -11,14 +11,12 @@ namespace NaiveMq.Service.Handlers
         {
             context.CheckUser();
 
-            if (context.User.Queues.TryGetValue(command.Name, out var queue))
-            {
-                queue.SetStatus(QueueStatus.Clearing);
-            }
-            else
+            if (!context.User.Queues.TryGetValue(command.Name, out var queue))
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Name });
             }
+
+            queue.SetStatus(QueueStatus.Clearing);
 
             if (queue.Entity.Durable)
             {

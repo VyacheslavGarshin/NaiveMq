@@ -18,10 +18,6 @@ namespace NaiveMq.Service.Cogs
 
         public ConcurrentDictionary<QueueCog, SubscriptionCog> Subscriptions { get; } = new();
 
-        public QueueCog LastQueue { get; set; }
-
-        public Type LastHandlerType { get; set; }
-
         public bool Tracking { get; set; }
 
         public ConcurrentBag<Guid> TrackFailedRequests { get; set; } = new();
@@ -84,7 +80,6 @@ namespace NaiveMq.Service.Cogs
             }
 
             Client = null;
-            LastQueue = null;
         }
     }
 }

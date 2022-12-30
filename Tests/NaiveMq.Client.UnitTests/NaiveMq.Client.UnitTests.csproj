@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\NaiveMq.Client\NaiveMq.Client.csproj" />
+    <ProjectReference Include="..\..\NaiveMq.Service\NaiveMq.Service.csproj" />
   </ItemGroup>
 
 </Project>

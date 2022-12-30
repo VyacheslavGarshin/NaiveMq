@@ -14,9 +14,12 @@ namespace NaiveMq.Service.Handlers
 
             if (command.Finish)
             {
-                if (context.Tracking)
+                if (!context.Tracking)
                 {
-                    result = TrackResponse.Ok(command, (response) =>
+                    throw new ServerException(ErrorCode.TrackingNotStarted);
+                }
+
+                result = TrackResponse.Ok(command, (response) =>
                     {
                         response.FailedRequests = context.TrackFailedRequests.ToList();
                         response.LastErrorCode = context.TrackLastErrorCode;
@@ -24,33 +27,23 @@ namespace NaiveMq.Service.Handlers
                         response.Overflow = context.TrackOverflow;
                     });
 
-                    context.Tracking = false;
-                    context.TrackFailedRequests = new();
-                    context.TrackLastErrorCode = null;
-                    context.TrackLastErrorMessage = null;
-                    context.TrackOverflow = false;
-                }
-                else
-                {
-                    throw new ServerException(ErrorCode.TrackingNotStarted);
-                }
+                context.Tracking = false;
+                context.TrackFailedRequests = new();
+                context.TrackLastErrorCode = null;
+                context.TrackLastErrorMessage = null;
+                context.TrackOverflow = false;
             }
 
             if (command.Start)
             {
-                if (!context.Tracking)
-                {
-                    context.Tracking = true;
-
-                    if (result == null)
-                    {
-                        result = TrackResponse.Ok(command);
-                    }
-                }
-                else
+                if (context.Tracking)
                 {
                     throw new ServerException(ErrorCode.TrackingAlreadyStarted);
                 }
+
+                context.Tracking = true;
+
+                result ??= TrackResponse.Ok(command);
             }
 
             return Task.FromResult(result);

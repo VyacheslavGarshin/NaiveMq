@@ -13,37 +13,31 @@ namespace NaiveMq.Service.Handlers
 
             var queues = FindQueues(context, command);
 
-            if (queues.TryGetValue(command.Queue, out var queue))
-            {
-                if (!queue.Entity.Exchange)
-                {
-                    var subscription = new SubscriptionCog(
-                        context.Client,
-                        queue,
-                        command.ConfirmMessage,
-                        command.ConfirmMessageTimeout,
-                        command.ClusterStrategy,
-                        command.ClusterIdleTimout);
-
-                    if (context.Subscriptions.TryAdd(queue, subscription))
-                    {
-                        subscription.Start();
-                    }
-                    else
-                    {
-                        subscription.Dispose();
-                        throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new[] { queue.Entity.Name });
-                    }
-                }
-                else
-                {
-                    throw new ServerException(ErrorCode.SubscribeToExchange);
-                }
-            }
-            else
+            if (!queues.TryGetValue(command.Queue, out var queue))
             {
                 throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Queue });
             }
+
+            if (queue.Entity.Exchange)
+            {
+                throw new ServerException(ErrorCode.SubscribeToExchange);
+            }
+
+            var subscription = new SubscriptionCog(
+                    context.Client,
+                    queue,
+                    command.ConfirmMessage,
+                    command.ConfirmMessageTimeout,
+                    command.ClusterStrategy,
+                    command.ClusterIdleTimout);
+
+            if (!context.Subscriptions.TryAdd(queue, subscription))
+            {
+                subscription.Dispose();
+                throw new ServerException(ErrorCode.SubscriptionAlreadyExists, new[] { queue.Entity.Name });
+            }
+
+            subscription.Start();
 
             return Task.FromResult(Confirmation.Ok(command));
         }
@@ -56,14 +50,12 @@ namespace NaiveMq.Service.Handlers
             {
                 context.CheckAdmin();
 
-                if (context.Storage.Users.TryGetValue(command.User, out var user))
+                if (!context.Storage.Users.TryGetValue(command.User, out var user))
                 {
-                    queues = user.Queues;
+                    throw new ClientException(ErrorCode.UserNotFound, new[] { command.User });
                 }
-                else
-                {
-                    throw new ClientException(ErrorCode.UserNotFound, new object[] { command.User });
-                }
+
+                queues = user.Queues;
             }
 
             return queues;

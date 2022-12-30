@@ -17,14 +17,12 @@ namespace NaiveMq.Service.Handlers
                 throw new ServerException(ErrorCode.UserDeleteSelf);
             }
 
-            if (context.Storage.Users.TryGetValue(command.Username, out var user))
-            {
-                user.SetStatus(UserStatus.Deleting);
-            }
-            else
+            if (!context.Storage.Users.TryGetValue(command.Username, out var user))
             {
                 throw new ServerException(ErrorCode.UserNotFound, new[] { command.Username });
             }
+
+            user.SetStatus(UserStatus.Deleting);
 
             if (context.Mode == ClientContextMode.Client)
             {
