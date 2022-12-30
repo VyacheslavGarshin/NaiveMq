@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NaiveMq.Client.Common;
+using System;
 using System.Buffers;
 
 namespace NaiveMq.Client.Serializers
@@ -7,7 +8,7 @@ namespace NaiveMq.Client.Serializers
     {
         byte[] Serialize(object obj);
 
-        (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool);
+        PackResult Serialize(object obj, ArrayPool<byte> arrayPool);
 
         object Deserialize(ReadOnlyMemory<byte> bytes, Type type);
     }

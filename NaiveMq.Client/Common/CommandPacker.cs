@@ -47,7 +47,7 @@ namespace NaiveMq.Client.Common
                     commandBytes,
                     data });
 
-            return new PackResult { Buffer = buffer, Length = allLength };
+            return new PackResult(buffer, allLength);
         }
 
         public byte[] Pack(IEnumerable<ICommand> commands)
@@ -75,7 +75,7 @@ namespace NaiveMq.Client.Common
             }
         }
 
-        public async Task<ReadResult> ReadAsync(Stream stream, Action<ReadResult> lengthCheckAction, CancellationToken cancellationToken)
+        public async Task<CommandReadResult> ReadAsync(Stream stream, Action<CommandReadResult> lengthCheckAction, CancellationToken cancellationToken)
         {
             byte[] lengthsBuffer = null;
 
@@ -90,7 +90,7 @@ namespace NaiveMq.Client.Common
                 var commandLength = BitConverter.ToInt32(lengthsBuffer, 4);
                 var dataLength = BitConverter.ToInt32(lengthsBuffer, 8);
 
-                var result = new ReadResult { CommandNameLength = commandNameLength, CommandLength = commandLength, DataLength = dataLength };
+                var result = new CommandReadResult { CommandNameLength = commandNameLength, CommandLength = commandLength, DataLength = dataLength };
 
                 lengthCheckAction?.Invoke(result);
 
@@ -114,7 +114,7 @@ namespace NaiveMq.Client.Common
         public async Task<List<ICommand>> ReadAsync(Stream stream, CancellationToken cancellationToken)
         {
             var result = new List<ICommand>();
-            var unpackResults = new List<ReadResult>();
+            var unpackResults = new List<CommandReadResult>();
 
             try
             {
@@ -139,7 +139,7 @@ namespace NaiveMq.Client.Common
             return result;
         }
 
-        public ICommand Unpack(ReadResult unpackResult)
+        public ICommand Unpack(CommandReadResult unpackResult)
         {
             var index = 0;
             var commandNameBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandNameLength);

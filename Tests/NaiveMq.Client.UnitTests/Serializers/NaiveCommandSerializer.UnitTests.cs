@@ -80,7 +80,7 @@ namespace NaiveMq.Client.UnitTests
             for (var i = 0; i < count; i++)
             {
                 var tuple = _serializer.Serialize(command, ArrayPool<byte>.Shared);
-                ArrayPool<byte>.Shared.Return(tuple.buffer);
+                ArrayPool<byte>.Shared.Return(tuple.Buffer);
             }
             sw.Stop();
             var timeS = sw.ElapsedTicks;
@@ -173,7 +173,7 @@ namespace NaiveMq.Client.UnitTests
                     for (var i = 0; i < count; i++)
                     {
                         var tuple = _serializer.Serialize(command, ArrayPool<byte>.Shared);
-                        ArrayPool<byte>.Shared.Return(tuple.buffer);
+                        ArrayPool<byte>.Shared.Return(tuple.Buffer);
                     }
                 }));
             }

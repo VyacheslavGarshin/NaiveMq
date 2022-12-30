@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using NaiveMq.Client.Common;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Buffers;
@@ -19,7 +20,7 @@ namespace NaiveMq.Client.Serializers
             return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj, _jsonSerializerSettings));
         }
 
-        public (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool)
+        public PackResult Serialize(object obj, ArrayPool<byte> arrayPool)
         {
             throw new NotImplementedException();
         }

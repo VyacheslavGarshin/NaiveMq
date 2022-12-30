@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.HighPerformance;
+using NaiveMq.Client.Common;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -25,7 +26,7 @@ namespace NaiveMq.Client.Serializers
             }
         }
 
-        public (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool)
+        public PackResult Serialize(object obj, ArrayPool<byte> arrayPool)
         {
             using (var stream = new MemoryStream())
             {
@@ -33,7 +34,7 @@ namespace NaiveMq.Client.Serializers
                 var buffer = arrayPool.Rent((int)stream.Length);
                 stream.Position = 0;
                 stream.Read(buffer, 0, (int)stream.Length);
-                return (buffer, (int)stream.Length);
+                return new PackResult(buffer, (int)stream.Length);
             }
         }
 

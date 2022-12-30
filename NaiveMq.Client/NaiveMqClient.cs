@@ -579,7 +579,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private void CheckCommandLengths(ReadResult unpackResult)
+        private void CheckCommandLengths(CommandReadResult unpackResult)
         {
             if (unpackResult.CommandNameLength == 0)
             {
@@ -602,7 +602,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceivedDataAsync(TcpClient tcpClient, ReadResult unpackResult, CancellationToken cancellationToken)
+        private async Task HandleReceivedDataAsync(TcpClient tcpClient, CommandReadResult unpackResult, CancellationToken cancellationToken)
         {
             try
             {
