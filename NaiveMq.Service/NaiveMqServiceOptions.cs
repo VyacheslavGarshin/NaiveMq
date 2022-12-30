@@ -1,4 +1,6 @@
-﻿namespace NaiveMq.Service
+﻿using NaiveMq.Client;
+
+namespace NaiveMq.Service
 {
     public class NaiveMqServiceOptions
     {
@@ -38,5 +40,7 @@
         public TimeSpan ClusterActivityInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         public int ClusterActivityBatchSize { get; set; } = 100;
+
+        public NaiveMqClientOptions ClientOptions { get; set; } = new NaiveMqClientOptions();
     }
 }

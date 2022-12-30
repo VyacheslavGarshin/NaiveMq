@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;
@@ -135,12 +136,11 @@ namespace NaiveMq.Service.Cogs
 
             try
             {
-                var options = new NaiveMqClientOptions
-                {
-                    Hosts = host.ToString(),
-                    AutoStart = false,
-                    AutoRestart = false,
-                };
+                var options = _storage.Service.Options.ClientOptions.Copy();
+
+                options.Hosts = host.ToString();
+                options.AutoStart = false;
+                options.AutoRestart = false;
 
                 client = new NaiveMqClient(options, _clientLogger, _stoppingToken);
                 client.OnStop += Client_OnStop;

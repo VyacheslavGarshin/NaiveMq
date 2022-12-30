@@ -9,9 +9,9 @@ namespace NaiveMq.Service.Commands
 {
     public class Replicate : AbstractRequest<Confirmation>, IDataCommand
     {
-        [DataMember(Name = "U")]
         public string User { get; set; }
 
+        [JsonIgnore]
         [IgnoreDataMember]
         public IRequest Request { get; set; }
 
@@ -19,6 +19,7 @@ namespace NaiveMq.Service.Commands
         /// Packed <see cref="Request"/>. Automatically generated from <see cref="Request"/> on sending replicate command.
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to <see cref="Request"/>. Then cleared.</remarks>
+        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
@@ -75,7 +76,7 @@ namespace NaiveMq.Service.Commands
 
             using var stream = Data.AsStream();
 
-            var task = commandPacker.Unpack(stream, CancellationToken.None);
+            var task = commandPacker.ReadAsync(stream, CancellationToken.None);
             task.Wait();
 
             Request = task.Result.Cast<IRequest>().First();

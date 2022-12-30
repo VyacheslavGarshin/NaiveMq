@@ -2,7 +2,7 @@
 using System;
 using System.Buffers;
 
-namespace NaiveMq.Client.Converters
+namespace NaiveMq.Client.Serializers
 {
     public interface ICommandSerializer
     {

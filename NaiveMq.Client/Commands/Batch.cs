@@ -11,6 +11,7 @@ namespace NaiveMq.Client.Commands
 {
     public class Batch : AbstractRequest<BatchResponse>, IDataCommand
     {
+        [JsonIgnore]
         [IgnoreDataMember]
         public List<IRequest> Requests { get; set; }
 
@@ -18,6 +19,7 @@ namespace NaiveMq.Client.Commands
         /// Combined packed requests. Automatically generated from Requests on sending command.
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to Requests. Then cleared.</remarks>
+        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
@@ -71,7 +73,7 @@ namespace NaiveMq.Client.Commands
 
             using var stream = Data.AsStream();
 
-            var task = commandPacker.Unpack(stream, CancellationToken.None);
+            var task = commandPacker.ReadAsync(stream, CancellationToken.None);
             task.Wait();
 
             Requests = task.Result.Cast<IRequest>().ToList();

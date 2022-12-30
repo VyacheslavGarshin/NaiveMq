@@ -164,12 +164,11 @@ namespace NaiveMq.Service
 
             try
             {
-                var options = new NaiveMqClientOptions
-                {
-                    TcpClient = tcpClient,
-                    AutoStart = false,
-                    AutoRestart = false,
-                };
+                var options = Options.ClientOptions.Copy();
+
+                options.TcpClient = tcpClient;
+                options.AutoStart = false;
+                options.AutoRestart = false;
 
                 var clientContext = new ClientContext
                 {
@@ -184,7 +183,7 @@ namespace NaiveMq.Service
                 client.OnReceiveCommandAsync += Client_OnReceiveCommandAsync;
                 client.OnSendCommandAsync += Client_OnSendCommandAsync;
                 client.Start(false);
-                
+
                 Storage.TryAddClient(client);
             }
             catch (Exception ex)

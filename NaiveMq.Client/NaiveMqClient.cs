@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Converters;
 using NaiveMq.Client.Dto;
+using NaiveMq.Client.Serializers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
@@ -24,7 +24,9 @@ namespace NaiveMq.Client
     {
         public const int DefaultPort = 8506;
 
-        public static Dictionary<string, Type> CommandTypes { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+        public static Dictionary<string, Type> Commands { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+
+        public static Dictionary<string, Type> CommandSerializers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
         public int Id { get; }
 
@@ -94,8 +96,7 @@ namespace NaiveMq.Client
 
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
-        // todo make it in command pack maybe
-        private readonly ICommandSerializer _converter = new NaiveCommandSerializer(); //new JsonCommandSerializer()
+        private readonly ICommandSerializer _commandSerializer;
 
         private readonly object _startLocker = new();
 
@@ -103,6 +104,9 @@ namespace NaiveMq.Client
 
         static NaiveMqClient()
         {
+            CommandSerializers.Add(nameof(NaiveCommandSerializer), typeof(NaiveCommandSerializer));
+            CommandSerializers.Add(nameof(JsonCommandSerializer), typeof(JsonCommandSerializer));
+
             RegisterCommands(typeof(ICommand).Assembly);
         }
 
@@ -114,7 +118,8 @@ namespace NaiveMq.Client
 
             _logger = logger;
             _stoppingToken = stoppingToken;
-            _commandPacker = new CommandPacker(_converter, _arrayPool);
+            _commandSerializer = (ICommandSerializer)Activator.CreateInstance(CommandSerializers[options.CommandSerializer]);
+            _commandPacker = new CommandPacker(_commandSerializer, _arrayPool);
 
             if (Options.OnStart != null)
             {
@@ -139,13 +144,13 @@ namespace NaiveMq.Client
 
             foreach (var type in types)
             {
-                if (CommandTypes.ContainsKey(type.Name))
+                if (Commands.ContainsKey(type.Name))
                 {
                     throw new ClientException(ErrorCode.CommandAlreadyRegistered, new object[] { type.Name });
                 }
                 else
                 {
-                    CommandTypes.Add(type.Name, type);
+                    Commands.Add(type.Name, type);
                 }
             }
         }
@@ -553,7 +558,7 @@ namespace NaiveMq.Client
                 {
                     try
                     {
-                        var unpackResult = await _commandPacker.Unpack(stream, CheckCommandLengths, cancellationTokenSource.Token);
+                        var unpackResult = await _commandPacker.ReadAsync(stream, CheckCommandLengths, cancellationTokenSource.Token);
 
                         Counters.ReadCommand.Add();
 
@@ -574,7 +579,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private void CheckCommandLengths(UnpackResult unpackResult)
+        private void CheckCommandLengths(ReadResult unpackResult)
         {
             if (unpackResult.CommandNameLength == 0)
             {
@@ -597,11 +602,11 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceivedDataAsync(TcpClient tcpClient, UnpackResult unpackResult, CancellationToken cancellationToken)
+        private async Task HandleReceivedDataAsync(TcpClient tcpClient, ReadResult unpackResult, CancellationToken cancellationToken)
         {
             try
             {
-                var command = _commandPacker.CreateCommand(unpackResult);
+                var command = _commandPacker.Unpack(unpackResult);
 
                 TraceCommand("<<", command);
 

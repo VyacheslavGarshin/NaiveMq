@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NaiveMq.Client.Serializers;
+using System;
 using System.Net.Sockets;
 
 namespace NaiveMq.Client
@@ -73,11 +74,38 @@ namespace NaiveMq.Client
         /// <remarks>Default value is 100 * 1024 * 1024.</remarks>
         public int MaxDataSize { get; set; } = 100 * 1024 * 1024;
 
+        public string CommandSerializer { get; set; } = nameof(NaiveCommandSerializer);
+
         /// <summary>
         /// Add this event before connect and login in constructor.
         /// </summary>
         public NaiveMqClient.OnStartHandler OnStart { get; set; }
         
         public NaiveMqClient.OnStopHandler OnStop { get; set; }
+
+        public NaiveMqClientOptions Copy()
+        {
+            return new NaiveMqClientOptions
+            {
+                AutoClusterRedirect = AutoClusterRedirect,
+                AutoRestart = AutoRestart,
+                AutoStart = AutoStart,
+                CommandSerializer = CommandSerializer,
+                ConfirmTimeout = ConfirmTimeout,
+                ConnectionTimeout = ConnectionTimeout,
+                Hosts = Hosts,
+                MaxCommandNameSize = MaxCommandNameSize,
+                MaxCommandSize = MaxCommandSize,
+                MaxDataSize = MaxDataSize,
+                OnStart = OnStart,
+                OnStop = OnStop,
+                Parallelism = Parallelism,
+                Password = Password,
+                RestartInterval = RestartInterval,
+                SendTimeout = SendTimeout,
+                TcpClient = TcpClient,
+                Username = Username,
+            };
+        }
     }
 }

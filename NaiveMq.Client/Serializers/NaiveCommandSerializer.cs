@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 
-namespace NaiveMq.Client.Converters
+namespace NaiveMq.Client.Serializers
 {
     public class NaiveCommandSerializer : ICommandSerializer
     {
@@ -33,7 +33,7 @@ namespace NaiveMq.Client.Converters
                 SerializeObject(command, stream);
                 var buffer = arrayPool.Rent((int)stream.Length);
                 stream.Position = 0;
-                stream.Write(buffer, 0, buffer.Length);
+                stream.Read(buffer, 0, (int)stream.Length);
                 return (buffer, (int)stream.Length);
             }
         }
@@ -229,7 +229,7 @@ namespace NaiveMq.Client.Converters
 
         private static Func<ReadOnlyMemory<byte>, int, (object, int)> IListRead(PropertyInfo propertyInfo)
         {
-            return (ReadOnlyMemory<byte> d, int i) =>
+            return (d, i) =>
             {
                 var count = BitConverter.ToInt32(d.Span.Slice(i, 4));
                 i += 4;
@@ -249,7 +249,7 @@ namespace NaiveMq.Client.Converters
 
         private static Func<ReadOnlyMemory<byte>, int, (object, int)> ObjectRead(PropertyInfo propertyInfo)
         {
-            return (ReadOnlyMemory<byte> d, int i) => { return DeserializeObject(d, propertyInfo.PropertyType, i); };
+            return (d, i) => { return DeserializeObject(d, propertyInfo.PropertyType, i); };
         }
 
         private static void SerializeObject(object obj, Stream stream)
@@ -279,7 +279,7 @@ namespace NaiveMq.Client.Converters
                     stream.WriteByte((byte)property.NameBytes.Length);
                     stream.Write(property.NameBytes);
 
-                    SerializeProperty(property, value, stream);                    
+                    SerializeProperty(property, value, stream);
                 }
             }
 

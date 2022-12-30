@@ -1,5 +1,4 @@
 ﻿using NaiveMq.Client.Commands;
-using NaiveMq.Client.Converters;
 using System.Buffers;
 using System.Text;
 using System;
@@ -8,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
+using NaiveMq.Client.Serializers;
 
 namespace NaiveMq.Client.Common
 {
@@ -15,18 +15,18 @@ namespace NaiveMq.Client.Common
     {
         public ArrayPool<byte> ArrayPool { get; }
 
-        private readonly ICommandSerializer _converter;        
+        private readonly ICommandSerializer _commandSerializer;
 
-        public CommandPacker(ICommandSerializer converter, ArrayPool<byte> arrayPool)
+        public CommandPacker(ICommandSerializer commandSerializer, ArrayPool<byte> arrayPool)
         {
-            _converter = converter;
+            _commandSerializer = commandSerializer;
             ArrayPool = arrayPool;
         }
 
         public PackResult Pack(ICommand command)
         {
             var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
-            var commandBytes = _converter.Serialize(command);
+            var commandBytes = _commandSerializer.Serialize(command);
             var dataLength = 0;
             var data = new ReadOnlyMemory<byte>();
 
@@ -75,7 +75,7 @@ namespace NaiveMq.Client.Common
             }
         }
 
-        public async Task<UnpackResult> Unpack(Stream stream, Action<UnpackResult> lengthCheckAction, CancellationToken cancellationToken)
+        public async Task<ReadResult> ReadAsync(Stream stream, Action<ReadResult> lengthCheckAction, CancellationToken cancellationToken)
         {
             byte[] lengthsBuffer = null;
 
@@ -90,7 +90,7 @@ namespace NaiveMq.Client.Common
                 var commandLength = BitConverter.ToInt32(lengthsBuffer, 4);
                 var dataLength = BitConverter.ToInt32(lengthsBuffer, 8);
 
-                var result = new UnpackResult { CommandNameLength = commandNameLength, CommandLength = commandLength, DataLength = dataLength };
+                var result = new ReadResult { CommandNameLength = commandNameLength, CommandLength = commandLength, DataLength = dataLength };
 
                 lengthCheckAction?.Invoke(result);
 
@@ -111,21 +111,21 @@ namespace NaiveMq.Client.Common
             }
         }
 
-        public async Task<List<ICommand>> Unpack(Stream stream, CancellationToken cancellationToken)
+        public async Task<List<ICommand>> ReadAsync(Stream stream, CancellationToken cancellationToken)
         {
             var result = new List<ICommand>();
-            var unpackResults = new List<UnpackResult>();
+            var unpackResults = new List<ReadResult>();
 
             try
             {
                 while (stream.Position < stream.Length)
                 {
-                    unpackResults.Add(await Unpack(stream, null, cancellationToken));
+                    unpackResults.Add(await ReadAsync(stream, null, cancellationToken));
                 }
 
                 foreach (var unpackResult in unpackResults)
                 {
-                    result.Add(CreateCommand(unpackResult));
+                    result.Add(Unpack(unpackResult));
                 }
             }
             finally
@@ -139,7 +139,7 @@ namespace NaiveMq.Client.Common
             return result;
         }
 
-        public ICommand CreateCommand(UnpackResult unpackResult)
+        public ICommand Unpack(ReadResult unpackResult)
         {
             var index = 0;
             var commandNameBytes = new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.CommandNameLength);
@@ -186,7 +186,7 @@ namespace NaiveMq.Client.Common
 
         private Type GetCommandType(string commandName)
         {
-            if (NaiveMqClient.CommandTypes.TryGetValue(commandName, out Type commandType))
+            if (NaiveMqClient.Commands.TryGetValue(commandName, out Type commandType))
             {
                 return commandType;
             }
@@ -198,7 +198,7 @@ namespace NaiveMq.Client.Common
 
         private ICommand ParseCommand(ReadOnlyMemory<byte> commandBytes, Type commandType)
         {
-            var result = _converter.Deserialize(commandBytes, commandType);
+            var result = _commandSerializer.Deserialize(commandBytes, commandType);
 
             if (result.Id == Guid.Empty)
             {

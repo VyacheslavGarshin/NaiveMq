@@ -164,7 +164,7 @@ static bool Commands(string input)
     {
         using var сс = new ConsoleContext(responseColor);
 
-        foreach (var commandType in NaiveMqClient.CommandTypes.Values.Where(x => x.GetInterface(nameof(IRequest)) != null).OrderBy(x => x.Name))
+        foreach (var commandType in NaiveMqClient.Commands.Values.Where(x => x.GetInterface(nameof(IRequest)) != null).OrderBy(x => x.Name))
         {
             var command = Activator.CreateInstance(commandType);
 
@@ -198,7 +198,7 @@ async Task<bool> SendAsync(string input)
 
     var func = client.GetType().GetMethods().First(x => x.Name == nameof(client.SendAsync) && x.GetParameters().Length == 3);
 
-    if (split.Length > 0 && NaiveMqClient.CommandTypes.TryGetValue(split[0], out var commandType))
+    if (split.Length > 0 && NaiveMqClient.Commands.TryGetValue(split[0], out var commandType))
     {
         var command = JsonConvert.DeserializeObject($"{{ {(split.Length > 1 ? split[1] : string.Empty)} }}", commandType);
 

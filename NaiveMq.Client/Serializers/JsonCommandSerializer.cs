@@ -5,7 +5,7 @@ using System;
 using System.Buffers;
 using System.Text;
 
-namespace NaiveMq.Client.Converters
+namespace NaiveMq.Client.Serializers
 {
     public class JsonCommandSerializer : ICommandSerializer
     {

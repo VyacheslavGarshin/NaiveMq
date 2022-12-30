@@ -300,15 +300,14 @@ namespace NaiveMq.Service.Cogs
             {
                 var service = _client.Context.Storage.Service;
 
-                var options = new NaiveMqClientOptions
-                {
-                    AutoRestart = false,
-                    Hosts = hint.Host,
-                    Username = service.Options.ClusterAdminUsername,
-                    Password = service.Options.ClusterAdminPassword,
-                    OnStart = ProxyClient_OnStart,
-                    OnStop = ProxyClient_OnStop,
-                };
+                var options = service.Options.ClientOptions.Copy();
+
+                options.AutoRestart = false;
+                options.Hosts = hint.Host;
+                options.Username = service.Options.ClusterAdminUsername;
+                options.Password = service.Options.ClusterAdminPassword;
+                options.OnStart = ProxyClient_OnStart;
+                options.OnStop = ProxyClient_OnStop;
 
                 _proxyClient = new NaiveMqClient(options, service.ClientLogger, _cancellationTokenSource.Token);
                 _proxyStarted = true;

@@ -1,6 +1,6 @@
 ﻿namespace NaiveMq.Client.Common
 {
-    public class UnpackResult
+    public class ReadResult
     {
         public byte[] Buffer { get; set; }
         public int CommandNameLength { get; set; }

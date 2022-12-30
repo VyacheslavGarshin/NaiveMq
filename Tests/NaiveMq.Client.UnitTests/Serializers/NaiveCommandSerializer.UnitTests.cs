@@ -1,8 +1,8 @@
 using FluentAssertions;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
-using NaiveMq.Client.Converters;
 using NaiveMq.Client.Dto;
+using NaiveMq.Client.Serializers;
 using NaiveMq.Service;
 using System.Buffers;
 using System.Diagnostics;
@@ -32,7 +32,7 @@ namespace NaiveMq.Client.UnitTests
         [Test]
         public void SerializeCommands()
         {
-            foreach (var type in NaiveMqClient.CommandTypes.Values)
+            foreach (var type in NaiveMqClient.Commands.Values)
             {
                 Console.Write(type.FullName);
 
@@ -162,12 +162,28 @@ namespace NaiveMq.Client.UnitTests
 
             await Task.WhenAll(taks);
             taks.Clear();
-
             sw.Stop();
             var time = sw.ElapsedTicks;
 
             sw.Restart();
+            for (var i = 0; i < threads; i++)
+            {
+                taks.Add(Task.Run(() =>
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        var tuple = _serializer.Serialize(command, ArrayPool<byte>.Shared);
+                        ArrayPool<byte>.Shared.Return(tuple.buffer);
+                    }
+                }));
+            }
 
+            await Task.WhenAll(taks);
+            taks.Clear();
+            sw.Stop();            
+            var timeS = sw.ElapsedTicks;
+
+            sw.Restart();
             for (var i = 0; i < threads; i++)
             {
                 taks.Add(Task.Run(() => { SerializeJson(command, count); }));
@@ -175,11 +191,11 @@ namespace NaiveMq.Client.UnitTests
 
             await Task.WhenAll(taks);
             taks.Clear();
-
             sw.Stop();
             var jTime = sw.ElapsedTicks;
 
             Console.WriteLine($"Serialize: {time} ticks");
+            Console.WriteLine($"Serialize pool: {timeS} ticks");
             Console.WriteLine($"Json Serialize: {jTime} ticks.");
             time.Should().BeLessThan(jTime);
         }
