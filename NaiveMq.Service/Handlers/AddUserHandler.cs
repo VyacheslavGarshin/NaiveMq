@@ -32,13 +32,13 @@ namespace NaiveMq.Service.Handlers
         {
             var user = new UserCog(userEntity, context.Storage.Counters, context.Storage.Service.SpeedCounterService);
 
-            if (!context.Storage.Users.TryAdd(userEntity.Username, user))
-            {
-                throw new ServerException(ErrorCode.UserAlreadyExists, new[] { userEntity.Username });
-            }
-
             try
             {
+                if (!context.Storage.Users.TryAdd(userEntity.Username, user))
+                {
+                    throw new ServerException(ErrorCode.UserAlreadyExists, new[] { userEntity.Username });
+                }
+
                 if (context.Mode == ClientContextMode.Client || context.Mode == ClientContextMode.Init)
                 {
                     await context.Storage.PersistentStorage.SaveUserAsync(userEntity, cancellationToken);
