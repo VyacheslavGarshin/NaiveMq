@@ -47,13 +47,12 @@ namespace NaiveMq.Client.Serializers
         {
             if (!TypeDefinitions.TryGetValue(type, out var definitions))
             {
-                var candidateDefinitionList = type.GetProperties().
-                    Where(x => x.CanRead && x.CanWrite).
-                    Select(x => new PropertyDefinition { PropertyInfo = x, Name = x.Name });
+                var definitionList = type.GetProperties()
+                    .Where(x => x.CanRead && x.CanWrite && x.GetCustomAttribute<IgnoreDataMemberAttribute>() == null)
+                    .Select(x => new PropertyDefinition { PropertyInfo = x, Name = x.Name })
+                    .ToArray();
 
-                var definitionList = new List<PropertyDefinition>();
-
-                foreach (var definition in candidateDefinitionList)
+                foreach (var definition in definitionList)
                 {
                     var propertyInfo = definition.PropertyInfo;
 
@@ -63,8 +62,6 @@ namespace NaiveMq.Client.Serializers
                     {
                         continue;
                     }
-
-                    definitionList.Add(definition);
 
                     var dataMember = propertyInfo.GetCustomAttribute<DataMemberAttribute>();
 

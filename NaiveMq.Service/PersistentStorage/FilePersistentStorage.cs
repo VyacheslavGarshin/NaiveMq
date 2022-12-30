@@ -26,7 +26,7 @@ namespace NaiveMq.Service.PersistentStorage
         
         private readonly string _baseClusterPath;
 
-        private readonly NaiveCommandSerializer _commandSerializer = new();
+        private readonly NaiveCommandSerializer _messageSerializer = new();
 
         public FilePersistentStorage(IOptions<FilePersistentStorageOptions> options, ILogger<FilePersistentStorage> logger)
         {
@@ -111,7 +111,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         public async Task SaveMessageAsync(string user, string queue, MessageEntity message, CancellationToken cancellationToken)
         {
-            var messageBytes = _commandSerializer.Serialize(message);
+            var messageBytes = _messageSerializer.Serialize(message);
             var messageLengthBytes = BitConverter.GetBytes(messageBytes.Length);
 
             await WriteFileAsync(
@@ -159,7 +159,7 @@ namespace NaiveMq.Service.PersistentStorage
                         var messageBytes = new byte[messageLength];
                         await file.ReadAsync(messageBytes, cancellationToken);
 
-                        result = (MessageEntity)_commandSerializer.Deserialize(messageBytes, typeof(MessageEntity));
+                        result = (MessageEntity)_messageSerializer.Deserialize(messageBytes, typeof(MessageEntity));
 
                         if (4 + messageLength + result.DataLength != file.Length)
                         {
