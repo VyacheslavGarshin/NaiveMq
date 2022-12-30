@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.HighPerformance;
-using NaiveMq.Client.Commands;
 using System;
 using System.Buffers;
 using System.Collections;
@@ -17,20 +16,20 @@ namespace NaiveMq.Client.Serializers
     {
         public static ConcurrentDictionary<Type, Dictionary<string, PropertyDefinition>> TypeDefinitions { get; } = new();
 
-        public byte[] Serialize(ICommand command)
+        public byte[] Serialize(object obj)
         {
             using (var stream = new MemoryStream())
             {
-                SerializeObject(command, stream);
+                SerializeObject(obj, stream);
                 return stream.ToArray();
             }
         }
 
-        public (byte[] buffer, int length) Serialize(ICommand command, ArrayPool<byte> arrayPool)
+        public (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool)
         {
             using (var stream = new MemoryStream())
             {
-                SerializeObject(command, stream);
+                SerializeObject(obj, stream);
                 var buffer = arrayPool.Rent((int)stream.Length);
                 stream.Position = 0;
                 stream.Read(buffer, 0, (int)stream.Length);
@@ -38,9 +37,9 @@ namespace NaiveMq.Client.Serializers
             }
         }
 
-        public ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type)
+        public object Deserialize(ReadOnlyMemory<byte> bytes, Type type)
         {
-            return (ICommand)DeserializeObject(bytes, type).obj;
+            return DeserializeObject(bytes, type).obj;
         }
 
         private static Dictionary<string, PropertyDefinition> GetTypeDefinition(Type type)

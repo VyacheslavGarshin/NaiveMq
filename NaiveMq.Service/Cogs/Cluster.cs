@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Dto;

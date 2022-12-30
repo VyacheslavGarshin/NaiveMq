@@ -198,7 +198,7 @@ namespace NaiveMq.Client.Common
 
         private ICommand ParseCommand(ReadOnlyMemory<byte> commandBytes, Type commandType)
         {
-            var result = _commandSerializer.Deserialize(commandBytes, commandType);
+            var result = (ICommand)_commandSerializer.Deserialize(commandBytes, commandType);
 
             if (result.Id == Guid.Empty)
             {

@@ -1,5 +1,4 @@
-﻿using NaiveMq.Client.Commands;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Buffers;
@@ -15,18 +14,19 @@ namespace NaiveMq.Client.Serializers
             ContractResolver = new DefaultContractResolver(),
         };
 
-        public byte[] Serialize(ICommand command)
+        public byte[] Serialize(object obj)
         {
-            return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(command, _jsonSerializerSettings));
+            return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj, _jsonSerializerSettings));
         }
 
-        public (byte[] buffer, int length) Serialize(ICommand command, ArrayPool<byte> arrayPool)
+        public (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool)
         {
             throw new NotImplementedException();
         }
-        public ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type)
+
+        public object Deserialize(ReadOnlyMemory<byte> bytes, Type type)
         {
-            return (ICommand)JsonConvert.DeserializeObject(Encoding.UTF8.GetString(bytes.Span), type, _jsonSerializerSettings);
+            return JsonConvert.DeserializeObject(Encoding.UTF8.GetString(bytes.Span), type, _jsonSerializerSettings);
         }
 
     }

@@ -1,15 +1,14 @@
-﻿using NaiveMq.Client.Commands;
-using System;
+﻿using System;
 using System.Buffers;
 
 namespace NaiveMq.Client.Serializers
 {
     public interface ICommandSerializer
     {
-        byte[] Serialize(ICommand command);
+        byte[] Serialize(object obj);
 
-        (byte[] buffer, int length) Serialize(ICommand command, ArrayPool<byte> arrayPool);
+        (byte[] buffer, int length) Serialize(object obj, ArrayPool<byte> arrayPool);
 
-        ICommand Deserialize(ReadOnlyMemory<byte> bytes, Type type);
+        object Deserialize(ReadOnlyMemory<byte> bytes, Type type);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NaiveMq.Client.Enums;
+using NaiveMq.Client.Serializers;
 using NaiveMq.Service.Entities;
 using Newtonsoft.Json;
 using System.Text;
@@ -24,6 +25,8 @@ namespace NaiveMq.Service.PersistentStorage
         private readonly string _basePath;
         
         private readonly string _baseClusterPath;
+
+        private readonly NaiveCommandSerializer _commandSerializer = new();
 
         public FilePersistentStorage(IOptions<FilePersistentStorageOptions> options, ILogger<FilePersistentStorage> logger)
         {
@@ -108,7 +111,7 @@ namespace NaiveMq.Service.PersistentStorage
 
         public async Task SaveMessageAsync(string user, string queue, MessageEntity message, CancellationToken cancellationToken)
         {
-            var messageBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+            var messageBytes = _commandSerializer.Serialize(message);
             var messageLengthBytes = BitConverter.GetBytes(messageBytes.Length);
 
             await WriteFileAsync(
@@ -156,7 +159,7 @@ namespace NaiveMq.Service.PersistentStorage
                         var messageBytes = new byte[messageLength];
                         await file.ReadAsync(messageBytes, cancellationToken);
 
-                        result = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(messageBytes));                        
+                        result = (MessageEntity)_commandSerializer.Deserialize(messageBytes, typeof(MessageEntity));
 
                         if (4 + messageLength + result.DataLength != file.Length)
                         {

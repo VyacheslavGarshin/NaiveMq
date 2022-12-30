@@ -1,6 +1,5 @@
 ﻿using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
-using Newtonsoft.Json;
 using System.Runtime.Serialization;
 
 namespace NaiveMq.Service.Entities
@@ -8,25 +7,25 @@ namespace NaiveMq.Service.Entities
     [DataContract]
     public class MessageEntity
     {
-        [DataMember]
+        [DataMember(Name = "I")]
         public Guid Id { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "T")]
         public string Tag { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "R")]
         public bool Request { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "P")]
         public Persistence Persistent { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "RK")]
         public string RoutingKey { get; set; }
 
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
-        [DataMember]
+        [DataMember(Name = "DL")]
         public int DataLength { get; set; }
 
         [IgnoreDataMember]
