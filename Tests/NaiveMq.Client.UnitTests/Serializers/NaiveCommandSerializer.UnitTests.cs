@@ -30,10 +30,12 @@ namespace NaiveMq.Client.UnitTests
         }
 
         [Test]
-        public void SerializeCommand()
+        public void SerializeCommands()
         {
             foreach (var type in NaiveMqClient.CommandTypes.Values)
             {
+                Console.Write(type.FullName);
+
                 var command = PrepareCommand(Activator.CreateInstance(type) as ICommand);
                 command.Prepare(_commandPacker);
 
@@ -48,7 +50,7 @@ namespace NaiveMq.Client.UnitTests
 
                 var properties = NaiveCommandSerializer.TypeDefinitions[type];
 
-                Console.WriteLine(type.FullName);
+                Console.WriteLine(", done");
 
                 foreach (var property in properties.Values)
                 {

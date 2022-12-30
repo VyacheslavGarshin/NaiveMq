@@ -1,9 +1,13 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class DeleteBinding : AbstractRequest<Confirmation>, IReplicable
     {
+        [DataMember(Name = "E")]
         public string Exchange { get; set; }
 
+        [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
         public DeleteBinding()

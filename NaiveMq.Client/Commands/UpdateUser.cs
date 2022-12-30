@@ -1,14 +1,19 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class UpdateUser : AbstractRequest<Confirmation>, IReplicable
     {
+        [DataMember(Name = "U")]
         public string Username { get; set; }
 
+        [DataMember(Name = "A")]
         public bool Administrator { get; set; }
 
         /// <summary>
         /// Update password if not empty.
         /// </summary>
+        [DataMember(Name = "P")]
         public string Password { get; set; }
 
         public UpdateUser()

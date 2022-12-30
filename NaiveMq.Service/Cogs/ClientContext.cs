@@ -41,7 +41,8 @@ namespace NaiveMq.Service.Cogs
             {
                 throw new ServerException(ErrorCode.UserNotFound, new[] { User.Entity.Username });
             }
-            else if (User.Status != UserStatus.Started)
+            
+            if (User.Status != UserStatus.Started)
             {
                 throw new ServerException(ErrorCode.UserNotStarted, new[] { User.Entity.Username });
             }

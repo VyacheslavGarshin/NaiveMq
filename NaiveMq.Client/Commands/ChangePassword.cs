@@ -1,9 +1,13 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class ChangePassword : AbstractRequest<Confirmation>, IReplicable
     {
+        [DataMember(Name = "CP")]
         public string CurrentPassword { get; set; }
-        
+
+        [DataMember(Name = "NP")]
         public string NewPassword { get; set; }
 
         public ChangePassword()

@@ -1,17 +1,24 @@
-﻿namespace NaiveMq.Service.Dto
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Service.Dto
 {
     public class ActiveQueue
     {
         public string Key => CreateKey(User, Name);
 
+        [DataMember(Name = "U")]
         public string User { get; set; }
 
+        [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        [DataMember(Name = "L")]
         public long Length { get; set; }
 
+        [DataMember(Name = "S")]
         public long Subscriptions { get; set; }
 
+        [DataMember(Name = "O")]
         public bool Outdated { get; set; }
 
         public ActiveQueue()

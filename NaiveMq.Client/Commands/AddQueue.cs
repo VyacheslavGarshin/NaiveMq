@@ -1,19 +1,26 @@
 ﻿using NaiveMq.Client.Enums;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
     public class AddQueue : AbstractRequest<Confirmation>, IReplicable
     {
+        [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        [DataMember(Name = "D")]
         public bool Durable { get; set; }
-        
+
+        [DataMember(Name = "E")]
         public bool Exchange { get; set; }
 
+        [DataMember(Name = "LL")]
         public long? LengthLimit { get; set; }
 
+        [DataMember(Name = "VL")]
         public long? VolumeLimit { get; set; }
 
+        [DataMember(Name = "LS")]
         public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
         public AddQueue()

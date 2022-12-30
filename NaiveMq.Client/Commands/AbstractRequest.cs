@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
     public abstract class AbstractRequest<TResponse> : AbstractCommand, IRequest<TResponse>
         where TResponse : IResponse
     {
+        [DataMember(Name = "T")]
         public string Tag { get; set; }
 
+        [DataMember(Name = "C")]
         public bool Confirm { get; set; } = true;
 
+        [DataMember(Name = "CT")]
         public TimeSpan? ConfirmTimeout { get; set; }
 
         public override void Validate()

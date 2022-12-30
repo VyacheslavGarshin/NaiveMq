@@ -1,4 +1,5 @@
 ﻿using NaiveMq.Client.Enums;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
@@ -8,10 +9,13 @@ namespace NaiveMq.Client.Commands
         /// Search by user.
         /// </summary>
         /// <remarks>If user is an administrator.</remarks>
+        [DataMember(Name = "U")]
         public string User { get; set; }
 
+        [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        [DataMember(Name = "St")]
         public QueueStatus? Status { get; set; }
 
         public SearchQueues()

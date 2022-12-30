@@ -1,18 +1,24 @@
 ﻿using System;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
     public abstract class AbstractResponse<T> : AbstractCommand, IResponse
         where T : IResponse
     {
+        [DataMember(Name = "RI")]
         public Guid RequestId { get; set; }
 
+        [DataMember(Name = "RT")]
         public string RequestTag { get; set; }
 
+        [DataMember(Name = "S")]
         public bool Success { get; set; } = true;
 
+        [DataMember(Name = "EC")]
         public string ErrorCode { get; set; }
 
+        [DataMember(Name = "EM")]
         public string ErrorMessage { get; set; }
 
         /// <summary>

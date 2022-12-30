@@ -9,6 +9,7 @@ namespace NaiveMq.Service.Commands
 {
     public class Replicate : AbstractRequest<Confirmation>, IDataCommand
     {
+        [DataMember(Name = "U")]
         public string User { get; set; }
 
         [JsonIgnore]

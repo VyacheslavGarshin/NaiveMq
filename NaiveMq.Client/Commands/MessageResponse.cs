@@ -6,6 +6,7 @@ namespace NaiveMq.Client.Commands
 {
     public class MessageResponse : AbstractResponse<MessageResponse>, IDataCommand
     {
+        [DataMember(Name = "R")]
         public bool Response { get; set; }
 
         [JsonIgnore]

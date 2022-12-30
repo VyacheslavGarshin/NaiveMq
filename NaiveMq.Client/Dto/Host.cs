@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Dto
 {
     public class Host
     {
+        [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        [DataMember(Name = "P")]
         public int? Port { get; set; }
 
         public Host()

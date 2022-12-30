@@ -1,7 +1,10 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class GetQueue : AbstractGetRequest<GetQueueResponse>
     {
+        [DataMember(Name = "N")]
         public string Name { get; set; }
 
         public GetQueue()

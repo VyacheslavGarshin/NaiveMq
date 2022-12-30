@@ -7,6 +7,8 @@ namespace NaiveMq.Client.Commands
 {
     public class Message : AbstractRequest<MessageResponse>, IDataCommand
     {
+        [DataMember(Name = "Q")]
+
         public string Queue { get; set; }
 
         /// <summary>
@@ -17,9 +19,15 @@ namespace NaiveMq.Client.Commands
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        [DataMember(Name = "R")]
+
         public bool Request { get; set; }
 
+        [DataMember(Name = "P")]
+
         public Persistence Persistent { get; set; } = Persistence.No;
+
+        [DataMember(Name = "RK")]
 
         public string RoutingKey { get; set; }
 

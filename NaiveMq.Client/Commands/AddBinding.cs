@@ -1,11 +1,16 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class AddBinding : AbstractRequest<Confirmation>, IReplicable
     {
+        [DataMember(Name = "E")]
         public string Exchange { get; set; }
 
+        [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
+        [DataMember(Name = "D")]
         public bool Durable { get; set; }
 
         /// <summary>

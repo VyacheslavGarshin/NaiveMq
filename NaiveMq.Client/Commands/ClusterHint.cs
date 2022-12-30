@@ -1,10 +1,12 @@
 ﻿using NaiveMq.Client.Dto;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
     public class ClusterHint : AbstractRequest<Confirmation>
     {
+        [DataMember(Name = "H")]
         public List<QueueHint> Hints { get; set; }
 
         public ClusterHint()

@@ -1,7 +1,10 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class Unsubscribe : AbstractRequest<Confirmation>
     {
+        [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
         public Unsubscribe()

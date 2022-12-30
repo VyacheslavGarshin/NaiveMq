@@ -47,16 +47,32 @@ namespace NaiveMq.Client.Converters
         {
             if (!TypeDefinitions.TryGetValue(type, out var definitions))
             {
-                definitions = type.GetProperties().
-                    Where(x => x.CanRead && x.CanWrite &&
-                        !x.CustomAttributes.Any(y => x.GetType() != typeof(IgnoreDataMemberAttribute))).
-                    Select(x => new PropertyDefinition { PropertyInfo = x }).
-                    ToDictionary(x => x.PropertyInfo.Name, x => x);
+                var candidateDefinitionList = type.GetProperties().
+                    Where(x => x.CanRead && x.CanWrite).
+                    Select(x => new PropertyDefinition { PropertyInfo = x, Name = x.Name });
 
-                foreach (var definition in definitions.Values)
+                var definitionList = new List<PropertyDefinition>();
+
+                foreach (var definition in candidateDefinitionList)
                 {
                     var propertyInfo = definition.PropertyInfo;
-                    
+
+                    var ignoreDataMember = propertyInfo.GetCustomAttribute<IgnoreDataMemberAttribute>();
+
+                    if (ignoreDataMember != null)
+                    {
+                        continue;
+                    }
+
+                    definitionList.Add(definition);
+
+                    var dataMember = propertyInfo.GetCustomAttribute<DataMemberAttribute>();
+
+                    if (dataMember != null && !string.IsNullOrEmpty(dataMember.Name))
+                    {
+                        definition.Name = dataMember.Name;
+                    }
+
                     if (propertyInfo.PropertyType.IsValueType)
                     {
                         if (propertyInfo.PropertyType == typeof(bool) || propertyInfo.PropertyType == typeof(bool?))
@@ -118,6 +134,7 @@ namespace NaiveMq.Client.Converters
                     }
                 }
 
+                definitions = definitionList.ToDictionary(x => x.Name, x => x);
                 TypeDefinitions.TryAdd(type, definitions);
             }
 
@@ -257,7 +274,7 @@ namespace NaiveMq.Client.Converters
 
                 if (value != null)
                 {
-                    property.NameBytes ??= Encoding.UTF8.GetBytes(property.PropertyInfo.Name);
+                    property.NameBytes ??= Encoding.UTF8.GetBytes(property.Name);
 
                     stream.WriteByte((byte)property.NameBytes.Length);
                     stream.Write(property.NameBytes);
@@ -322,13 +339,20 @@ namespace NaiveMq.Client.Converters
 
         public class PropertyDefinition
         {
+            public string Name { get; set; }
+
+            public byte[] NameBytes { get; set; }
+
             public PropertyInfo PropertyInfo { get; set; }
 
             public Action<object, Stream> SerializeFunc { get; set; }
 
             public Func<ReadOnlyMemory<byte>, int, ValueTuple<object, int>> DeserializeFunc { get; set; }
 
-            public byte[] NameBytes { get; set; }
+            public override string ToString()
+            {
+                return $"{PropertyInfo.DeclaringType.Name}.{PropertyInfo.Name}{(Name != PropertyInfo.Name ? $"({Name})" : string.Empty)}";
+            }
         }
     }
 }

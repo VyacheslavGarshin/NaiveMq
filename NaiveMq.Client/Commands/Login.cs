@@ -1,9 +1,13 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class Login : AbstractRequest<Confirmation>
     {
+        [DataMember(Name = "U")]
         public string Username { get; set; }
 
+        [DataMember(Name = "P")]
         public string Password { get; set; }
 
         public Login()

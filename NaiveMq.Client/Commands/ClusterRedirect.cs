@@ -1,7 +1,10 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using System.Runtime.Serialization;
+
+namespace NaiveMq.Client.Commands
 {
     public class ClusterRedirect : AbstractRequest<Confirmation>
     {
+        [DataMember(Name = "H")]
         public string Host { get; set; }
 
         public ClusterRedirect()
