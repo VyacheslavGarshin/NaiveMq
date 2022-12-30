@@ -2,6 +2,7 @@
 
 namespace NaiveMq.Client.Dto
 {
+    [DataContract]
     public class Server
     {
         [DataMember(Name = "N")]

@@ -8,27 +8,22 @@ namespace NaiveMq.Client.Commands
     public class Message : AbstractRequest<MessageResponse>, IDataCommand
     {
         [DataMember(Name = "Q")]
-
         public string Queue { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         /// <remarks>When receive message data is available only during handling in event.</remarks>
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
         [DataMember(Name = "R")]
-
         public bool Request { get; set; }
 
         [DataMember(Name = "P")]
-
         public Persistence Persistent { get; set; } = Persistence.No;
 
         [DataMember(Name = "RK")]
-
         public string RoutingKey { get; set; }
 
         public Message()

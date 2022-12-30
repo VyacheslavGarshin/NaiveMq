@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Dto
 {
+    [DataContract]
     public class Queue
     {
         [DataMember(Name = "U")]

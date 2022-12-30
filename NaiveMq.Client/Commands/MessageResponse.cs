@@ -9,7 +9,6 @@ namespace NaiveMq.Client.Commands
         [DataMember(Name = "R")]
         public bool Response { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 

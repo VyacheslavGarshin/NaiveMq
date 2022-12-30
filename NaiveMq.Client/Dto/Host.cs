@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Dto
 {
+    [DataContract]
     public class Host
     {
         [DataMember(Name = "N")]

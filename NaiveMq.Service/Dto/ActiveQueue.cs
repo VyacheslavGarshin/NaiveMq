@@ -2,6 +2,7 @@
 
 namespace NaiveMq.Service.Dto
 {
+    [DataContract]
     public class ActiveQueue
     {
         public string Key => CreateKey(User, Name);

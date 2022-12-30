@@ -5,29 +5,33 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Service.Entities
 {
+    [DataContract]
     public class MessageEntity
     {
+        [DataMember]
         public Guid Id { get; set; }
 
+        [DataMember]
         public string Tag { get; set; }
 
+        [DataMember]
         public bool Request { get; set; }
 
+        [DataMember]
         public Persistence Persistent { get; set; }
 
+        [DataMember]
         public string RoutingKey { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        [DataMember]
         public int DataLength { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public int? ClientId { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public bool Delivered { get; set; }
 

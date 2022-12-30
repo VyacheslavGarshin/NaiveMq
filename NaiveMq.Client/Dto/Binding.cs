@@ -2,6 +2,7 @@
 
 namespace NaiveMq.Client.Dto
 {
+    [DataContract]
     public class Binding
     {
         [DataMember(Name = "E")]

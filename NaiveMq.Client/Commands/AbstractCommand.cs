@@ -4,6 +4,7 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    [DataContract]
     public abstract class AbstractCommand : ICommand
     {
         [DataMember(Name = "I")]

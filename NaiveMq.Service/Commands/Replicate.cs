@@ -12,7 +12,6 @@ namespace NaiveMq.Service.Commands
         [DataMember(Name = "U")]
         public string User { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public IRequest Request { get; set; }
 
@@ -20,7 +19,6 @@ namespace NaiveMq.Service.Commands
         /// Packed <see cref="Request"/>. Automatically generated from <see cref="Request"/> on sending replicate command.
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to <see cref="Request"/>. Then cleared.</remarks>
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
