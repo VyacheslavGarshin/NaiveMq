@@ -61,69 +61,33 @@ namespace NaiveMq.Client.Converters
                     {
                         if (propertyInfo.PropertyType == typeof(bool) || propertyInfo.PropertyType == typeof(bool?))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(BitConverter.GetBytes((bool)v));
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (BitConverter.ToBoolean(d.Span.Slice(i, 1)), i + 1);
-                            };
+                            definition.SerializeFunc = BoolWrite;
+                            definition.DeserializeFunc = BoolRead;
                         }
                         else if (propertyInfo.PropertyType == typeof(Guid) || propertyInfo.PropertyType == typeof(Guid?))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(((Guid)v).ToByteArray());
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (new Guid(d.Span.Slice(i, 16)), i + 16);
-                            };
+                            definition.SerializeFunc = GuidWrite;
+                            definition.DeserializeFunc = GuidRead;
                         }
                         else if (propertyInfo.PropertyType == typeof(TimeSpan) || propertyInfo.PropertyType == typeof(TimeSpan?))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(BitConverter.GetBytes(((TimeSpan)v).TotalMilliseconds));
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (TimeSpan.FromMilliseconds(BitConverter.ToDouble(d.Span.Slice(i, 8))), i + 8);
-                            };
+                            definition.SerializeFunc = TimeSpanWrite;
+                            definition.DeserializeFunc = TimeSpanRead;
                         }
                         else if (propertyInfo.PropertyType.IsEnum || (Nullable.GetUnderlyingType(propertyInfo.PropertyType)?.IsEnum ?? false))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(BitConverter.GetBytes((int)v));
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (BitConverter.ToInt32(d.Span.Slice(i, 4)), i + 4);
-                            };
+                            definition.SerializeFunc = EnumWrite;
+                            definition.DeserializeFunc = EnumRead;
                         }
                         else if (propertyInfo.PropertyType == typeof(int) || propertyInfo.PropertyType == typeof(int?))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(BitConverter.GetBytes((int)v));
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (BitConverter.ToInt32(d.Span.Slice(i, 4)), i + 4);
-                            };
+                            definition.SerializeFunc = IntWrite;
+                            definition.DeserializeFunc = IntRead;
                         }
                         else if (propertyInfo.PropertyType == typeof(long) || propertyInfo.PropertyType == typeof(long?))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                stream.Write(BitConverter.GetBytes((long)v));
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                return (BitConverter.ToInt64(d.Span.Slice(i, 8)), i + 8);
-                            };
+                            definition.SerializeFunc = LongWrite;
+                            definition.DeserializeFunc = LongRead;
                         }
                         else
                         {
@@ -132,55 +96,20 @@ namespace NaiveMq.Client.Converters
                     }
                     else if (propertyInfo.PropertyType == typeof(string))
                     {
-                        definition.SerializeFunc = (object v, Stream stream) =>
-                        {
-                            var bytes = Encoding.UTF8.GetBytes(v as string);
-                            stream.Write(bytes.Length);
-                            stream.Write(bytes);
-                        };
-                        definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                        {
-                            var length = BitConverter.ToInt32(d.Span.Slice(i, 4));
-                            i += 4;
-                            return (Encoding.UTF8.GetString(d.Span.Slice(i, length)), i + length);
-                        };
+                        definition.SerializeFunc = StringWrite;
+                        definition.DeserializeFunc = StringRead;
                     }
                     else if (propertyInfo.PropertyType.IsClass)
                     {
                         if (propertyInfo.PropertyType.GetInterfaces().Any(x => x == typeof(IList)))
                         {
-                            definition.SerializeFunc = (object v, Stream stream) =>
-                            {
-                                var collection = v as IList;
-
-                                stream.Write(collection.Count);
-
-                                foreach (var item in collection)
-                                {
-                                    SerializeObject(item, stream);
-                                }
-                            };
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) =>
-                            {
-                                var count = BitConverter.ToInt32(d.Span.Slice(i, 4));
-                                i += 4;
-
-                                var collection = Activator.CreateInstance(propertyInfo.PropertyType) as IList;
-
-                                for (var j = 0; j < count; j++)
-                                {
-                                    var res = DeserializeObject(d, propertyInfo.PropertyType.GetGenericArguments()[0], i);
-                                    collection.Add(res.obj);
-                                    i = res.index;
-                                }
-
-                                return (collection, i);
-                            };
+                            definition.SerializeFunc = IListWrite;
+                            definition.DeserializeFunc = IListRead(propertyInfo);
                         }
                         else
                         {
                             definition.SerializeFunc = SerializeObject;
-                            definition.DeserializeFunc = (ReadOnlyMemory<byte> d, int i) => { return DeserializeObject(d, propertyInfo.PropertyType, i); };
+                            definition.DeserializeFunc = ObjectRead(propertyInfo);
                         }
                     }
                     else
@@ -193,6 +122,117 @@ namespace NaiveMq.Client.Converters
             }
 
             return definitions;
+        }
+
+        private static void BoolWrite(object v, Stream stream)
+        {
+            stream.Write(BitConverter.GetBytes((bool)v));
+        }
+
+        private static (object, int) BoolRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (BitConverter.ToBoolean(d.Span.Slice(i, 1)), i + 1);
+        }
+
+        private static void GuidWrite(object v, Stream stream)
+        {
+            stream.Write(((Guid)v).ToByteArray());
+        }
+
+        private static (object, int) GuidRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (new Guid(d.Span.Slice(i, 16)), i + 16);
+        }
+
+        private static void TimeSpanWrite(object v, Stream stream)
+        {
+            stream.Write(BitConverter.GetBytes(((TimeSpan)v).TotalMilliseconds));
+        }
+
+        private static (object, int) TimeSpanRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (TimeSpan.FromMilliseconds(BitConverter.ToDouble(d.Span.Slice(i, 8))), i + 8);
+        }
+
+        private static void EnumWrite(object v, Stream stream)
+        {
+            stream.Write(BitConverter.GetBytes((int)v));
+        }
+
+        private static (object, int) EnumRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (BitConverter.ToInt32(d.Span.Slice(i, 4)), i + 4);
+        }
+
+        private static void IntWrite(object v, Stream stream)
+        {
+            stream.Write(BitConverter.GetBytes((int)v));
+        }
+
+        private static (object, int) IntRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (BitConverter.ToInt32(d.Span.Slice(i, 4)), i + 4);
+        }
+
+        private static void LongWrite(object v, Stream stream)
+        {
+            stream.Write(BitConverter.GetBytes((long)v));
+        }
+
+        private static (object, int) LongRead(ReadOnlyMemory<byte> d, int i)
+        {
+            return (BitConverter.ToInt64(d.Span.Slice(i, 8)), i + 8);
+        }
+
+        private static void StringWrite(object v, Stream stream)
+        {
+            var bytes = Encoding.UTF8.GetBytes(v as string);
+            stream.Write(bytes.Length);
+            stream.Write(bytes);
+        }
+
+        private static (object, int) StringRead(ReadOnlyMemory<byte> d, int i)
+        {
+            var length = BitConverter.ToInt32(d.Span.Slice(i, 4));
+            i += 4;
+            return (Encoding.UTF8.GetString(d.Span.Slice(i, length)), i + length);
+        }
+
+        private static void IListWrite(object v, Stream stream)
+        {
+            var collection = v as IList;
+
+            stream.Write(collection.Count);
+
+            foreach (var item in collection)
+            {
+                SerializeObject(item, stream);
+            }
+        }
+
+        private static Func<ReadOnlyMemory<byte>, int, (object, int)> IListRead(PropertyInfo propertyInfo)
+        {
+            return (ReadOnlyMemory<byte> d, int i) =>
+            {
+                var count = BitConverter.ToInt32(d.Span.Slice(i, 4));
+                i += 4;
+
+                var collection = Activator.CreateInstance(propertyInfo.PropertyType) as IList;
+
+                for (var j = 0; j < count; j++)
+                {
+                    var res = DeserializeObject(d, propertyInfo.PropertyType.GetGenericArguments()[0], i);
+                    collection.Add(res.obj);
+                    i = res.index;
+                }
+
+                return (collection, i);
+            };
+        }
+
+        private static Func<ReadOnlyMemory<byte>, int, (object, int)> ObjectRead(PropertyInfo propertyInfo)
+        {
+            return (ReadOnlyMemory<byte> d, int i) => { return DeserializeObject(d, propertyInfo.PropertyType, i); };
         }
 
         private static void SerializeObject(object obj, Stream stream)

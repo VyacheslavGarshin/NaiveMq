@@ -95,7 +95,7 @@ namespace NaiveMq.Client
         private readonly ConcurrentDictionary<Guid, ResponseItem> _responses = new();
 
         // todo make it in command pack maybe
-        private readonly ICommandSerializer _converter = new JsonCommandSerializer();
+        private readonly ICommandSerializer _converter = new NaiveCommandSerializer(); //new JsonCommandSerializer()
 
         private readonly object _startLocker = new();
 
