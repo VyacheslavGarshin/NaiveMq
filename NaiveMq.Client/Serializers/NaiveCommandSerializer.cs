@@ -320,6 +320,11 @@ namespace NaiveMq.Client.Converters
 
                 properties.TryGetValue(propertyName, out var property);
 
+                if (property == null)
+                {
+                    throw new ArgumentException($"Deserialization error. Cannot find property with name '{propertyName}'.");
+                }
+
                 index = DeserializeProperty(property, bytes, index, result);
             } while (index < bytes.Length);
 
