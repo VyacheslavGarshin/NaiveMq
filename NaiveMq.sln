@@ -26,6 +26,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.Console", "NaiveMq.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMq.Client.UnitTests", "Tests\NaiveMq.Client.UnitTests\NaiveMq.Client.UnitTests.csproj", "{BC33C781-78C6-4025-8590-88CDF6DB6C65}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Naive.Serializer", "..\NaiveSerializer\Naive.Serializer\Naive.Serializer.csproj", "{24919763-EA2B-46BC-9EA9-60114366FEDD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -76,12 +78,20 @@ Global
 		{1561B607-37B8-4A47-89FE-955F5267B23F}.Release|x64.Build.0 = Release|x64
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|x64.Build.0 = Debug|Any CPU
+		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|x64.ActiveCfg = Debug|x64
+		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Debug|x64.Build.0 = Debug|x64
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Release|x64.ActiveCfg = Release|x64
 		{BC33C781-78C6-4025-8590-88CDF6DB6C65}.Release|x64.Build.0 = Release|x64
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Debug|x64.Build.0 = Debug|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Release|x64.ActiveCfg = Release|Any CPU
+		{24919763-EA2B-46BC-9EA9-60114366FEDD}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

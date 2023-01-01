@@ -28,4 +28,8 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\NaiveSerializer\Naive.Serializer\Naive.Serializer.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -8,7 +8,7 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Text;
 
-namespace NaiveMq.Client.UnitTests
+namespace NaiveMq.Client.UnitTests.Serializers
 {
     public class NaiveCommandSerializerUnitTests
     {
@@ -48,17 +48,9 @@ namespace NaiveMq.Client.UnitTests
 
                 var commandD = actD.Should().NotThrow().Which;
 
-                var properties = NaiveCommandSerializer.TypeDefinitions[type];
-
                 Console.WriteLine(", done");
 
-                foreach (var property in properties.Values)
-                {
-                    var value = property.PropertyInfo.GetValue(command);
-                    var valueD = property.PropertyInfo.GetValue(commandD);
-
-                    value.Should().BeEquivalentTo(valueD);
-                }
+                commandD.Should().BeEquivalentTo(command);
             }
         }
 
@@ -96,7 +88,6 @@ namespace NaiveMq.Client.UnitTests
             Console.WriteLine($"Serialize: {result?.Length} bytes, Json Serialize: {jResult?.Length} bytes.");
             Console.WriteLine($"Serialize: {Encoding.ASCII.GetString(result)} bytes.");
             Console.WriteLine($"Json Serialize: {Encoding.UTF8.GetString(jResult)} bytes.");
-            time.Should().BeLessThan(jTime);
 
             sw.Restart();
             for (var i = 0; i < count; i++)
@@ -104,7 +95,7 @@ namespace NaiveMq.Client.UnitTests
                 _serializer.Deserialize(new ReadOnlyMemory<byte>(result), type);
             }
             sw.Stop();
-            time = sw.ElapsedTicks;
+            var timeD = sw.ElapsedTicks;
 
             sw.Restart();
             for (var i = 0; i < count; i++)
@@ -112,11 +103,13 @@ namespace NaiveMq.Client.UnitTests
                 _jSerializer.Deserialize(new ReadOnlyMemory<byte>(jResult), type);
             }
             sw.Stop();
-            jTime = sw.ElapsedTicks;
+            var jTimeD = sw.ElapsedTicks;
 
-            Console.WriteLine($"Deserialize: {time} ticks");
-            Console.WriteLine($"Json Deserialize: {jTime} ticks.");
+            Console.WriteLine($"Deserialize: {timeD} ticks");
+            Console.WriteLine($"Json Deserialize: {jTimeD} ticks.");
+
             time.Should().BeLessThan(jTime);
+            timeD.Should().BeLessThan(jTimeD);
         }
 
         private byte[] SerializeJson(ICommand command, int count)
@@ -180,7 +173,7 @@ namespace NaiveMq.Client.UnitTests
 
             await Task.WhenAll(taks);
             taks.Clear();
-            sw.Stop();            
+            sw.Stop();
             var timeS = sw.ElapsedTicks;
 
             sw.Restart();
