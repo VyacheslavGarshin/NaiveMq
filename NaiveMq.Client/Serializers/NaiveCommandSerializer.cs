@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.HighPerformance;
-using Naive.Serializer;
+﻿using Naive.Serializer;
 using NaiveMq.Client.Common;
 using System;
 using System.Buffers;
@@ -28,8 +27,8 @@ namespace NaiveMq.Client.Serializers
 
         public object Deserialize(ReadOnlyMemory<byte> bytes, Type type)
         {
-            using var stream = bytes.AsStream();
-            return NaiveSerializer.Deserialize(stream, type);
+            // ReadOnlyMemory stream is surprizingly slow
+            return NaiveSerializer.Deserialize(bytes.ToArray(), type);
         }
     }
 }

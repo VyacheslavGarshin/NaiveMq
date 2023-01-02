@@ -66,7 +66,7 @@ namespace NaiveMq.Client.UnitTests.Serializers
             var sw = Stopwatch.StartNew();
             var result = SerializeNaive(command, count);
             sw.Stop();
-            var time = sw.ElapsedTicks;
+            var time = sw.Elapsed.TotalMilliseconds;
 
             sw.Restart();
             for (var i = 0; i < count; i++)
@@ -75,18 +75,18 @@ namespace NaiveMq.Client.UnitTests.Serializers
                 ArrayPool<byte>.Shared.Return(tuple.Buffer);
             }
             sw.Stop();
-            var timeS = sw.ElapsedTicks;
+            var timeS = sw.Elapsed.TotalMilliseconds;
 
             sw.Restart();
             var jResult = SerializeJson(command, count);
             sw.Stop();
-            var jTime = sw.ElapsedTicks;
+            var jTime = sw.Elapsed.TotalMilliseconds;
 
-            Console.WriteLine($"Serialize: {time} ticks");
-            Console.WriteLine($"Serialize pool: {timeS} ticks");
-            Console.WriteLine($"Json Serialize: {jTime} ticks");
+            Console.WriteLine($"Serialize: {time} ms");
+            Console.WriteLine($"Serialize pool: {timeS} ms");
+            Console.WriteLine($"Json Serialize: {jTime} ms");
             Console.WriteLine($"Serialize: {result?.Length} bytes, Json Serialize: {jResult?.Length} bytes.");
-            Console.WriteLine($"Serialize: {Encoding.ASCII.GetString(result)} bytes.");
+            Console.WriteLine($"Serialize: {string.Join(",", (result ?? new byte[0]).Select(x => x.ToString()))} bytes.");
             Console.WriteLine($"Json Serialize: {Encoding.UTF8.GetString(jResult)} bytes.");
 
             sw.Restart();
@@ -95,7 +95,7 @@ namespace NaiveMq.Client.UnitTests.Serializers
                 _serializer.Deserialize(new ReadOnlyMemory<byte>(result), type);
             }
             sw.Stop();
-            var timeD = sw.ElapsedTicks;
+            var timeD = sw.Elapsed.TotalMilliseconds;
 
             sw.Restart();
             for (var i = 0; i < count; i++)
@@ -103,10 +103,10 @@ namespace NaiveMq.Client.UnitTests.Serializers
                 _jSerializer.Deserialize(new ReadOnlyMemory<byte>(jResult), type);
             }
             sw.Stop();
-            var jTimeD = sw.ElapsedTicks;
+            var jTimeD = sw.Elapsed.TotalMilliseconds;
 
-            Console.WriteLine($"Deserialize: {timeD} ticks");
-            Console.WriteLine($"Json Deserialize: {jTimeD} ticks.");
+            Console.WriteLine($"Deserialize: {timeD} ms");
+            Console.WriteLine($"Json Deserialize: {jTimeD} ms.");
 
             time.Should().BeLessThan(jTime);
             timeD.Should().BeLessThan(jTimeD);
@@ -136,12 +136,37 @@ namespace NaiveMq.Client.UnitTests.Serializers
             return result;
         }
 
+        private object DeserializeJson(ReadOnlyMemory<byte> bytes, Type type, int count)
+        {
+            object result = null;
+
+            for (var i = 0; i < count; i++)
+            {
+                result = _jSerializer.Deserialize(bytes, type);
+            }
+
+            return result;
+        }
+
+        private object DeserializeNaive(ReadOnlyMemory<byte> bytes, Type type, int count)
+        {
+            object result = null;
+
+            for (var i = 0; i < count; i++)
+            {
+                result = _serializer.Deserialize(bytes, type);
+            }
+
+            return result;
+        }
+
         [TestCase(10)]
         [TestCase(100)]
         public async Task CommandSpeedParallel(int threads)
         {
             var command = PrepareCommand(new Login());
             command.Prepare(_commandPacker);
+            var type = command.GetType();
 
             var count = 10000;
             var taks = new List<Task>();
@@ -156,17 +181,20 @@ namespace NaiveMq.Client.UnitTests.Serializers
             await Task.WhenAll(taks);
             taks.Clear();
             sw.Stop();
-            var time = sw.ElapsedTicks;
+            var time = sw.Elapsed.TotalMilliseconds;
+
+            Console.WriteLine($"Serialize: {time} ms");
 
             sw.Restart();
             for (var i = 0; i < threads; i++)
             {
                 taks.Add(Task.Run(() =>
                 {
+                    var pool = ArrayPool<byte>.Create();
                     for (var i = 0; i < count; i++)
                     {
-                        var tuple = _serializer.Serialize(command, ArrayPool<byte>.Shared);
-                        ArrayPool<byte>.Shared.Return(tuple.Buffer);
+                        var tuple = _serializer.Serialize(command, pool);
+                        pool.Return(tuple.Buffer);
                     }
                 }));
             }
@@ -174,7 +202,9 @@ namespace NaiveMq.Client.UnitTests.Serializers
             await Task.WhenAll(taks);
             taks.Clear();
             sw.Stop();
-            var timeS = sw.ElapsedTicks;
+            var timeS = sw.Elapsed.TotalMilliseconds;
+
+            Console.WriteLine($"Serialize pool: {timeS} ms");
 
             sw.Restart();
             for (var i = 0; i < threads; i++)
@@ -185,11 +215,38 @@ namespace NaiveMq.Client.UnitTests.Serializers
             await Task.WhenAll(taks);
             taks.Clear();
             sw.Stop();
-            var jTime = sw.ElapsedTicks;
+            var jTime = sw.Elapsed.TotalMilliseconds;
 
-            Console.WriteLine($"Serialize: {time} ticks");
-            Console.WriteLine($"Serialize pool: {timeS} ticks");
-            Console.WriteLine($"Json Serialize: {jTime} ticks.");
+            Console.WriteLine($"Json Serialize: {jTime} ms.");
+
+            var bytes = SerializeNaive(command, count);
+            sw.Restart();
+            for (var i = 0; i < threads; i++)
+            {
+                taks.Add(Task.Run(() => { DeserializeNaive(bytes, type, count); }));
+            }
+
+            await Task.WhenAll(taks);
+            taks.Clear();
+            sw.Stop();
+            var timeD = sw.Elapsed.TotalMilliseconds;
+
+            Console.WriteLine($"Deserialize: {timeD} ms");
+
+            var bytesJ = SerializeJson(command, count);
+            sw.Restart();
+            for (var i = 0; i < threads; i++)
+            {
+                taks.Add(Task.Run(() => { DeserializeJson(bytesJ, type, count); }));
+            }
+
+            await Task.WhenAll(taks);
+            taks.Clear();
+            sw.Stop();
+            var timeDJ = sw.Elapsed.TotalMilliseconds;
+
+            Console.WriteLine($"Deserialize: {timeDJ} ms");
+
             time.Should().BeLessThan(jTime);
         }
 

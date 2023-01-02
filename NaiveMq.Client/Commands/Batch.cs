@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.HighPerformance;
+﻿using Naive.Serializer;
 using NaiveMq.Client.Common;
 using Newtonsoft.Json;
 using System;
@@ -71,7 +71,7 @@ namespace NaiveMq.Client.Commands
         {
             base.Restore(commandPacker);
 
-            using var stream = Data.AsStream();
+            using var stream = new RomStream(Data);
 
             var task = commandPacker.ReadAsync(stream, CancellationToken.None);
             task.Wait();
