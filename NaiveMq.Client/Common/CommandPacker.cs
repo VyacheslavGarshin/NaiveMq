@@ -25,29 +25,41 @@ namespace NaiveMq.Client.Common
 
         public PackResult Pack(ICommand command)
         {
-            var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
-            var commandBytes = _commandSerializer.Serialize(command);
-            var dataLength = 0;
-            var data = new ReadOnlyMemory<byte>();
+            PackResult commandPackResult = null;
 
-            if (command is IDataCommand dataCommand)
+            try
             {
-                dataLength = dataCommand.Data.Length;
-                data = dataCommand.Data;
-            }
+                var commandNameBytes = Encoding.UTF8.GetBytes(command.GetType().Name);
+                commandPackResult = _commandSerializer.Serialize(command, ArrayPool);
+                var dataLength = 0;
+                var data = new ReadOnlyMemory<byte>();
 
-            var allLength = 4 * 3 + commandNameBytes.Length + commandBytes.Length + dataLength;
-            var buffer = ArrayPool.Rent(allLength);
+                if (command is IDataCommand dataCommand)
+                {
+                    dataLength = dataCommand.Data.Length;
+                    data = dataCommand.Data;
+                }
 
-            buffer.CopyFrom(new[] {
+                var allLength = 4 * 3 + commandNameBytes.Length + commandPackResult.Length + dataLength;
+                var buffer = ArrayPool.Rent(allLength);
+
+                buffer.CopyFrom(new[] {
                     BitConverter.GetBytes(commandNameBytes.Length),
-                    BitConverter.GetBytes(commandBytes.Length),
+                    BitConverter.GetBytes(commandPackResult.Length),
                     BitConverter.GetBytes(dataLength),
                     commandNameBytes,
-                    commandBytes,
+                    new ReadOnlyMemory<byte>(commandPackResult.Buffer, 0, commandPackResult.Length),
                     data });
 
-            return new PackResult(buffer, allLength);
+                return new PackResult(buffer, allLength);
+            }
+            finally
+            {
+                if (commandPackResult != null)
+                {
+                    ArrayPool.Return(commandPackResult.Buffer);
+                }
+            }
         }
 
         public byte[] Pack(IEnumerable<ICommand> commands)
