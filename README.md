@@ -49,7 +49,7 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 | In memory message with confirmation           |   19.000  |  16.000   |              |              |                 |                 |
 | - Rabbit-like batch by 100 messages           |   96.000  |  52.000   |              |              |                 |                 |
 | Persistent message without confirmation       |    4.100  |  22.000** |              |              |                 |                 |
-| Persistent message with confirmation          |    2.300  |     600   |              |              |                 |                 |
+| Persistent message with confirmation          |    2.500  |     600   |              |              |                 |                 |
 | - Rabbit-like batch by 100 messages           |    2.500  |  13.000   |              |           -  |                 |               - |
 
 \* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are jumping around 5.000-10.000.
