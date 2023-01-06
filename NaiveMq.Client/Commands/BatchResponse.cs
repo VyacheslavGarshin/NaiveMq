@@ -1,4 +1,5 @@
 ﻿using Naive.Serializer;
+using Naive.Serializer.Cogs;
 using NaiveMq.Client.Common;
 using Newtonsoft.Json;
 using System;

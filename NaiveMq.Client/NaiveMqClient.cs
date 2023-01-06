@@ -255,7 +255,7 @@ namespace NaiveMq.Client
         /// <param name="throwIfError">Throw exception if response.Success is false.</param>
         /// <param name="cancellationToken"></param>
         /// <exception cref="ConnectionException"></exception>
-        /// <exception cref="ConfirmationException<TResponse>"></exception>
+        /// <exception cref="ConfirmationException"></exception>
         /// <exception cref="TimeoutException"></exception>
         /// <returns></returns>
         public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, bool throwIfError, CancellationToken cancellationToken)

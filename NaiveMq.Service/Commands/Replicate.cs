@@ -1,4 +1,5 @@
 ﻿using Naive.Serializer;
+using Naive.Serializer.Cogs;
 using NaiveMq.Client;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Common;
