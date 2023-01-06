@@ -34,24 +34,25 @@ Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 
 |-----------------------------------------------|-----------|-----------|--------------|--------------|-----------------|-----------------|
 |                                               | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers+Consumers**                       |           |           |              |              |                 |                 |
-| In memory message without confirmation        |           |       *   |              |              |                 |                 |
-| In memory message with confirmation           |           |           |              |              |                 |                 |
-| - 100 queues                                  |           |           |              |              |                 |                 |
-| - batch by 100 messages                       |           |           |              |              |                 |                 |
-| - handle confirms in a separate handler       |           |      -    |              |      -       |                 |    -            |
-| In memory request-response message            |           |      -    |              |      -       |                 |    -            |
-| Persistent message without confirmation       |           |       **  |              |              |                 |                 |
-| Persistent message with confirmation          |           |           |              |              |                 |                 |
-| - 100 queues                                  |           |           |              |              |                 |                 |
-| Disk only message with confirmation           |           |      -    |              |      -       |                 |    -            |
+| In memory message without confirmation        |   55.000  |  36.000*  |              |              |                 |                 |
+| In memory message with confirmation           |   10.300  |  10.500   |      9.200   |      10.000  |           730   |           580   |
+| - 100 queues                                  |    9.400  |  13.000   |              |              |                 |                 |
+| - batch by 100 messages in one request        |   16.000  |         - |              |           -  |                 |               - |
+| - Rabbit-like batch by 100 messages           |   15.000  |  44.000   |     12.600   |      19.000  |           650   |           450   |
+| In memory request-response message            |    9.400  |         - |              |            - |                 |               - |
+| Persistent message without confirmation       |    2.900  |  20.000** |              |              |                 |                 |
+| Persistent message with confirmation          |    2.500  |     600   |      2.100   |        400   |           490   |           100   |
+| - 100 queues                                  |    2.500  |     700   |              |              |                 |                 |
+| Disk only message with confirmation           |    2.300  |         - |      1.800   |            - |           450   |               - |
 | **Producers**                                 |           |           |              |              |                 |                 |
-| In memory message without confirmation        |           |       *   |              |              |                 |                 |
-| In memory message with confirmation           |           |           |              |              |                 |                 |
-| - handle confirms in a separate handler       |           |      -    |              |              |                 |                 |
-| Persistent message without confirmation       |           |       **  |              |              |                 |                 |
-| Persistent message with confirmation          |           |           |              |              |                 |                 |
+| In memory message without confirmation        |  118.000  |  45.000*  |              |              |                 |                 |
+| In memory message with confirmation           |   19.000  |  16.000   |              |              |                 |                 |
+| - Rabbit-like batch by 100 messages           |   96.000  |  52.000   |              |              |                 |                 |
+| Persistent message without confirmation       |    4.100  |  22.000** |              |              |                 |                 |
+| Persistent message with confirmation          |    2.300  |     600   |              |              |                 |                 |
+| - Rabbit-like batch by 100 messages           |    2.500  |  13.000   |              |           -  |                 |               - |
 
-\* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are around 15.000.
+\* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are jumping around 5.000-10.000.
 
 \*\* Same as * and disk I/O is low, not sure the messages are persistent after all.
 
