@@ -4,27 +4,28 @@ NaiveMq
 .NET Standard message queue server and client.
 
 Implemented so far:
-+ All async client interface
-+ Simple custom client-server messaging protocol
-+ User management
-+ Queue management, publish message, queue subscriptions and message consuming
-+ Message publish/consume confirmation
-+ Exchanges, routing with regex
-+ Request-response messages with response from consumer passed to producer
-+ Durable queues
-+ Disk only messages for long queues with big message data
-+ Queue limits by length or volume with server behaviour delay, reject or discard the message
-+ Server memory limits manual/automatic
-+ Management console applicaton
-+ Message or any type of request batching
-+ Clustering
++ All async client interface.
++ Simple custom client-server messaging protocol.
++ User management.
++ Queue management, publish message, queue subscriptions and message consuming.
++ Message publish/consume confirmation.
++ Exchanges, routing with regex.
++ Request-response messages with response from consumer passed to producer.
++ Durable queues.
++ Disk only messages for long queues with big message data.
++ Queue limits by length or volume with server behaviour delay, reject or discard the message.
++ Server memory limits manual/automatic.
++ Management console applicaton.
++ Message or any type of request batching.
++ Clustering.
 
 Plans:
-+ Better clustering
-+ Better durable queues
-+ Management UI
-+ Unit tests
-+ Integration tests
++ Release.
++ Better clustering.
++ Better durable queues.
++ Management UI.
++ Unit tests.
++ Integration tests.
 
 Performance vs RabbitMQ (3.10.12)
 -----------------------
