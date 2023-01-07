@@ -1,9 +1,7 @@
-﻿using Naive.Serializer;
-using Naive.Serializer.Cogs;
+﻿using Naive.Serializer.Cogs;
 using NaiveMq.Client;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
-using Newtonsoft.Json;
 using System.Runtime.Serialization;
 
 namespace NaiveMq.Service.Commands
@@ -12,7 +10,6 @@ namespace NaiveMq.Service.Commands
     {
         public string User { get; set; }
 
-        [JsonIgnore]
         [IgnoreDataMember]
         public IRequest Request { get; set; }
 
@@ -20,7 +17,6 @@ namespace NaiveMq.Service.Commands
         /// Packed <see cref="Request"/>. Automatically generated from <see cref="Request"/> on sending replicate command.
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to <see cref="Request"/>. Then cleared.</remarks>
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
@@ -42,7 +38,7 @@ namespace NaiveMq.Service.Commands
             {
                 Request.Prepare(commandPacker);
 
-                PackResult packResult = null;
+                BufferResult packResult = null;
 
                 try
                 {
@@ -61,16 +57,6 @@ namespace NaiveMq.Service.Commands
             }
         }
 
-        public override void Validate()
-        {
-            base.Validate();
-
-            if (Request is not IReplicable)
-            {
-                throw new ServerException(ErrorCode.NotReplicableRequest);
-            }
-        }
-
         public override void Restore(CommandPacker commandPacker)
         {
             base.Restore(commandPacker);
@@ -83,6 +69,16 @@ namespace NaiveMq.Service.Commands
             Request = task.Result.Cast<IRequest>().First();
 
             Data = new ReadOnlyMemory<byte>();
+        }
+
+        public override void Validate()
+        {
+            base.Validate();
+
+            if (Request is not IReplicable)
+            {
+                throw new ServerException(ErrorCode.NotReplicableRequest);
+            }
         }
     }
 }

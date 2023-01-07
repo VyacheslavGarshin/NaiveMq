@@ -2,24 +2,42 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Login.
+    /// </summary>
     public class Login : AbstractRequest<Confirmation>
     {
+        /// <summary>
+        /// Username.
+        /// </summary>
         [DataMember(Name = "U")]
         public string Username { get; set; }
 
+        /// <summary>
+        /// Password.
+        /// </summary>
         [DataMember(Name = "P")]
         public string Password { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Login()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
         public Login(string username, string password)
         {
             Username = username;
             Password = password;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

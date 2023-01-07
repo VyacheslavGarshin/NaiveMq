@@ -1,5 +1,5 @@
 ﻿using NaiveMq.Client;
-using NaiveMq.Client.Common;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service.Counters;
 using NaiveMq.Service.Entities;

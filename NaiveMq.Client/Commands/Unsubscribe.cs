@@ -2,20 +2,34 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Unsubscribe from the queue.
+    /// </summary>
     public class Unsubscribe : AbstractRequest<Confirmation>
     {
+        /// <summary>
+        /// Queue name.
+        /// </summary>
         [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Unsubscribe()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="queue"></param>
         public Unsubscribe(string queue)
         {
             Queue = queue;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

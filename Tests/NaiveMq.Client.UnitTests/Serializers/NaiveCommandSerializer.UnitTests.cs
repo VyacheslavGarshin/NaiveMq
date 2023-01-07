@@ -1,6 +1,6 @@
 using FluentAssertions;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Dto;
 using NaiveMq.Client.Serializers;
 using NaiveMq.Service;

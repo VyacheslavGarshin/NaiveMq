@@ -2,21 +2,42 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Add new user.
+    /// </summary>
     public class AddUser : AbstractRequest<Confirmation>, IReplicable
     {
+        /// <summary>
+        /// Username.
+        /// </summary>
         [DataMember(Name = "U")]
         public string Username { get; set; }
 
+        /// <summary>
+        /// Password.
+        /// </summary>
         [DataMember(Name = "P")]
         public string Password { get; set; }
 
+        /// <summary>
+        /// Mark user as administrator.
+        /// </summary>
         [DataMember(Name = "A")]
         public bool Administrator { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public AddUser()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <param name="administrator"></param>
         public AddUser(string username, string password, bool administrator = false)
         {
             Username = username;
@@ -24,6 +45,7 @@ namespace NaiveMq.Client.Commands
             Administrator = administrator;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

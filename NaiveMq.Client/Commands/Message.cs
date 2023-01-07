@@ -4,8 +4,14 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Send queue message.
+    /// </summary>
     public class Message : AbstractRequest<MessageResponse>, IDataCommand
     {
+        /// <summary>
+        /// Queue.
+        /// </summary>
         [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
@@ -15,20 +21,40 @@ namespace NaiveMq.Client.Commands
         /// <remarks>When receive message data is available only during handling in event.</remarks>
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
-
+        
+        /// <summary>
+        /// Mark message as request and wait for an answer from consumer.
+        /// </summary>
         [DataMember(Name = "R")]
         public bool Request { get; set; }
 
+        /// <summary>
+        /// Save message.
+        /// </summary>
         [DataMember(Name = "P")]
         public Persistence Persistent { get; set; } = Persistence.No;
 
+        /// <summary>
+        /// Exchange routing key.
+        /// </summary>
         [DataMember(Name = "RK")]
         public string RoutingKey { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Message()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="queue"></param>
+        /// <param name="data"></param>
+        /// <param name="request"></param>
+        /// <param name="persistent"></param>
+        /// <param name="routingKey"></param>
         public Message(string queue, ReadOnlyMemory<byte> data, bool request = false, Persistence persistent = Persistence.No, string routingKey = null)
         {
             Queue = queue;
@@ -38,6 +64,7 @@ namespace NaiveMq.Client.Commands
             RoutingKey = routingKey;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

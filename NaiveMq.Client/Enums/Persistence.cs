@@ -1,5 +1,8 @@
 ﻿namespace NaiveMq.Client.Enums
 {
+    /// <summary>
+    /// Message persistence.
+    /// </summary>
     public enum Persistence
     {
         /// <summary>

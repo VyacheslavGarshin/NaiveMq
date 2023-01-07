@@ -5,20 +5,37 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Dto
 {
+    /// <summary>
+    /// Host.
+    /// </summary>
     [DataContract]
     public class Host
     {
+        /// <summary>
+        /// Name.
+        /// </summary>
         [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Port.
+        /// </summary>
         [DataMember(Name = "P")]
         public int? Port { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Host()
         {
 
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <exception cref="ArgumentException"></exception>
         public Host(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -43,11 +60,17 @@ namespace NaiveMq.Client.Dto
             }
         }
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"{Name}{(Port != null ? $":{Port}" : string.Empty)}";
         }
 
+        /// <summary>
+        /// Parse string to list of hosts.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public static IEnumerable<Host> Parse(string value)
         {
             return (value ?? string.Empty).Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries).Select(x => new Host(x));

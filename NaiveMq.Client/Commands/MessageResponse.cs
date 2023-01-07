@@ -3,23 +3,46 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Message response.
+    /// </summary>
     public class MessageResponse : AbstractResponse<MessageResponse>, IDataCommand
     {
+        /// <summary>
+        /// Mark as response wich passes the data to the requesting application.
+        /// </summary>
         [DataMember(Name = "R")]
         public bool Response { get; set; }
 
+        /// <summary>
+        /// Response data.
+        /// </summary>
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public MessageResponse()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="data"></param>
         public MessageResponse(ReadOnlyMemory<byte> data)
         {
             Data = data;
         }
 
+        /// <summary>
+        /// Create successful respose.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="data"></param>
+        /// <param name="response"></param>
+        /// <returns></returns>
         public static MessageResponse Ok(IRequest request, ReadOnlyMemory<byte> data, bool response = false)
         {
             return new MessageResponse
@@ -32,6 +55,31 @@ namespace NaiveMq.Client.Commands
             };
         }
 
+        /// <summary>
+        /// Create unsuccessful respose.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="errorCode"></param>
+        /// <param name="errorMessage"></param>
+        /// <param name="response"></param>
+        /// <returns></returns>
+        public static MessageResponse Error(IRequest request, string errorCode = null, string errorMessage = null, bool response = false)
+        {
+            return new MessageResponse
+            {
+                RequestId = request.Id,
+                RequestTag = request.Tag,
+                Success = false,
+                ErrorCode = errorCode,
+                ErrorMessage = errorMessage,
+                Response = response,
+            };
+        }
+
+        /// <summary>
+        /// Copy message response.
+        /// </summary>
+        /// <returns></returns>
         public override MessageResponse Copy()
         {
             var result = base.Copy();
@@ -42,6 +90,7 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

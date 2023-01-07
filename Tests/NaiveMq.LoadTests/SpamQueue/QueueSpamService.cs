@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using NaiveMq.Client;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Enums;
 using NaiveMq.Service;
 using Newtonsoft.Json;

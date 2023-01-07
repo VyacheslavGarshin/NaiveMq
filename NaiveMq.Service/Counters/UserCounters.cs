@@ -1,4 +1,4 @@
-﻿using NaiveMq.Client.Common;
+﻿using NaiveMq.Client.Cogs;
 
 namespace NaiveMq.Service.Counters
 {

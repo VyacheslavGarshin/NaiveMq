@@ -1,7 +1,5 @@
-﻿using Naive.Serializer;
-using Naive.Serializer.Cogs;
-using NaiveMq.Client.Common;
-using Newtonsoft.Json;
+﻿using Naive.Serializer.Cogs;
+using NaiveMq.Client.Cogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +8,14 @@ using System.Threading;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Batch response.
+    /// </summary>
     public class BatchResponse : AbstractResponse<BatchResponse>, IDataCommand
     {
-        [JsonIgnore]
+        /// <summary>
+        /// Responses.
+        /// </summary>
         [IgnoreDataMember]
         public List<IResponse> Responses { get; set; }
 
@@ -20,19 +23,26 @@ namespace NaiveMq.Client.Commands
         /// Combined packed responses. Automatically generated from Responses on sending command.
         /// </summary>
         /// <remarks>When receive Data is reconstructed back to Responses. Then cleared.</remarks>
-        [JsonIgnore]
         [IgnoreDataMember]
         public ReadOnlyMemory<byte> Data { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public BatchResponse()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="responses"></param>
         public BatchResponse(List<IResponse> responses)
         {
             Responses = responses;
         }
 
+        /// <inheritdoc/>
         public override void Prepare(CommandPacker commandPacker)
         {
             base.Prepare(commandPacker);
@@ -48,6 +58,22 @@ namespace NaiveMq.Client.Commands
             }
         }
 
+        /// <inheritdoc/>
+        public override void Restore(CommandPacker commandPacker)
+        {
+            base.Restore(commandPacker);
+
+            using var stream = new RomStream(Data);
+
+            var task = commandPacker.ReadAsync(stream, CancellationToken.None);
+            task.Wait();
+
+            Responses = task.Result.Cast<IResponse>().ToList();
+
+            Data = new ReadOnlyMemory<byte>();
+        }
+
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();
@@ -61,20 +87,6 @@ namespace NaiveMq.Client.Commands
             {
                 response.Validate();
             }
-        }
-
-        public override void Restore(CommandPacker commandPacker)
-        {
-            base.Restore(commandPacker);
-
-            using var stream = new RomStream(Data);
-
-            var task = commandPacker.ReadAsync(stream, CancellationToken.None);
-            task.Wait();
-
-            Responses = task.Result.Cast<IResponse>().ToList();
-
-            Data = new ReadOnlyMemory<byte>();
         }
     }
 }

@@ -1,6 +1,6 @@
-﻿using NaiveMq.Client.Common;
-using NaiveMq.Client.Commands;
+﻿using NaiveMq.Client.Commands;
 using System.Runtime.Serialization;
+using NaiveMq.Client.Cogs;
 
 namespace NaiveMq.Service.Entities
 {

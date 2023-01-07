@@ -1,17 +1,20 @@
 ﻿namespace NaiveMq.Client.Enums
 {
+    /// <summary>
+    /// Strategy for the queue subscribed to the cluster server if queue is empty for the specified time.
+    /// </summary>
     public enum ClusterStrategy
     {
-        // todo implemetn proxy in subscribtioncog
         /// <summary>
         /// Proxy messages to client from the other cluster node.
         /// </summary>
+        /// <remarks>Default. Good for client with several subscriptions.</remarks>
         Proxy = 0,
 
-        // todo implement redirection in cog and client
         /// <summary>
         /// Redirect client to the other cluster node.
         /// </summary>
+        /// <remarks>Ideal for the client with one subscription.</remarks>
         Redirect = 1,
 
         /// <summary>

@@ -2,20 +2,34 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Clear queue from messages.
+    /// </summary>
     public class ClearQueue : AbstractRequest<Confirmation>, IReplicable
     {
+        /// <summary>
+        /// Queue name.
+        /// </summary>
         [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public ClearQueue()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="name"></param>
         public ClearQueue(string name)
         {
             Name = name;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

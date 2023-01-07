@@ -2,6 +2,10 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Absract implementation for any get entity request.
+    /// </summary>
+    /// <typeparam name="TResponse"></typeparam>
     public abstract class AbstractGetRequest<TResponse> : AbstractRequest<TResponse>
         where TResponse : IResponse
     {

@@ -2,20 +2,34 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Delete queue.
+    /// </summary>
     public class DeleteQueue : AbstractRequest<Confirmation>, IReplicable
     {
+        /// <summary>
+        /// Name.
+        /// </summary>
         [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public DeleteQueue()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="name"></param>
         public DeleteQueue(string name)
         {
             Name = name;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

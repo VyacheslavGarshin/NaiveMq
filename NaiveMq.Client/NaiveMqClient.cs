@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
-using NaiveMq.Client.Common;
 using NaiveMq.Client.Dto;
 using NaiveMq.Client.Serializers;
 using Newtonsoft.Json;
@@ -20,58 +20,162 @@ using System.Threading.Tasks;
 
 namespace NaiveMq.Client
 {
+    /// <summary>
+    /// NaiveMq client.
+    /// </summary>
     public class NaiveMqClient : IDisposable
     {
+        /// <summary>
+        /// Default port is 8506.
+        /// </summary>
         public const int DefaultPort = 8506;
 
+        /// <summary>
+        /// Registered commands.
+        /// </summary>
         public static Dictionary<string, Type> Commands { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
+        /// <summary>
+        /// Registered serializers.
+        /// </summary>
         public static Dictionary<string, Type> CommandSerializers { get; } = new(StringComparer.InvariantCultureIgnoreCase);
 
+        /// <summary>
+        /// Id of the client.
+        /// </summary>
         public int Id { get; }
 
+        /// <summary>
+        /// Current TcpClient.
+        /// </summary>
         public TcpClient TcpClient { get; private set; }
 
+        /// <summary>
+        /// Is started.
+        /// </summary>
         public bool Started { get; private set; }
 
+        /// <summary>
+        /// Options.
+        /// </summary>
         public NaiveMqClientOptions Options { get; }
 
+        /// <summary>
+        /// Counters.
+        /// </summary>
         public ClientCounters Counters { get; }
 
+        /// <summary>
+        /// OnStartHandler.
+        /// </summary>
+        /// <param name="sender"></param>
         public delegate void OnStartHandler(NaiveMqClient sender);
 
+        /// <summary>
+        /// On start.
+        /// </summary>
         public event OnStartHandler OnStart;
 
+        /// <summary>
+        /// OnStopHandler.
+        /// </summary>
+        /// <param name="sender"></param>
         public delegate void OnStopHandler(NaiveMqClient sender);
 
+        /// <summary>
+        /// On stop.
+        /// </summary>
         public event OnStopHandler OnStop;
 
+        /// <summary>
+        /// OnReceiveErrorHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="ex"></param>
+        /// <returns></returns>
         public delegate Task OnReceiveErrorHandler(NaiveMqClient sender, Exception ex);
 
+        /// <summary>
+        /// On receive error async.
+        /// </summary>
         public event OnReceiveErrorHandler OnReceiveErrorAsync;
 
+        /// <summary>
+        /// OnReceiveCommandHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="command"></param>
+        /// <returns></returns>
         public delegate Task OnReceiveCommandHandler(NaiveMqClient sender, ICommand command);
 
+        /// <summary>
+        /// On receive command async.
+        /// </summary>
         public event OnReceiveCommandHandler OnReceiveCommandAsync;
 
+        /// <summary>
+        /// OnReceiveRequestHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public delegate Task OnReceiveRequestHandler(NaiveMqClient sender, IRequest request);
 
+        /// <summary>
+        /// On receive request async.
+        /// </summary>
         public event OnReceiveRequestHandler OnReceiveRequestAsync;
 
+        /// <summary>
+        /// OnReceiveMessageHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
         public delegate Task OnReceiveMessageHandler(NaiveMqClient sender, Message message);
 
+        /// <summary>
+        /// On receive message async.
+        /// </summary>
         public event OnReceiveMessageHandler OnReceiveMessageAsync;
 
+        /// <summary>
+        /// OnReceiveResponseHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="response"></param>
+        /// <returns></returns>
         public delegate Task OnReceiveResponseHandler(NaiveMqClient sender, IResponse response);
 
+        /// <summary>
+        /// On receive response async.
+        /// </summary>
         public event OnReceiveResponseHandler OnReceiveResponseAsync;
 
+        /// <summary>
+        /// OnSendCommandHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="command"></param>
+        /// <returns></returns>
         public delegate Task OnSendCommandHandler(NaiveMqClient sender, ICommand command);
 
+        /// <summary>
+        /// On send command async.
+        /// </summary>
         public event OnSendCommandHandler OnSendCommandAsync;
 
+        /// <summary>
+        /// OnSendMessageHandler.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
         public delegate Task OnSendMessageHandler(NaiveMqClient sender, Message message);
 
+        /// <summary>
+        /// On send message async.
+        /// </summary>
         public event OnSendMessageHandler OnSendMessageAsync;
 
         private static readonly StringEnumConverter _stringEnumConverter = new();
@@ -110,6 +214,12 @@ namespace NaiveMq.Client
             RegisterCommands(typeof(ICommand).Assembly);
         }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="logger"></param>
+        /// <param name="stoppingToken"></param>
         public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
         {
             Id = GetHashCode();
@@ -137,6 +247,11 @@ namespace NaiveMq.Client
             }
         }
 
+        /// <summary>
+        /// Register additional commands.
+        /// </summary>
+        /// <param name="assembly"></param>
+        /// <exception cref="ClientException"></exception>
         public static void RegisterCommands(Assembly assembly)
         {
             var types = assembly.GetTypes()
@@ -155,6 +270,12 @@ namespace NaiveMq.Client
             }
         }
 
+        /// <summary>
+        /// Start client.
+        /// </summary>
+        /// <param name="login"></param>
+        /// <param name="host"></param>
+        /// <exception cref="ClientException"></exception>
         public void Start(bool login = false, string host = null)
         {
             lock (_startLocker)
@@ -207,6 +328,9 @@ namespace NaiveMq.Client
             }
         }
 
+        /// <summary>
+        /// Stop client.
+        /// </summary>
         public void Stop()
         {
             lock (_startLocker)
@@ -251,12 +375,9 @@ namespace NaiveMq.Client
         /// Send request.
         /// </summary>
         /// <param name="request"></param>
-        /// <param name="wait">Wait for response if requsest.Confirm is set.</param>
-        /// <param name="throwIfError">Throw exception if response.Success is false.</param>
+        /// <param name="wait">Wait for response if <see cref="IRequest.Confirm"/> is set to true.</param>
+        /// <param name="throwIfError">Throw <see cref="ClientException"/> if <see cref="IResponse.Success"/> is false.</param>
         /// <param name="cancellationToken"></param>
-        /// <exception cref="ConnectionException"></exception>
-        /// <exception cref="ConfirmationException"></exception>
-        /// <exception cref="TimeoutException"></exception>
         /// <returns></returns>
         public async Task<TResponse> SendAsync<TResponse>(IRequest<TResponse> request, bool wait, bool throwIfError, CancellationToken cancellationToken)
             where TResponse : IResponse
@@ -301,6 +422,11 @@ namespace NaiveMq.Client
             return (TResponse)response;
         }
 
+        /// <summary>
+        /// Send response.
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns></returns>
         public Task SendAsync(IResponse response)
         {
             return SendAsync(response, CancellationToken.None);
@@ -319,6 +445,7 @@ namespace NaiveMq.Client
             await WriteCommandAsync(response, cancellationToken);
         }
 
+        /// <inheritdoc/>
         public virtual void Dispose()
         {
             Stop();
@@ -471,17 +598,9 @@ namespace NaiveMq.Client
             return response;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="text"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        /// <exception cref="ConnectionException"></exception>
-        /// <exception cref="ClientStoppedException"></exception>
         private async Task WriteCommandAsync(ICommand command, CancellationToken cancellationToken)
         {
-            PackResult package = null;
+            BufferResult package = null;
 
             try
             {
@@ -564,7 +683,7 @@ namespace NaiveMq.Client
 
                         await _readSemaphore.WaitAsync(cancellationTokenSource.Token);
 
-                        _ = Task.Run(async () => await HandleReceivedDataAsync(tcpClient, unpackResult, cancellationTokenSource.Token), cancellationTokenSource.Token);
+                        _ = Task.Run(async () => await HandleReceivedDataAsync(tcpClient, unpackResult), cancellationTokenSource.Token);
                     }
                     catch (Exception ex)
                     {
@@ -602,7 +721,7 @@ namespace NaiveMq.Client
             }
         }
 
-        private async Task HandleReceivedDataAsync(TcpClient tcpClient, CommandReadResult unpackResult, CancellationToken cancellationToken)
+        private async Task HandleReceivedDataAsync(TcpClient tcpClient, CommandReadResult unpackResult)
         {
             try
             {
@@ -622,12 +741,9 @@ namespace NaiveMq.Client
             }
             finally
             {
-                _commandPacker.ArrayPool.Return(unpackResult.Buffer);
+                _readSemaphore?.Release();
 
-                if (_readSemaphore != null)
-                {
-                    _readSemaphore.Release();
-                }
+                _commandPacker.ArrayPool.Return(unpackResult.Buffer);
             }
         }
 

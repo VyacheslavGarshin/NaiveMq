@@ -4,8 +4,14 @@ using System.Net.Sockets;
 
 namespace NaiveMq.Client
 {
+    /// <summary>
+    /// Client options.
+    /// </summary>
     public class NaiveMqClientOptions
     {
+        /// <summary>
+        /// Ready TcpClient.
+        /// </summary>
         public TcpClient TcpClient { get; set; }
 
         /// <summary>
@@ -42,12 +48,24 @@ namespace NaiveMq.Client
         /// </summary>
         public bool AutoClusterRedirect { get; set; } = true;
 
+        /// <summary>
+        /// Restart interval.
+        /// </summary>
         public TimeSpan RestartInterval { get; set; } = TimeSpan.FromSeconds(5);
 
+        /// <summary>
+        /// Connection timeout.
+        /// </summary>
         public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
+        /// <summary>
+        /// Command confirm timeout.
+        /// </summary>
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
+        /// <summary>
+        /// Command send timeout.
+        /// </summary>
         public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
@@ -74,15 +92,56 @@ namespace NaiveMq.Client
         /// <remarks>Default value is 100 * 1024 * 1024.</remarks>
         public int MaxDataSize { get; set; } = 100 * 1024 * 1024;
 
+        /// <summary>
+        /// Command serializer used in communication.
+        /// </summary>
+        /// <remarks>Default is <see cref="NaiveCommandSerializer"/>.</remarks>
         public string CommandSerializer { get; set; } = nameof(NaiveCommandSerializer);
 
         /// <summary>
-        /// Add this event before connect and login in constructor.
+        /// On start.
         /// </summary>
+        /// <remarks>Add this event before connect and login in constructor.</remarks>
         public NaiveMqClient.OnStartHandler OnStart { get; set; }
         
+        /// <summary>
+        /// On stop.
+        /// </summary>
         public NaiveMqClient.OnStopHandler OnStop { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public NaiveMqClientOptions()
+        {
+        }
+
+        /// <summary>
+        /// Constructor with parameters.
+        /// </summary>
+        /// <param name="hosts"></param>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
+        /// <param name="onStart"></param>
+        /// <param name="onStop"></param>
+        public NaiveMqClientOptions(
+            string hosts, 
+            string username, 
+            string password, 
+            NaiveMqClient.OnStartHandler onStart = null, 
+            NaiveMqClient.OnStopHandler onStop = null)
+        {
+            Hosts = hosts;
+            Username = username;
+            Password = password;
+            OnStart = onStart;
+            OnStop = onStop;
+        }
+
+        /// <summary>
+        /// Copy options.
+        /// </summary>
+        /// <returns></returns>
         public NaiveMqClientOptions Copy()
         {
             return new NaiveMqClientOptions

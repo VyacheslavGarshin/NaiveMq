@@ -369,7 +369,7 @@ namespace NaiveMq.Service.Cogs
 
             if (hints.Any())
             {
-                await _client.SendAsync(new ClusterHint(hints) { Confirm = false });
+                await _client.SendAsync(new ClusterQueueHint(_queue.Entity.Name, hints) { Confirm = false });
             }
         }
 
@@ -382,7 +382,6 @@ namespace NaiveMq.Service.Cogs
                 {
                     yield return new QueueHint
                     {
-                        Name = _queue.Entity.Name,
                         Host = server.Host.ToString(),
                         Length = activeQueue.Length,
                         Subscriptions = activeQueue.Subscriptions,

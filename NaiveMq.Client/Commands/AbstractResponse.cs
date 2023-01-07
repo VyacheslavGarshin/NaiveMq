@@ -3,26 +3,35 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Abstract response implementation.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
     public abstract class AbstractResponse<T> : AbstractCommand, IResponse
         where T : IResponse
     {
+        /// <inheritdoc/>
         [DataMember(Name = "RI")]
         public Guid RequestId { get; set; }
 
+        /// <inheritdoc/>
         [DataMember(Name = "RT")]
         public string RequestTag { get; set; }
 
+        /// <inheritdoc/>
         [DataMember(Name = "S")]
         public bool Success { get; set; } = true;
 
+        /// <inheritdoc/>
         [DataMember(Name = "EC")]
         public string ErrorCode { get; set; }
 
+        /// <inheritdoc/>
         [DataMember(Name = "EM")]
         public string ErrorMessage { get; set; }
 
         /// <summary>
-        /// Returns new(T) with set <see cref="RequestId"/> if <see cref="request.Confirm"/>.
+        /// Returns sucessful new(T) with set <see cref="IResponse.RequestId"/> if <see cref="IRequest.Confirm"/> is set to true.
         /// </summary>
         /// <param name="request"></param>
         /// <param name="action"></param>
@@ -42,6 +51,13 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
+        /// <summary>
+        ///  Returns unsucessful new(T) with set <see cref="IResponse.RequestId"/> if <see cref="IRequest.Confirm"/> is set to true.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="errorCode"></param>
+        /// <param name="errorMessage"></param>
+        /// <returns></returns>
         public static T Error(IRequest request, string errorCode, string errorMessage)
         {
             var result = Activator.CreateInstance<T>();
@@ -55,6 +71,10 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
+        /// <summary>
+        /// Copy current request.
+        /// </summary>
+        /// <returns></returns>
         public virtual T Copy()
         {
             var result = Activator.CreateInstance<T>();
@@ -68,6 +88,7 @@ namespace NaiveMq.Client.Commands
             return result;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             if (RequestId == Guid.Empty)

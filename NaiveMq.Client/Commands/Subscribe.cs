@@ -4,8 +4,14 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Subscribe to queue.
+    /// </summary>
     public class Subscribe : AbstractRequest<Confirmation>
     {
+        /// <summary>
+        /// Queue.
+        /// </summary>
         [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
@@ -41,10 +47,22 @@ namespace NaiveMq.Client.Commands
         [DataMember(Name = "U")]
         public string User { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public Subscribe()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="queue"></param>
+        /// <param name="confirmMessage"></param>
+        /// <param name="confirmMessageTimeout"></param>
+        /// <param name="clusterStrategy"></param>
+        /// <param name="clusterIdleTimout"></param>
+        /// <param name="user"></param>
         public Subscribe(
             string queue, 
             bool confirmMessage = true, 
@@ -66,6 +84,7 @@ namespace NaiveMq.Client.Commands
             User = user;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

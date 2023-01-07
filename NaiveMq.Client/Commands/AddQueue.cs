@@ -3,30 +3,63 @@ using System.Runtime.Serialization;
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Add new queue.
+    /// </summary>
     public class AddQueue : AbstractRequest<Confirmation>, IReplicable
     {
+        /// <summary>
+        /// Name.
+        /// </summary>
         [DataMember(Name = "N")]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Save.
+        /// </summary>
         [DataMember(Name = "D")]
         public bool Durable { get; set; }
 
+        /// <summary>
+        /// Mark as exchange.
+        /// </summary>
         [DataMember(Name = "E")]
         public bool Exchange { get; set; }
 
+        /// <summary>
+        /// Limit by length.
+        /// </summary>
         [DataMember(Name = "LL")]
         public long? LengthLimit { get; set; }
 
+        /// <summary>
+        /// Limit by volume in bytes.
+        /// </summary>
         [DataMember(Name = "VL")]
         public long? VolumeLimit { get; set; }
 
+        /// <summary>
+        /// Limit strategy.
+        /// </summary>
         [DataMember(Name = "LS")]
         public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public AddQueue()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="durable"></param>
+        /// <param name="exchange"></param>
+        /// <param name="lengthLimit"></param>
+        /// <param name="volumeLimit"></param>
+        /// <param name="limitStrategy"></param>
         public AddQueue(string name, bool durable = false, bool exchange = false, long? lengthLimit = null, long? volumeLimit = null, LimitStrategy limitStrategy = LimitStrategy.Delay)
         {
             Name = name;
@@ -37,6 +70,7 @@ namespace NaiveMq.Client.Commands
             LimitStrategy = limitStrategy;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();

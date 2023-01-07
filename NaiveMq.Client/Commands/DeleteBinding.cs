@@ -2,24 +2,42 @@
 
 namespace NaiveMq.Client.Commands
 {
+    /// <summary>
+    /// Delete binding.
+    /// </summary>
     public class DeleteBinding : AbstractRequest<Confirmation>, IReplicable
     {
+        /// <summary>
+        /// Exchange queue.
+        /// </summary>
         [DataMember(Name = "E")]
         public string Exchange { get; set; }
 
+        /// <summary>
+        /// Bound queue.
+        /// </summary>
         [DataMember(Name = "Q")]
         public string Queue { get; set; }
 
+        /// <summary>
+        /// Constructor.
+        /// </summary>
         public DeleteBinding()
         {
         }
 
+        /// <summary>
+        /// Constructor with params.
+        /// </summary>
+        /// <param name="exchange"></param>
+        /// <param name="queue"></param>
         public DeleteBinding(string exchange, string queue)
         {
             Exchange = exchange;
             Queue = queue;
         }
 
+        /// <inheritdoc/>
         public override void Validate()
         {
             base.Validate();
