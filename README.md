@@ -29,9 +29,10 @@ Plans:
 
 Performance vs RabbitMQ (3.10.12)
 -----------------------
-Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb, SSD
+Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb, SSD.
+Scenario, 10 queue, 1 consumer, 1 producer per queue.
 
-| Scenario, 10 queue, 1 consumer, 1 producer    | 100 bytes |           | 10.000 bytes |              | 1.000.000 bytes |                 |
+|                                               | 100 bytes |           | 10.000 bytes |              | 1.000.000 bytes |                 |
 |-----------------------------------------------|-----------|-----------|--------------|--------------|-----------------|-----------------|
 |                                               | NaiveMq   | RabbitMq  | NaiveMq      | RabbitMq     | NaiveMq         | RabbitMq        |
 | **Producers+Consumers**                       |           |           |              |              |                 |                 |
