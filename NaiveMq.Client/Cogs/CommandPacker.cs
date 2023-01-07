@@ -199,8 +199,7 @@ namespace NaiveMq.Client.Cogs
             index += unpackResult.CommandLength;
             var dataBytes = unpackResult.DataLength > 0 ? new ReadOnlyMemory<byte>(unpackResult.Buffer, index, unpackResult.DataLength) : new ReadOnlyMemory<byte>();
 
-            var commandName = Encoding.UTF8.GetString(commandNameBytes.Span);
-            var commandType = GetCommandType(commandName);
+            var commandType = GetCommandType(commandNameBytes);
 
             var command = ParseCommand(commandBytes, commandType);
 
@@ -235,15 +234,15 @@ namespace NaiveMq.Client.Cogs
             return true;
         }
 
-        private Type GetCommandType(string commandName)
+        private Type GetCommandType(ReadOnlyMemory<byte> commandNameBytes)
         {
-            if (NaiveMqClient.Commands.TryGetValue(commandName, out Type commandType))
+            if (NaiveMqClient.Commands.TryGetValue(commandNameBytes, out Type commandType))
             {
                 return commandType;
             }
             else
             {
-                throw new ClientException(ErrorCode.CommandNotFound, new object[] { commandName });
+                throw new ClientException(ErrorCode.CommandNotFound, new object[] { Encoding.UTF8.GetString(commandNameBytes.Span) });
             }
         }
 

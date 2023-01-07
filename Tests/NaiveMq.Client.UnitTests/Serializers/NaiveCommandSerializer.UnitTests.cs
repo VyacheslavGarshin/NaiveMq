@@ -32,7 +32,7 @@ namespace NaiveMq.Client.UnitTests.Serializers
         [Test]
         public void SerializeCommands()
         {
-            foreach (var type in NaiveMqClient.Commands.Values)
+            foreach (var type in NaiveMqClient.Commands)
             {
                 Console.Write(type.FullName);
 

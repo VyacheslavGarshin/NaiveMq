@@ -64,10 +64,9 @@ do
     }
     catch (Exception ex)
     {
-        using (var cc = new ConsoleContext(errorColor))
-        {
-            Console.WriteLine("Error on processing command: " + ex.Message);
-        }
+        using var cc = new ConsoleContext(errorColor);
+
+        Console.WriteLine("Error on processing command: " + ex.Message);
     }
 } while (!quit);
 
@@ -164,7 +163,7 @@ static bool Commands(string input)
     {
         using var сс = new ConsoleContext(responseColor);
 
-        foreach (var commandType in NaiveMqClient.Commands.Values.Where(x => x.GetInterface(nameof(IRequest)) != null).OrderBy(x => x.Name))
+        foreach (var commandType in NaiveMqClient.Commands.Where(x => x.GetInterface(nameof(IRequest)) != null).OrderBy(x => x.Name))
         {
             var command = Activator.CreateInstance(commandType);
 

@@ -33,7 +33,7 @@ namespace NaiveMq.Client
         /// <summary>
         /// Registered commands.
         /// </summary>
-        public static Dictionary<string, Type> Commands { get; } = new(StringComparer.InvariantCultureIgnoreCase);
+        public static readonly CommandRegistry Commands = new();
 
         /// <summary>
         /// Registered serializers.
@@ -259,14 +259,7 @@ namespace NaiveMq.Client
 
             foreach (var type in types)
             {
-                if (Commands.ContainsKey(type.Name))
-                {
-                    throw new ClientException(ErrorCode.CommandAlreadyRegistered, new object[] { type.Name });
-                }
-                else
-                {
-                    Commands.Add(type.Name, type);
-                }
+                Commands.Add(type);
             }
         }
 
