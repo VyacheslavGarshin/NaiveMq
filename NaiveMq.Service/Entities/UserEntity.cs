@@ -25,5 +25,15 @@ namespace NaiveMq.Service.Entities
                 PasswordHash = command.Password.ComputeHash(),
             };
         }
+
+        public UserEntity Copy()
+        {
+            return new UserEntity
+            {
+                Administrator = Administrator,
+                PasswordHash = PasswordHash,
+                Username = Username
+            };
+        }
     }
 }

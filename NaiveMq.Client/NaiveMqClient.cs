@@ -178,7 +178,7 @@ namespace NaiveMq.Client
         /// </summary>
         public event OnSendMessageHandler OnSendMessageAsync;
 
-        private static readonly StringEnumConverter _stringEnumConverter = new();
+        private static readonly JsonSerializerSettings _traceJsonSettings;
 
         private SemaphoreSlim _readSemaphore;
         
@@ -208,6 +208,15 @@ namespace NaiveMq.Client
 
         static NaiveMqClient()
         {
+            _traceJsonSettings = new JsonSerializerSettings
+            {
+                Converters = new List<JsonConverter>
+                {
+                    new StringEnumConverter()
+                },
+                ContractResolver = JsonOriginalPropertiesResolver.Default,
+            };
+
             CommandSerializers.Add(nameof(NaiveCommandSerializer), typeof(NaiveCommandSerializer));
             CommandSerializers.Add(nameof(JsonCommandSerializer), typeof(JsonCommandSerializer));
 
@@ -461,7 +470,6 @@ namespace NaiveMq.Client
 
             if (TcpClient != null)
             {
-                // todo other side doesn't get that we disconected on redirection.
                 TcpClient.Dispose();
                 TcpClient = null;
             }
@@ -474,7 +482,15 @@ namespace NaiveMq.Client
 
             if (_receivingTaskCancellationTokenSource != null)
             {
-                _receivingTaskCancellationTokenSource.Cancel();
+                try
+                {
+                    _receivingTaskCancellationTokenSource.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // could be disposed on clent error
+                }
+
                 _receivingTaskCancellationTokenSource = null;
             }
 
@@ -863,7 +879,8 @@ namespace NaiveMq.Client
         {
             if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {JsonConvert.SerializeObject(command, _stringEnumConverter)}{(command is IDataCommand dataCommand ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
+                var json = JsonConvert.SerializeObject(command, _traceJsonSettings);
+                _logger.LogTrace($"{prefix} {command.GetType().Name}, {Id}: {json}{(command is IDataCommand dataCommand ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
             }
         }
 

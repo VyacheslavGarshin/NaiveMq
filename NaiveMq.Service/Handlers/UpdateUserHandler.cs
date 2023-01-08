@@ -23,7 +23,7 @@ namespace NaiveMq.Service.Handlers
                     throw new ServerException(ErrorCode.UserNotFound, new[] { command.Username });
                 }
 
-                oldEntity = JsonConvert.DeserializeObject<UserEntity>(JsonConvert.SerializeObject(user.Entity));
+                oldEntity = user.Entity.Copy();
 
                 if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase)
                     && !command.Administrator)

@@ -1,0 +1,1 @@
+docker build -f "Dockerfile" --force-rm -t naivemqserver  --label "com.microsoft.created-by=visual-studio" --label "com.microsoft.visual-studio.project-name=NaiveMq.Server" "C:\GitHub\NaiveMq"

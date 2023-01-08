@@ -5,10 +5,12 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["NaiveMq.Server.csproj", "."]
-RUN dotnet restore "./NaiveMq.Server.csproj"
+COPY ["NaiveMq.Server/NaiveMq.Server.csproj", "NaiveMq.Server/"]
+COPY ["NaiveMq.Client/NaiveMq.Client.csproj", "NaiveMq.Client/"]
+COPY ["NaiveMq.Service/NaiveMq.Service.csproj", "NaiveMq.Service/"]
+RUN dotnet restore "NaiveMq.Server/NaiveMq.Server.csproj"
 COPY . .
-WORKDIR "/src/."
+WORKDIR "/src/NaiveMq.Server"
 RUN dotnet build "NaiveMq.Server.csproj" -c Release -o /app/build
 
 FROM build AS publish
@@ -18,3 +20,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "NaiveMq.Server.dll"]
+
+EXPOSE 8506

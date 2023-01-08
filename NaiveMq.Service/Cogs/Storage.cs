@@ -84,7 +84,7 @@ namespace NaiveMq.Service.Cogs
         {
             var result = _clients.TryAdd(client.Id, client);
 
-            _logger.LogInformation("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
+            _logger.LogTrace("Client added '{ClientId}' from endpoint {RemoteEndPoint}.", client.Id, client.TcpClient.Client.RemoteEndPoint);
 
             return result;
         }
@@ -98,7 +98,7 @@ namespace NaiveMq.Service.Cogs
                 try
                 {
                     client.Dispose();
-                    _logger.LogInformation("Client deleted '{ClientId}'.", client.Id);
+                    _logger.LogTrace("Client deleted '{ClientId}'.", client.Id);
                 }
                 catch (Exception ex)
                 {

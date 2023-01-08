@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NaiveMq.Client;
+using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
 using NaiveMq.Client.Enums;
 using Newtonsoft.Json;
@@ -16,7 +17,11 @@ using var loggerFactory = LoggerFactory.Create(builder =>
 });
 var logger = loggerFactory.CreateLogger<NaiveMqClient>();
 
-var enumConverter = new StringEnumConverter();
+var jsonSettings = new JsonSerializerSettings
+{
+    ContractResolver = new JsonOriginalPropertiesResolver(),
+    Converters = new List<JsonConverter> { new StringEnumConverter() }
+};
 
 var client = CreateClient();
 
@@ -73,7 +78,7 @@ do
 void WriteCommand(bool isOut, ICommand command)
 {
     var dataCommand = command as IDataCommand;
-    Console.WriteLine($"{(isOut ? "Out" : "In")} {command.GetType().Name} {JsonConvert.SerializeObject(command, enumConverter)}" +
+    Console.WriteLine($"{(isOut ? "Out" : "In")} {command.GetType().Name} {JsonConvert.SerializeObject(command, jsonSettings)}" +
         $"{(dataCommand != null ? $", DataLength: {dataCommand.Data.Length}" : string.Empty)}");
 }
 
@@ -195,16 +200,19 @@ async Task<bool> SendAsync(string input)
 {
     var split = input.Split(' ', 2);
 
-    var func = client.GetType().GetMethods().First(x => x.Name == nameof(client.SendAsync) && x.GetParameters().Length == 3);
+    var func = client.GetType().GetMethods().First(x => x.Name == nameof(client.SendAsync) && x.GetParameters().Length == 4);
 
     if (split.Length > 0 && NaiveMqClient.Commands.TryGetValue(split[0], out var commandType))
     {
-        var command = JsonConvert.DeserializeObject($"{{ {(split.Length > 1 ? split[1] : string.Empty)} }}", commandType);
+        var command = JsonConvert.DeserializeObject(
+            $"{{ {(split.Length > 1 ? split[1] : string.Empty)} }}",
+            commandType, 
+            jsonSettings);
 
         if (command != null && commandType.BaseType != null)
         {
             var method = func.MakeGenericMethod(commandType.BaseType.GetGenericArguments());
-            await (Task)method.Invoke(client, new object[] { command, true, CancellationToken.None });
+            await (Task)method.Invoke(client, new object[] { command, true, true, CancellationToken.None });
 
             return true;
         }

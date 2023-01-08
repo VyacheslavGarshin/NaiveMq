@@ -53,7 +53,7 @@ namespace NaiveMq.Service.Cogs
                 _statsTimer = new Timer(async (state) => { await SendServerActivityAsync(); }, null, TimeSpan.Zero, _options.ClusterActivityInterval);
 
                 Started = true;
-                _logger.LogInformation("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
+                _logger.LogTrace("Cluster discovery started with hosts '{ClusterHosts}' and cluster admin '{ClusterAdmin}'.", _options.ClusterHosts, _options.ClusterAdminUsername);
             }
         }
 
@@ -167,7 +167,7 @@ namespace NaiveMq.Service.Cogs
                     server.Client = client;
                     client = null;
 
-                    _logger.LogInformation("Discovered cluster server '{Host}', name '{Name}'.", host, server.Name);
+                    _logger.LogTrace("Discovered cluster server '{Host}', name '{Name}'.", host, server.Name);
                 }
                 else
                 {
@@ -302,7 +302,7 @@ namespace NaiveMq.Service.Cogs
                 server.Client.Dispose();
                 server.Client = null;
 
-                _logger.LogInformation("Disconnected cluster server '{Host}', name '{Name}'.", server.Host, server.Name);
+                _logger.LogTrace("Disconnected cluster server '{Host}', name '{Name}'.", server.Host, server.Name);
             }
         }
 
