@@ -33,10 +33,26 @@ namespace NaiveMq.Service.PersistentStorage
             _options = options.Value;
             _logger = logger;
 
-            _basePath = string.IsNullOrEmpty(_options.Path) ? AppDomain.CurrentDomain.BaseDirectory : _options.Path;
-            _baseClusterPath = string.IsNullOrEmpty(_options.ClusterPath) ? _basePath : _options.ClusterPath;
+            var localApplicationDataFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
-            _logger.LogInformation("Base path '{BasePath}' for messages, cluster base path '{ClusterBasePath}' for other.", _basePath, _baseClusterPath);
+            _basePath = Path.IsPathRooted(_options.Path)
+                ? _options.Path
+                : Path.Combine(localApplicationDataFolder, _options.Path);
+
+            if (!string.IsNullOrEmpty(_options.ClusterPath))
+            {
+                _baseClusterPath = Path.IsPathRooted(_options.ClusterPath)
+                    ? _options.ClusterPath
+                    : Path.Combine(localApplicationDataFolder, _options.ClusterPath);
+
+                _logger.LogInformation("Storage path '{BasePath}' for messages, storage path '{ClusterBasePath}' for other things.", _basePath, _baseClusterPath);
+            }
+            else
+            {
+                _baseClusterPath = _basePath;
+
+                _logger.LogInformation("Storage path '{BasePath}'.", _basePath);
+            }
         }
 
         public async Task SaveUserAsync(UserEntity user, CancellationToken cancellationToken)
