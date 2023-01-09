@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..</DockerfileContext>
+    <DockerfileRunArguments>-p 9000:9000</DockerfileRunArguments>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
