@@ -30,7 +30,7 @@ namespace NaiveMq.Client.Cogs
         public SpeedCounters Parent { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SpeedCounters.
         /// </summary>
         /// <param name="service"></param>
         /// <param name="parent"></param>

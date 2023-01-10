@@ -22,14 +22,14 @@ namespace NaiveMq.Client.Commands
         public List<QueueHint> Hints { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClusterQueueHint command.
         /// </summary>
         public ClusterQueueHint()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new ClusterQueueHint command params.
         /// </summary>
         /// <param name="name"></param>
         /// <param name="hints"></param>

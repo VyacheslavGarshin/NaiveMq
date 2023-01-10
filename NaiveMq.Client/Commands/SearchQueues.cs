@@ -28,14 +28,14 @@ namespace NaiveMq.Client.Commands
         public QueueStatus? Status { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SearchQueues command.
         /// </summary>
         public SearchQueues()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new SearchQueues command with params.
         /// </summary>
         /// <param name="user"></param>
         /// <param name="name"></param>

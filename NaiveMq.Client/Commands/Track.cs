@@ -21,14 +21,14 @@ namespace NaiveMq.Client.Commands
         public bool Finish { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Track command.
         /// </summary>
         public Track()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Track command with params.
         /// </summary>
         /// <param name="start"></param>
         /// <param name="finish"></param>

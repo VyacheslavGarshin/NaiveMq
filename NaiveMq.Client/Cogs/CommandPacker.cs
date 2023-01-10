@@ -24,7 +24,7 @@ namespace NaiveMq.Client.Cogs
         private readonly ICommandSerializer _commandSerializer;
 
         /// <summary>
-        /// Constructor.
+        /// Creates new CommandPacker.
         /// </summary>
         /// <param name="commandSerializer"></param>
         /// <param name="arrayPool"></param>

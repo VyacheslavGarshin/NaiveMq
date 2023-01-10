@@ -20,7 +20,7 @@ namespace NaiveMq.Client
         public IResponse Response { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientException.
         /// </summary>
         /// <param name="errorCode"></param>
         public ClientException(ErrorCode errorCode) : this(errorCode, errorCode.GetDescription(), null)
@@ -28,7 +28,7 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientException.
         /// </summary>
         /// <param name="errorCode"></param>
         /// <param name="message"></param>
@@ -37,7 +37,7 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientException.
         /// </summary>
         /// <param name="errorCode"></param>
         /// <param name="args"></param>
@@ -46,7 +46,7 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientException.
         /// </summary>
         /// <param name="errorCode"></param>
         /// <param name="innerException"></param>
@@ -55,7 +55,7 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientException.
         /// </summary>
         /// <param name="errorCode"></param>
         /// <param name="message"></param>

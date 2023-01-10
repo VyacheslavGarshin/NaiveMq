@@ -25,14 +25,14 @@ namespace NaiveMq.Client.Cogs
         private Counter _counting = new();
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SpeedCounter.
         /// </summary>
         public SpeedCounter()
         {
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SpeedCounter.
         /// </summary>
         /// <param name="counterInterval"></param>
         /// <param name="average"></param>
@@ -43,7 +43,7 @@ namespace NaiveMq.Client.Cogs
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SpeedCounter.
         /// </summary>
         /// <param name="counterInterval"></param>
         /// <param name="value"></param>

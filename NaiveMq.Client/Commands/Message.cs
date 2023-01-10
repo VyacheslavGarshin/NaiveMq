@@ -41,14 +41,14 @@ namespace NaiveMq.Client.Commands
         public string RoutingKey { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Message command.
         /// </summary>
         public Message()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Message command with params.
         /// </summary>
         /// <param name="queue"></param>
         /// <param name="data"></param>

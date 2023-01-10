@@ -17,7 +17,7 @@ namespace NaiveMq.Client.Cogs
         private readonly IntervalService _hour = new(CounterInterval.Hour);
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SpeedCounter.
         /// </summary>
         /// <param name="counterInterval"></param>
         /// <param name="value"></param>

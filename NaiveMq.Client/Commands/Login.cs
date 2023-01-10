@@ -20,14 +20,14 @@ namespace NaiveMq.Client.Commands
         public string Password { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Login command.
         /// </summary>
         public Login()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Login command with params.
         /// </summary>
         /// <param name="username"></param>
         /// <param name="password"></param>

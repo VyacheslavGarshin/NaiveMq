@@ -14,14 +14,14 @@ namespace NaiveMq.Client.Commands
         public string Username { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new SearchUsers command.
         /// </summary>
         public SearchUsers()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new SearchUsers command with params.
         /// </summary>
         /// <param name="username"></param>
         public SearchUsers(string username)

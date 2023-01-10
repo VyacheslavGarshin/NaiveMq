@@ -16,14 +16,14 @@
         public int Length { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new BufferResult.
         /// </summary>
         public BufferResult()
         {
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new BufferResult.
         /// </summary>
         /// <param name="buffer"></param>
         /// <param name="length"></param>

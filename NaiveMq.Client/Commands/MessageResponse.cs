@@ -21,14 +21,14 @@ namespace NaiveMq.Client.Commands
         public ReadOnlyMemory<byte> Data { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new MessageResponse command.
         /// </summary>
         public MessageResponse()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new MessageResponse command with params.
         /// </summary>
         /// <param name="data"></param>
         public MessageResponse(ReadOnlyMemory<byte> data)

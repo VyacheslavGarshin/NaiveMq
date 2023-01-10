@@ -3,7 +3,7 @@
 namespace NaiveMq.Client.Commands
 {
     /// <summary>
-    /// Add binding between ecchange and queue.
+    /// Add binding between exchange and queue.
     /// </summary>
     public class AddBinding : AbstractRequest<Confirmation>, IReplicable
     {
@@ -29,17 +29,18 @@ namespace NaiveMq.Client.Commands
         /// Reqex pattern.
         /// </summary>
         /// <remarks>If null or empty then any message will go to the queue.</remarks>
+        [DataMember(Name = "P")]
         public string Pattern { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new AddBinding command.
         /// </summary>
         public AddBinding()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new AddBinding command with params.
         /// </summary>
         /// <param name="exchange"></param>
         /// <param name="queue"></param>

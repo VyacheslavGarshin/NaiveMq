@@ -45,14 +45,14 @@ namespace NaiveMq.Client.Commands
         public LimitStrategy LimitStrategy { get; set; } = LimitStrategy.Delay;
 
         /// <summary>
-        /// Constructor.
+        /// Creates new AddQueue command.
         /// </summary>
         public AddQueue()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new AddQueue command with params.
         /// </summary>
         /// <param name="name"></param>
         /// <param name="durable"></param>

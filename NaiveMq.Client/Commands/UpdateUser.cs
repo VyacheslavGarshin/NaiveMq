@@ -26,14 +26,14 @@ namespace NaiveMq.Client.Commands
         public string Password { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new UpdateUser command.
         /// </summary>
         public UpdateUser()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new UpdateUser command with params.
         /// </summary>
         /// <param name="username"></param>
         /// <param name="administrator"></param>

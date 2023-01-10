@@ -30,7 +30,7 @@ namespace NaiveMq.Client.Cogs
         private SpeedCounterService _service = new();
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClientCounters.
         /// </summary>
         public ClientCounters()
         {

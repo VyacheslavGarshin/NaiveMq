@@ -48,14 +48,14 @@ namespace NaiveMq.Client.Commands
         public string User { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Subscribe command.
         /// </summary>
         public Subscribe()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Subscribe command with params.
         /// </summary>
         /// <param name="queue"></param>
         /// <param name="confirmMessage"></param>

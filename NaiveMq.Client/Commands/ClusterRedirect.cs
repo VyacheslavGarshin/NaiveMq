@@ -14,14 +14,14 @@ namespace NaiveMq.Client.Commands
         public string Host { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClusterRedirect command.
         /// </summary>
         public ClusterRedirect()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new ClusterRedirect command with params.
         /// </summary>
         /// <param name="host"></param>
         public ClusterRedirect(string host)

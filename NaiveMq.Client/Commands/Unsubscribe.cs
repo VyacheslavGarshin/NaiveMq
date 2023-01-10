@@ -14,14 +14,14 @@ namespace NaiveMq.Client.Commands
         public string Queue { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Unsubscribe command.
         /// </summary>
         public Unsubscribe()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Unsubscribe command with params.
         /// </summary>
         /// <param name="queue"></param>
         public Unsubscribe(string queue)

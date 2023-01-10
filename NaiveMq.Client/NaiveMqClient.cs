@@ -224,19 +224,19 @@ namespace NaiveMq.Client
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new NaiveMq сlient.
         /// </summary>
         /// <param name="options"></param>
         /// <param name="logger"></param>
         /// <param name="stoppingToken"></param>
-        public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger, CancellationToken stoppingToken)
+        public NaiveMqClient(NaiveMqClientOptions options, ILogger<NaiveMqClient> logger = null, CancellationToken? stoppingToken = null)
         {
             Id = GetHashCode();
             Options = options;
             Counters = new();
 
-            _logger = logger;
-            _stoppingToken = stoppingToken;
+            _logger = logger ?? CreateLogger();
+            _stoppingToken = stoppingToken ?? CancellationToken.None;
             _commandSerializer = (ICommandSerializer)Activator.CreateInstance(CommandSerializers[options.CommandSerializer]);
             _commandPacker = new CommandPacker(_commandSerializer, _arrayPool);
 
@@ -340,6 +340,8 @@ namespace NaiveMq.Client
                 if (Started)
                 {
                     DisposeTcpClientAndCancelReceivingTask();
+
+                    CancelResponses();
 
                     OnStop?.Invoke(this);
 
@@ -464,6 +466,20 @@ namespace NaiveMq.Client
             Counters.Dispose();
         }
 
+        private ILogger<NaiveMqClient> CreateLogger()
+        {
+            var factory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddFilter("Microsoft", LogLevel.Warning)
+                    .AddFilter("System", LogLevel.Warning)
+                    .AddFilter("NaiveMq.Client.NaiveMqClient", LogLevel.Warning)
+                    .AddConsole();
+            });
+
+            return factory.CreateLogger<NaiveMqClient>();
+        }
+
         private void DisposeTcpClientAndCancelReceivingTask()
         {
             Started = false;
@@ -495,6 +511,31 @@ namespace NaiveMq.Client
             }
 
             _receivingTask = null;
+        }
+
+        private void CancelResponses()
+        {
+            foreach (var pair in _responses.ToList())
+            {
+                try
+                {
+                    pair.Value.Response = new Confirmation
+                    {
+                        RequestId = pair.Key,
+                        ErrorCode = ErrorCode.ClientStopped.ToString(),
+                        ErrorMessage = ErrorCode.ClientStopped.GetDescription()
+                    };
+
+                    pair.Value.SemaphoreSlim.Release();
+                }
+                catch (SemaphoreFullException)
+                {
+                }
+                catch (ObjectDisposedException)
+                {
+                    // it's ok that semaphore is already released
+                }
+            }
         }
 
         private void AutoRestart()

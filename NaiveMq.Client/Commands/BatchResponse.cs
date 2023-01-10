@@ -27,14 +27,14 @@ namespace NaiveMq.Client.Commands
         public ReadOnlyMemory<byte> Data { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new BatchResponse command.
         /// </summary>
         public BatchResponse()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new BatchResponse command with params.
         /// </summary>
         /// <param name="responses"></param>
         public BatchResponse(List<IResponse> responses)

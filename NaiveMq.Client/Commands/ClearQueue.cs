@@ -14,14 +14,14 @@ namespace NaiveMq.Client.Commands
         public string Name { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ClearQueue command.
         /// </summary>
         public ClearQueue()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new ClearQueue command with params.
         /// </summary>
         /// <param name="name"></param>
         public ClearQueue(string name)

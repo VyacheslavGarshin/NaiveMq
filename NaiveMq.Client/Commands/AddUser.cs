@@ -26,14 +26,14 @@ namespace NaiveMq.Client.Commands
         public bool Administrator { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new AddUser command.
         /// </summary>
         public AddUser()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new AddUser command with params.
         /// </summary>
         /// <param name="username"></param>
         /// <param name="password"></param>

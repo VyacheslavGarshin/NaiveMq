@@ -5,7 +5,7 @@ using System.Net.Sockets;
 namespace NaiveMq.Client
 {
     /// <summary>
-    /// Client options.
+    /// NaiveMq client options.
     /// </summary>
     public class NaiveMqClientOptions
     {
@@ -110,14 +110,14 @@ namespace NaiveMq.Client
         public NaiveMqClient.OnStopHandler OnStop { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new NaiveMq client options.
         /// </summary>
         public NaiveMqClientOptions()
         {
         }
 
         /// <summary>
-        /// Constructor with parameters.
+        /// Creates new NaiveMq client options.
         /// </summary>
         /// <param name="hosts"></param>
         /// <param name="username"></param>

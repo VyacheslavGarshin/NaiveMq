@@ -14,14 +14,14 @@ namespace NaiveMq.Client.Commands
         public string Username { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new DeleteUser command.
         /// </summary>
         public DeleteUser()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new DeleteUser command with params.
         /// </summary>
         /// <param name="username"></param>
         public DeleteUser(string username)

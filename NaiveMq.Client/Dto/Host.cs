@@ -24,7 +24,7 @@ namespace NaiveMq.Client.Dto
         public int? Port { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Host.
         /// </summary>
         public Host()
         {
@@ -32,7 +32,7 @@ namespace NaiveMq.Client.Dto
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new Host with params.
         /// </summary>
         /// <param name="value"></param>
         /// <exception cref="ArgumentException"></exception>

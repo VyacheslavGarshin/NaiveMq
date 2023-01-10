@@ -20,14 +20,14 @@ namespace NaiveMq.Client.Commands
         public string NewPassword { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new ChangePassword command.
         /// </summary>
         public ChangePassword()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new ChangePassword command with params.
         /// </summary>
         /// <param name="currentPassword"></param>
         /// <param name="newPassword"></param>

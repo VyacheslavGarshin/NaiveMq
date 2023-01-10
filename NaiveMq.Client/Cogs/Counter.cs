@@ -27,14 +27,14 @@ namespace NaiveMq.Client.Cogs
         private long _count;
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Counter.
         /// </summary>
         public Counter()
         {
         }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new Counter.
         /// </summary>
         /// <param name="parent"></param>
         public Counter(Counter parent)

@@ -34,14 +34,14 @@ namespace NaiveMq.Client.Commands
         public bool Overflow { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new TrackResponse command.
         /// </summary>
         public TrackResponse()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new TrackResponse command with params.
         /// </summary>
         /// <param name="failedRequests"></param>
         /// <param name="lastErrorCode"></param>

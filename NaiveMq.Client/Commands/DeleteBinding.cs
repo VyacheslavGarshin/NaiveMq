@@ -20,14 +20,14 @@ namespace NaiveMq.Client.Commands
         public string Queue { get; set; }
 
         /// <summary>
-        /// Constructor.
+        /// Creates new DeleteBinding command.
         /// </summary>
         public DeleteBinding()
         {
         }
 
         /// <summary>
-        /// Constructor with params.
+        /// Creates new DeleteBinding command with params.
         /// </summary>
         /// <param name="exchange"></param>
         /// <param name="queue"></param>
