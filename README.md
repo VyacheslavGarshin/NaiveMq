@@ -61,9 +61,9 @@ Scenario: 10 queues, 1 consumer, 1 producer per queue.
 
 Scalability
 -----------
-Since in cluster mode the node has its own messages then teoretically 
+Since in the cluster mode the node has its own messages then teoretically 
 the queue performance should scale linearly by multiplying one node performance by number of nodes, 
-provided the producers and consumers are spread evenly beetween the nodes.
+provided the producers and consumers are spread evenly beetween the nodes or redirect option is selected in consumer subscription.
 
 Requirements
 --------------
