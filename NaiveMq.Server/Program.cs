@@ -2,6 +2,7 @@ using NaiveMq.Service;
 using NaiveMq.Service.PersistentStorage;
 
 var host = Host.CreateDefaultBuilder(args)
+    .UseWindowsService()
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;

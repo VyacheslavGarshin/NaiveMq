@@ -1,4 +1,6 @@
-﻿using NaiveMq.Client.Serializers;
+﻿using NaiveMq.Client.Commands;
+using NaiveMq.Client.Enums;
+using NaiveMq.Client.Serializers;
 using System;
 using System.Net.Sockets;
 
@@ -21,13 +23,13 @@ namespace NaiveMq.Client
         public string Hosts { get; set; } = "localhost";
 
         /// <summary>
-        /// 
+        /// Username.
         /// </summary>
         /// <remarks>Default is "guest".</remarks>
         public string Username { get; set; } = "guest";
 
         /// <summary>
-        /// 
+        /// Password.
         /// </summary>
         /// <remarks>Default is "guest".</remarks>
         public string Password { get; set; } = "guest";
@@ -41,31 +43,38 @@ namespace NaiveMq.Client
         /// <summary>
         /// Auto restart on connection lost.
         /// </summary>
+        /// <remarks>Default is true.</remarks>
         public bool AutoRestart { get; set; } = true;
 
         /// <summary>
-        /// Auto reconnect to another cluster server.
+        /// Auto reconnect to another cluster server if current cluster server queue is empty 
+        /// and <see cref="Subscribe.ClusterStrategy"/> set to <see cref="ClusterStrategy.Redirect"/>.
         /// </summary>
+        /// <remarks>Default is true.</remarks>
         public bool AutoClusterRedirect { get; set; } = true;
 
         /// <summary>
         /// Restart interval.
         /// </summary>
+        /// <remarks>Default is 5 seconds.</remarks>
         public TimeSpan RestartInterval { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Connection timeout.
         /// </summary>
+        /// <remarks>Default is 10 seconds.</remarks>
         public TimeSpan ConnectionTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
         /// <summary>
         /// Command confirm timeout.
         /// </summary>
+        /// <remarks>Default one minute.</remarks>
         public TimeSpan ConfirmTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// Command send timeout.
         /// </summary>
+        /// <remarks>Default is one minute.</remarks>
         public TimeSpan SendTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
         /// <summary>
@@ -75,19 +84,19 @@ namespace NaiveMq.Client
         public int Parallelism { get; set; } = 8;
 
         /// <summary>
-        /// 
+        /// Maximum command name size.
         /// </summary>
         /// <remarks>Default value is 1024.</remarks>
         public int MaxCommandNameSize { get; set; } = 1024;
 
         /// <summary>
-        /// 
+        /// Maximum command size.
         /// </summary>
         /// <remarks>Default value is 1024 * 1024.</remarks>
         public int MaxCommandSize { get; set; } = 1024 * 1024;
 
         /// <summary>
-        /// 
+        /// Maximum data part of the command size.
         /// </summary>
         /// <remarks>Default value is 100 * 1024 * 1024.</remarks>
         public int MaxDataSize { get; set; } = 100 * 1024 * 1024;

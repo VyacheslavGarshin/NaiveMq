@@ -27,7 +27,7 @@ namespace NaiveMq.Client.Cogs
         /// </summary>
         public SpeedCounters WriteCommand { get; }
 
-        private SpeedCounterService _service = new();
+        private readonly SpeedCounterService _service = new();
 
         /// <summary>
         /// Creates new ClientCounters.
