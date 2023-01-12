@@ -14,6 +14,11 @@ namespace NaiveMq.Service.Handlers
 
             if (!context.User.Queues.TryGetValue(command.Name, out var queue))
             {
+                if (command.Try)
+                {
+                    return Confirmation.Ok(command);
+                }
+
                 throw new ServerException(ErrorCode.QueueNotFound, new[] { command.Name });
             }
 

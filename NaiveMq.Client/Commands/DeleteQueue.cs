@@ -5,7 +5,7 @@ namespace NaiveMq.Client.Commands
     /// <summary>
     /// Delete queue.
     /// </summary>
-    public class DeleteQueue : AbstractRequest<Confirmation>, IReplicable
+    public class DeleteQueue : AbstractDeleteRequest<Confirmation>, IReplicable
     {
         /// <summary>
         /// Name.

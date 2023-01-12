@@ -5,7 +5,7 @@ namespace NaiveMq.Client.Commands
     /// <summary>
     /// Delete binding.
     /// </summary>
-    public class DeleteBinding : AbstractRequest<Confirmation>, IReplicable
+    public class DeleteBinding : AbstractDeleteRequest<Confirmation>, IReplicable
     {
         /// <summary>
         /// Exchange queue.

@@ -14,6 +14,11 @@ namespace NaiveMq.Service.Handlers
 
             if (string.Equals(context.User.Entity.Username, command.Username, StringComparison.InvariantCultureIgnoreCase))
             {
+                if (command.Try)
+                {
+                    return Confirmation.Ok(command);
+                }
+
                 throw new ServerException(ErrorCode.UserDeleteSelf);
             }
 

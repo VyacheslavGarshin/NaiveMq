@@ -5,7 +5,7 @@ namespace NaiveMq.Client.Commands
     /// <summary>
     /// Delete user.
     /// </summary>
-    public class DeleteUser : AbstractRequest<Confirmation>, IReplicable
+    public class DeleteUser : AbstractDeleteRequest<Confirmation>, IReplicable
     {
         /// <summary>
         /// Username.
