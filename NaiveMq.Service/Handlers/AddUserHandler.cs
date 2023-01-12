@@ -23,12 +23,12 @@ namespace NaiveMq.Service.Handlers
 
             var userEntity = UserEntity.FromCommand(command);
             
-            await ExecuteEntityAsync(context, userEntity, cancellationToken);
+            await ExecuteEntityAsync(context, userEntity, command, cancellationToken);
 
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity, CancellationToken cancellationToken)
+        public static async Task ExecuteEntityAsync(ClientContext context, UserEntity userEntity, AddUser command, CancellationToken cancellationToken)
         {
             var user = new UserCog(userEntity, context.Storage.Counters, context.Storage.Service.SpeedCounterService);
 
@@ -36,6 +36,11 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.Storage.Users.TryAdd(userEntity.Username, user))
                 {
+                    if (command != null && command.Try)
+                    {
+                        return;
+                    }
+
                     throw new ServerException(ErrorCode.UserAlreadyExists, new[] { userEntity.Username });
                 }
 

@@ -16,12 +16,12 @@ namespace NaiveMq.Service.Handlers
             var queueEnity = QueueEntity.FromCommand(command);
             queueEnity.User = context.User.Entity.Username;
 
-            await ExecuteEntityAsync(context, queueEnity, cancellationToken);
+            await ExecuteEntityAsync(context, queueEnity, command, cancellationToken);
 
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity, CancellationToken cancellationToken)
+        public static async Task ExecuteEntityAsync(ClientContext context, QueueEntity queueEntity, AddQueue command, CancellationToken cancellationToken)
         {
             var queue = new QueueCog(queueEntity, context.User, context.Storage.Service.SpeedCounterService);
 
@@ -29,6 +29,11 @@ namespace NaiveMq.Service.Handlers
             {
                 if (!context.User.Queues.TryAdd(queueEntity.Name, queue))
                 {
+                    if (command != null && command.Try)
+                    {
+                        return;
+                    }
+
                     throw new ServerException(ErrorCode.QueueAlreadyExists, new[] { queueEntity.Name });
                 }
 

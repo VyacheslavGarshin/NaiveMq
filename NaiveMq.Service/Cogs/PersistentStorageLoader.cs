@@ -53,8 +53,7 @@ namespace NaiveMq.Service.Cogs
             {
                 var user = await _storage.PersistentStorage.LoadUserAsync(key, _cancellationToken);
                 
-                var handler = new AddUserHandler();
-                await handler.ExecuteEntityAsync(context, user, _cancellationToken);
+                await AddUserHandler.ExecuteEntityAsync(context, user, null, _cancellationToken);
                 
                 count++;
             }
@@ -86,8 +85,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     var queue = await _storage.PersistentStorage.LoadQueueAsync(user.Entity.Username, keys, _cancellationToken);
 
-                    var handler = new AddQueueHandler();
-                    await handler.ExecuteEntityAsync(context, queue, _cancellationToken);
+                    await AddQueueHandler.ExecuteEntityAsync(context, queue, null, _cancellationToken);
 
                     queuesCount++;
                 }
@@ -110,8 +108,7 @@ namespace NaiveMq.Service.Cogs
                 {
                     var binding = await _storage.PersistentStorage.LoadBindingAsync(user.Entity.Username, key, _cancellationToken);
 
-                    var handler = new AddBindingHandler();
-                    await handler.ExecuteEntityAsync(context, binding, _cancellationToken);
+                    await AddBindingHandler.ExecuteEntityAsync(context, binding, null, _cancellationToken);
 
                     bindingsCount++;
                 }

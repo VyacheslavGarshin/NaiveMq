@@ -15,39 +15,51 @@ namespace NaiveMq.Service.Handlers
 
             var bindingEnity = BindingEntity.FromCommand(command);
             
-            await ExecuteEntityAsync(context, bindingEnity, cancellationToken);
+            await ExecuteEntityAsync(context, bindingEnity, command, cancellationToken);
 
             return Confirmation.Ok(command);
         }
 
-        public async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEntity, CancellationToken cancellationToken)
+        public static async Task ExecuteEntityAsync(ClientContext context, BindingEntity bindingEntity, AddBinding command, CancellationToken cancellationToken)
         {
             var binding = new BindingCog(bindingEntity);
 
             Check(context, binding);
 
-            Bind(context, binding, out var exchangeBindings, out var queueBindings);
-
-            if (context.Mode == ClientContextMode.Client && bindingEntity.Durable)
+            try
             {
-                try
-                {
-                    await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Entity.Username, bindingEntity, cancellationToken);
-                }
-                catch
-                {
-                    if (exchangeBindings.IsEmpty)
-                    {
-                        context.User.Bindings.TryRemove(bindingEntity.Exchange, out var _);
-                    }
+                Bind(context, binding, out var exchangeBindings, out var queueBindings);
 
-                    if (queueBindings.IsEmpty)
+                if (context.Mode == ClientContextMode.Client && bindingEntity.Durable)
+                {
+                    try
                     {
-                        context.User.Bindings.TryRemove(bindingEntity.Queue, out var _);
+                        await context.Storage.PersistentStorage.SaveBindingAsync(context.User.Entity.Username, bindingEntity, cancellationToken);
                     }
+                    catch
+                    {
+                        if (exchangeBindings.IsEmpty)
+                        {
+                            context.User.Bindings.TryRemove(bindingEntity.Exchange, out var _);
+                        }
 
-                    throw;
+                        if (queueBindings.IsEmpty)
+                        {
+                            context.User.Bindings.TryRemove(bindingEntity.Queue, out var _);
+                        }
+
+                        throw;
+                    }
                 }
+            }
+            catch (ServerException ex)
+            {
+                if (ex.ErrorCode == ErrorCode.BindingAlreadyExists && command != null && command.Try)
+                {
+                    return;
+                }
+
+                throw;
             }
         }
 

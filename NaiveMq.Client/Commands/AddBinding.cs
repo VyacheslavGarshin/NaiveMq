@@ -5,7 +5,7 @@ namespace NaiveMq.Client.Commands
     /// <summary>
     /// Add binding between exchange and queue.
     /// </summary>
-    public class AddBinding : AbstractRequest<Confirmation>, IReplicable
+    public class AddBinding : AbstractAddRequest<Confirmation>, IReplicable
     {
         /// <summary>
         /// Exchange queue created with <see cref="AddQueue.Exchange"/> set to true.
