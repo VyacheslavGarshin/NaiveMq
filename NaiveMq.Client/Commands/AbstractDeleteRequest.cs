@@ -12,6 +12,7 @@ namespace NaiveMq.Client.Commands
         /// <summary>
         /// Do not throw exception if object does not exists.
         /// </summary>
+        /// <remarks>Default is false.</remarks>
         [DataMember(Name = "Tr")]
         public bool Try { get; set; } = false;
     }

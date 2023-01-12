@@ -28,7 +28,7 @@ Plans:
 + Integration tests.
 
 Performance vs RabbitMQ (3.10.12)
------------------------
+---------------------------------
 Configuration: server and client on the same pc, Intel Core i5-7200U, DDR3 Dual 16Gb, SSD.
 
 Scenario: 10 queues, 1 consumer, 1 producer per queue.
@@ -58,6 +58,12 @@ Scenario: 10 queues, 1 consumer, 1 producer per queue.
 \* RabbitMq .NET Client eats up all memory, so the test is stable for about a minute. Then numbers are jumping around 5.000-10.000.
 
 \*\* Same as * and disk I/O is low, not sure the messages are persistent after all.
+
+Scalability
+-----------
+Since in cluster mode the node has its own messages then teoretically 
+the queue performance should scale linearly by multiplying one node performance by number of nodes, 
+provided the producers and consumers are spread evenly beetween the nodes.
 
 Requirements
 --------------

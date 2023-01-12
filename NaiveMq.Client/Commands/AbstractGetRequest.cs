@@ -10,9 +10,9 @@ namespace NaiveMq.Client.Commands
         where TResponse : IResponse
     {
         /// <summary>
-        /// Try to get entity.
+        /// Try to get object.
         /// </summary>
-        /// <remarks>Return null if entity is not found. Overwise raise an exception. True by default.</remarks>
+        /// <remarks>Returns null if object is not found. Overwise raises an exception. Default is true.</remarks>
         [DataMember(Name = "Tr")]
         public bool Try { get; set; } = true;
     }
