@@ -40,7 +40,7 @@ Scenario: 10 queues, 1 consumer, 1 producer per queue.
 | In memory message without confirmation        |   55.000  |  36.000*  |              |              |                 |                 |
 | In memory message with confirmation           |   10.300  |  10.500   |      9.200   |      10.000  |           730   |           580   |
 | - 100 queues                                  |    9.400  |  13.000   |              |              |                 |                 |
-| - batch by 100 messages in one request        |   16.000  |         - |              |           -  |                 |               - |
+| - batch by 100 messages in one request        |   17.500  |         - |              |           -  |                 |               - |
 | - Rabbit-like batch by 100 messages           |   15.000  |  44.000   |     12.600   |      19.000  |           650   |           450   |
 | In memory request-response message            |    9.400  |         - |              |            - |                 |               - |
 | Persistent message without confirmation       |    2.900  |  20.000** |              |              |                 |                 |
@@ -50,6 +50,7 @@ Scenario: 10 queues, 1 consumer, 1 producer per queue.
 | **Producers**                                 |           |           |              |              |                 |                 |
 | In memory message without confirmation        |  118.000  |  45.000*  |              |              |                 |                 |
 | In memory message with confirmation           |   19.000  |  16.000   |              |              |                 |                 |
+| - batch by 100 messages in one request        |  150.000  |         - |              |           -  |                 |               - |
 | - Rabbit-like batch by 100 messages           |   96.000  |  52.000   |              |              |                 |                 |
 | Persistent message without confirmation       |    4.100  |  22.000** |              |              |                 |                 |
 | Persistent message with confirmation          |    2.500  |     600   |              |              |                 |                 |

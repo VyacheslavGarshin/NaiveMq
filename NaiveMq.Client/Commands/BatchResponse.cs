@@ -2,6 +2,7 @@
 using NaiveMq.Client.Cogs;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -63,7 +64,8 @@ namespace NaiveMq.Client.Commands
         {
             base.Restore(commandPacker);
 
-            using var stream = new RomStream(Data);
+            // RomStream is slow
+            using var stream = new MemoryStream(Data.ToArray());
 
             var task = commandPacker.ReadAsync(stream, CancellationToken.None);
             task.Wait();
