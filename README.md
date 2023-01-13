@@ -66,6 +66,18 @@ the queue performance should scale linearly by multiplying one node performance 
 provided the producers and consumers are spread evenly beetween the nodes 
 or redirect option is selected in consumer subscription as cluster subscription strategy.
 
+Server installation
+-------------------
+Msi, binaries and client nuget can be found [here](https://github.com/VyacheslavGarshin/NaiveMq/releases).
+
+Client installation
+-------------------
+
+NuGet package is [here](https://www.nuget.org/packages/NaiveMq.Client/).
+```
+> dotnet add package NaiveMq.Client
+```
+
 Client Example
 --------------
 ```csharp
