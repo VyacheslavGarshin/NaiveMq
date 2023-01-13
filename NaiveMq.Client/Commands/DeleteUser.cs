@@ -24,7 +24,8 @@ namespace NaiveMq.Client.Commands
         /// Creates new DeleteUser command with params.
         /// </summary>
         /// <param name="username"></param>
-        public DeleteUser(string username)
+        /// <param name="try"></param>
+        public DeleteUser(string username, bool @try = false) : base(@try)
         {
             Username = username;
         }

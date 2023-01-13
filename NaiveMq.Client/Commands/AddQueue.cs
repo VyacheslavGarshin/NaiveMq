@@ -60,7 +60,15 @@ namespace NaiveMq.Client.Commands
         /// <param name="lengthLimit"></param>
         /// <param name="volumeLimit"></param>
         /// <param name="limitStrategy"></param>
-        public AddQueue(string name, bool durable = false, bool exchange = false, long? lengthLimit = null, long? volumeLimit = null, LimitStrategy limitStrategy = LimitStrategy.Delay)
+        /// <param name="try"></param>
+        public AddQueue(
+            string name, 
+            bool durable = false, 
+            bool exchange = false, 
+            long? lengthLimit = null, 
+            long? volumeLimit = null, 
+            LimitStrategy limitStrategy = LimitStrategy.Delay, 
+            bool @try = false) : base(@try)
         {
             Name = name;
             Durable = durable;

@@ -15,5 +15,21 @@ namespace NaiveMq.Client.Commands
         /// <remarks>Default is false.</remarks>
         [DataMember(Name = "Tr")]
         public bool Try { get; set; } = false;
+
+        /// <summary>
+        /// Creates AbstractAddRequest.
+        /// </summary>
+        protected AbstractAddRequest()
+        {
+        }
+
+        /// <summary>
+        /// Creates AbstractAddRequest with params.
+        /// </summary>
+        /// <param name="try"></param>
+        public AbstractAddRequest(bool @try)
+        {
+            Try = @try;
+        }
     }
 }

@@ -31,7 +31,8 @@ namespace NaiveMq.Client.Commands
         /// </summary>
         /// <param name="exchange"></param>
         /// <param name="queue"></param>
-        public DeleteBinding(string exchange, string queue)
+        /// <param name="try"></param>
+        public DeleteBinding(string exchange, string queue, bool @try = false) : base(@try)
         {
             Exchange = exchange;
             Queue = queue;

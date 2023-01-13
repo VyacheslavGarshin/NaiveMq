@@ -24,7 +24,8 @@ namespace NaiveMq.Client.Commands
         /// Creates new GetQueue command with params.
         /// </summary>
         /// <param name="name"></param>
-        public GetQueue(string name)
+        /// <param name="try"></param>
+        public GetQueue(string name, bool @try = false) : base(@try) 
         {
             Name = name;
         }

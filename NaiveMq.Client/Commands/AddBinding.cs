@@ -46,7 +46,8 @@ namespace NaiveMq.Client.Commands
         /// <param name="queue"></param>
         /// <param name="durable"></param>
         /// <param name="pattern"></param>
-        public AddBinding(string exchange, string queue, bool durable = false, string pattern = null)
+        /// <param name="try"></param>
+        public AddBinding(string exchange, string queue, bool durable = false, string pattern = null, bool @try = false) : base(@try)
         {
             Exchange = exchange;
             Queue = queue;

@@ -43,7 +43,7 @@ namespace NaiveMq.Client.Commands
         /// <param name="data"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        public static MessageResponse Ok(IRequest request, ReadOnlyMemory<byte> data, bool response = false)
+        public static MessageResponse Ok(IRequest request, ReadOnlyMemory<byte>? data = null, bool response = false)
         {
             return new MessageResponse
             {
@@ -51,7 +51,7 @@ namespace NaiveMq.Client.Commands
                 RequestTag = request.Tag,
                 Success = true,
                 Response = response,
-                Data = data,
+                Data = data ?? new ReadOnlyMemory<byte>(),
             };
         }
 

@@ -38,7 +38,8 @@ namespace NaiveMq.Client.Commands
         /// <param name="username"></param>
         /// <param name="password"></param>
         /// <param name="administrator"></param>
-        public AddUser(string username, string password, bool administrator = false)
+        /// <param name="try"></param>
+        public AddUser(string username, string password, bool administrator = false, bool @try = false) : base(@try)
         {
             Username = username;
             Password = password;

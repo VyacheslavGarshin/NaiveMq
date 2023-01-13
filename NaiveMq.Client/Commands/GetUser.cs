@@ -24,7 +24,8 @@ namespace NaiveMq.Client.Commands
         /// Creates new GetUser command with params.
         /// </summary>
         /// <param name="username"></param>
-        public GetUser(string username)
+        /// <param name="try"></param>
+        public GetUser(string username, bool @try = false) : base(@try)
         {
             Username = username;
         }

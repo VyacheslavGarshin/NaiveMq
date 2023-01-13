@@ -66,6 +66,39 @@ the queue performance should scale linearly by multiplying one node performance 
 provided the producers and consumers are spread evenly beetween the nodes 
 or redirect option is selected in consumer subscription as cluster subscription strategy.
 
+Client Example
+--------------
+```csharp
+var client = new NaiveMqClient(new NaiveMqClientOptions());
+
+await client.SendAsync(new AddQueue("test", @try: true));
+
+client.OnReceiveMessageAsync += Client_OnReceiveMessageAsync;
+
+static async Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
+{
+    Console.WriteLine($"Received: {Encoding.UTF8.GetString(message.Data.Span)}.");
+
+    if (message.Confirm)
+    {
+        await sender.SendAsync(MessageResponse.Ok(message));
+    };
+}
+
+await client.SendAsync(new Subscribe("test"));
+
+for (int i = 0; i < 1000; i++)
+{
+    var text = $"{i}";    
+    await client.SendAsync(new Message("test", Encoding.UTF8.GetBytes($"{i}")));
+
+    Console.WriteLine($"Sent: {text}.");
+    await Task.Delay(1000);
+}
+
+await client.SendAsync(new Unsubscribe("test"));
+```
+
 Requirements
 --------------
 + .NET Standard for Client and Service

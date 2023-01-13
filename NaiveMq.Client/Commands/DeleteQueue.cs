@@ -24,7 +24,8 @@ namespace NaiveMq.Client.Commands
         /// Creates new DeleteQueue command with params.
         /// </summary>
         /// <param name="name"></param>
-        public DeleteQueue(string name)
+        /// <param name="try"></param>
+        public DeleteQueue(string name, bool @try = false) : base(@try)
         {
             Name = name;
         }

@@ -15,5 +15,21 @@ namespace NaiveMq.Client.Commands
         /// <remarks>Default is false.</remarks>
         [DataMember(Name = "Tr")]
         public bool Try { get; set; } = false;
+
+        /// <summary>
+        /// Creates AbstractDeleteRequest.
+        /// </summary>
+        protected AbstractDeleteRequest()
+        {
+        }
+
+        /// <summary>
+        /// Creates AbstractDeleteRequest with params.
+        /// </summary>
+        /// <param name="try"></param>
+        public AbstractDeleteRequest(bool @try)
+        {
+            Try = @try;
+        }
     }
 }
