@@ -7,20 +7,9 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..</DockerfileContext>
     <DockerfileRunArguments>-p 9000:9000</DockerfileRunArguments>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>AnyCPU</Platforms>
     <Version>1.0.0</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="service-create.bat" />
-    <None Remove="service-create.ps1" />
-    <None Remove="service-delete.bat" />
-    <None Remove="service-delete.ps1" />
-    <None Remove="service-start.bat" />
-    <None Remove="service-start.ps1" />
-    <None Remove="service-stop.bat" />
-    <None Remove="service-stop.ps1" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="service-create.bat">
