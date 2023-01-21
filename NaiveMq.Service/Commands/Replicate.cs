@@ -1,5 +1,6 @@
 ﻿using Naive.Serializer.Cogs;
 using NaiveMq.Client;
+using NaiveMq.Client.AbstractCommands;
 using NaiveMq.Client.Cogs;
 using NaiveMq.Client.Commands;
 using System.Runtime.Serialization;

@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Serialization;
+using NaiveMq.Client.Commands;
 
-namespace NaiveMq.Client.Commands
+namespace NaiveMq.Client.AbstractCommands
 {
     /// <summary>
     /// Absract implementation for any delete request.

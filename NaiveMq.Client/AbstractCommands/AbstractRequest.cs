@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using NaiveMq.Client.Commands;
 
-namespace NaiveMq.Client.Commands
+namespace NaiveMq.Client.AbstractCommands
 {
     /// <summary>
     /// Abstract request.

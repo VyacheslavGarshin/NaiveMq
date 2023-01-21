@@ -1,4 +1,5 @@
 ﻿using Naive.Serializer.Cogs;
+using NaiveMq.Client.AbstractCommands;
 using NaiveMq.Client.Cogs;
 using System;
 using System.Collections.Generic;

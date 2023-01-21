@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace NaiveMq.Client.Commands
+namespace NaiveMq.Client.AbstractCommands
 {
     /// <summary>
     /// Abstract get entity response.

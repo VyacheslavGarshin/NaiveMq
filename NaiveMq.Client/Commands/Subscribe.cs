@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Enums;
+﻿using NaiveMq.Client.AbstractCommands;
+using NaiveMq.Client.Enums;
 using System;
 using System.Runtime.Serialization;
 

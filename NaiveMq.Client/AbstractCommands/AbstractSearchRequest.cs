@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Serialization;
+using NaiveMq.Client.Commands;
 
-namespace NaiveMq.Client.Commands
+namespace NaiveMq.Client.AbstractCommands
 {
     /// <summary>
     /// Abstract implementation for any search request.

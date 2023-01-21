@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Commands;
+﻿using NaiveMq.Client.AbstractCommands;
+using NaiveMq.Client.Commands;
 
 namespace NaiveMq.Service.Commands
 {

@@ -1,4 +1,5 @@
-﻿using NaiveMq.Client.Dto;
+﻿using NaiveMq.Client.AbstractCommands;
+using NaiveMq.Client.Dto;
 
 namespace NaiveMq.Client.Commands
 {

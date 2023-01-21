@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using NaiveMq.Client.AbstractCommands;
 
 namespace NaiveMq.Client.Commands
 {

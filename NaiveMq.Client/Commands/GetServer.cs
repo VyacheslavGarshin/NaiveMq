@@ -1,4 +1,6 @@
-﻿namespace NaiveMq.Client.Commands
+﻿using NaiveMq.Client.AbstractCommands;
+
+namespace NaiveMq.Client.Commands
 {
     /// <summary>
     /// Get server.

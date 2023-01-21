@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using NaiveMq.Client.Commands;
 
-namespace NaiveMq.Client.Commands
+namespace NaiveMq.Client.AbstractCommands
 {
     /// <summary>
     /// Abstract response implementation.
@@ -39,8 +40,8 @@ namespace NaiveMq.Client.Commands
         public static TResult Ok<TResult>(IRequest<TResult> request, Action<TResult> action = null)
             where TResult : IResponse, new()
         {
-            var result = (request?.Confirm ?? false) 
-                ? new TResult { RequestId = request.Id, RequestTag = request.Tag, Success = true } 
+            var result = request?.Confirm ?? false
+                ? new TResult { RequestId = request.Id, RequestTag = request.Tag, Success = true }
                 : default;
 
             if (result != null)
