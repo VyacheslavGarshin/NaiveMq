@@ -81,6 +81,8 @@ NuGet package is [here](https://www.nuget.org/packages/NaiveMq.Client/).
 Client Example
 --------------
 ```csharp
+var isRequest = true;
+
 var client = new NaiveMqClient(new NaiveMqClientOptions());
 
 await client.SendAsync(new AddQueue("test", @try: true));
@@ -89,11 +91,13 @@ client.OnReceiveMessageAsync += Client_OnReceiveMessageAsync;
 
 static async Task Client_OnReceiveMessageAsync(NaiveMqClient sender, Message message)
 {
-    Console.WriteLine($"Received: {Encoding.UTF8.GetString(message.Data.Span)}.");
+    var data = Encoding.UTF8.GetString(message.Data.Span);
+    Console.WriteLine($"Received: {data}. Is request: {message.Request}.");
 
     if (message.Confirm)
     {
-        await sender.SendAsync(MessageResponse.Ok(message));
+        await sender.SendAsync(MessageResponse.Ok(
+            message, message.Request ? Encoding.UTF8.GetBytes($"response on message {data}") : null, message.Request));
     };
 }
 
@@ -102,9 +106,9 @@ await client.SendAsync(new Subscribe("test"));
 for (int i = 0; i < 1000; i++)
 {
     var text = $"{i}";    
-    await client.SendAsync(new Message("test", Encoding.UTF8.GetBytes($"{i}")));
+    var response = await client.SendAsync(new Message("test", Encoding.UTF8.GetBytes($"{i}"), isRequest));
 
-    Console.WriteLine($"Sent: {text}.");
+    Console.WriteLine($"Sent: {text}.{(isRequest ? $" Response: {Encoding.UTF8.GetString(response.Data.Span)}" : string.Empty)}");
     await Task.Delay(1000);
 }
 
