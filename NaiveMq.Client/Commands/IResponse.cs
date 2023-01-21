@@ -20,6 +20,7 @@ namespace NaiveMq.Client.Commands
         /// <summary>
         /// Successfullness of the operation.
         /// </summary>
+        /// <remarks>Default is true.</remarks>
         public bool Success { get; set; }
 
         /// <summary>

@@ -522,6 +522,7 @@ namespace NaiveMq.Client
                     pair.Value.Response = new Confirmation
                     {
                         RequestId = pair.Key,
+                        Success = false,
                         ErrorCode = ErrorCode.ClientStopped.ToString(),
                         ErrorMessage = ErrorCode.ClientStopped.GetDescription()
                     };
